@@ -656,6 +656,27 @@ test('Pattern Validator Tests', async (t) => {
     assert.ok(!errors.some(e => e.rule?.startsWith('list-endpoint-')), JSON.stringify(errors));
   });
 
+  // A record can hold a list of its own — a basket and the things in it — and
+  // reading one is still reading a record.
+  await t.test('validateSpec - a record with an items array, read by its id, is not a list', () => {
+    const errors = validateSpec({
+      paths: {
+        '/baskets/{basketId}': {
+          get: {
+            responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Basket' } } } } },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          Basket: { type: 'object', properties: { id: { type: 'string' }, items: { type: 'array', items: { type: 'string' } } } },
+        },
+      },
+    }, 'test.yaml');
+
+    assert.ok(!errors.some(e => e.rule?.startsWith('list-endpoint-')), JSON.stringify(errors));
+  });
+
   await t.test('validateSpec - returns empty array for spec without paths', () => {
     const spec = {
       info: { title: 'Test', version: '1.0' }

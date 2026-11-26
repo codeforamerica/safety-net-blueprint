@@ -1,10 +1,10 @@
 /**
- * Unit tests for collection-utils — deriveCollectionName and mergeByPrecedence.
+ * Unit tests for collection-utils — storageName, collectionNamed and mergeByPrecedence.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { deriveCollectionName, mergeByPrecedence, resolveDotPath } from '../../src/collection-utils.js';
+import { storageName, collectionNamed, mergeByPrecedence, resolveDotPath } from '../../src/collection-utils.js';
 
 // =============================================================================
 // mergeByPrecedence
@@ -75,23 +75,34 @@ test('mergeByPrecedence — preserves declaration order (domain first, then mach
 });
 
 // =============================================================================
-// deriveCollectionName
+// storageName, collectionNamed
 // =============================================================================
 
-test('deriveCollectionName — top-level plural collection', () => {
-  assert.strictEqual(deriveCollectionName('/applications', '/intake'), 'applications');
+test('storageName — a collection is kept under its domain and path', () => {
+  assert.strictEqual(storageName('intake', '/applications'), 'intake/applications');
 });
 
-test('deriveCollectionName — sub-collection prefixed with parent singular', () => {
-  assert.strictEqual(deriveCollectionName('/applications/{id}/documents', '/intake'), 'application-documents');
+test('storageName — a nested collection keeps its parent in its name, parameters left out', () => {
+  assert.strictEqual(storageName('intake', '/applications/{applicationId}/members'), 'intake/applications/members');
 });
 
-test('deriveCollectionName — singleton sub-resource kept as-is', () => {
-  assert.strictEqual(deriveCollectionName('/applications/{id}/interview', '/intake'), 'interview');
+// Nothing is read from how a word is spelled: an irregular plural is named
+// like any other.
+test('storageName — a nested collection named people is named for its path', () => {
+  assert.strictEqual(storageName('census', '/households/{householdId}/people'), 'census/households/people');
 });
 
-test('deriveCollectionName — entity path without leading slash', () => {
-  assert.strictEqual(deriveCollectionName('intake/applications/documents', 'intake'), 'application-documents');
+test('storageName — two domains with the same path are two collections', () => {
+  assert.notStrictEqual(storageName('ordering', '/settings'), storageName('dispatch', '/settings'));
+});
+
+test('collectionNamed — a step names a collection by domain and path', () => {
+  assert.strictEqual(collectionNamed('intake/applications/members'), 'intake/applications/members');
+});
+
+test('collectionNamed — another name for a collection is read through the resource index', () => {
+  const resources = { aliases: new Map([['intake/application-members', 'intake/applications/members']]) };
+  assert.strictEqual(collectionNamed('intake/application-members', resources), 'intake/applications/members');
 });
 
 // =============================================================================

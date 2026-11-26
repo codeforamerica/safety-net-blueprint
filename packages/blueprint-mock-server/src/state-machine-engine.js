@@ -6,7 +6,7 @@
 
 import jsonLogic from 'json-logic-js';
 import { evaluateCEL as evaluateExpression } from '@codeforamerica/blueprint-core/cel';
-import { deriveCollectionName, resolveDotPath } from './collection-utils.js';
+import { collectionNamed, resolveDotPath } from './collection-utils.js';
 import { resolveTimeToken } from './time-tokens.js';
 import { evaluate as evaluateRules } from '@codeforamerica/blueprint-rules-engine';
 
@@ -501,7 +501,7 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
     } else {
       // Collection create: POST to domain/collection
       const domain = rawPath.split('/')[0];
-      const entity = deriveCollectionName(rawPath, domain);
+      const entity = collectionNamed(rawPath, context.instance?.resources);
       const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
       const lastSeg = pathSegs[pathSegs.length - 1] || '';
       const eventObject = (lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg).replace(/-/g, '_');
@@ -602,17 +602,21 @@ function* walkSteps(steps, resource, context, store, pending) {
 
       const { from: collectionPath, where, as: itemAlias } = step.forEach;
       const forEachSteps = step.do || [];
-      if (!collectionPath || !where || !itemAlias) {
-        console.warn('forEach: missing required from:, where:, or as: — skipping');
+      if (!collectionPath || !itemAlias) {
+        console.warn('forEach: missing required from: or as: — skipping');
         continue;
       }
 
-      const collection = deriveCollectionName(collectionPath, collectionPath.split('/')[0]);
+      const collection = collectionNamed(collectionPath, context.instance?.resources);
       const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
-      const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
+      const isJsonLogic = Boolean(where) && typeof where === 'object' && Object.keys(where).some(k => logicOperators.has(k));
 
       let items;
-      if (isJsonLogic) {
+      if (!where) {
+        // With no where:, every record in the collection, as a binding with
+        // none finds the first (state-machine-schema.yaml, ContextBinding).
+        ({ items } = store.findAll(collection, {}, { limit: null }));
+      } else if (isJsonLogic) {
         const { items: allItems } = store.findAll(collection, {});
         const logicData = {
           this: context.this ?? {},
@@ -714,7 +718,7 @@ function* walkSteps(steps, resource, context, store, pending) {
           pendingOperations.push({ path, rawPath, body });
         } else {
           const domain = rawPath.split('/')[0];
-          const entity = deriveCollectionName(rawPath, domain);
+          const entity = collectionNamed(rawPath, context.instance?.resources);
           const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
           const lastSeg = pathSegs[pathSegs.length - 1] || '';
           const eventObject = (lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg).replace(/-/g, '_');

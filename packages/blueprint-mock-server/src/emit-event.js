@@ -11,6 +11,13 @@
 import { withoutEngineFields } from './sla-engine.js';
 
 /**
+ * Where the event log is kept: the platform's `/events`, under its domain, as
+ * every collection is (collection-utils.js storageName), so `GET
+ * /platform/events` reads what is saved here.
+ */
+export const EVENTS_COLLECTION = 'platform/events';
+
+/**
  * Emit a pre-built CloudEvents 1.0 envelope directly to the event bus.
  * Used by POST /platform/events to inject externally-sourced domain events
  * (e.g., events from other domains during integration testing).
@@ -53,8 +60,8 @@ export function emitEventEnvelope(envelope, instance) {
  * keep the timestamps it adds.
  */
 function saveEvent(store, record) {
-  if (typeof store.append === 'function') store.append('events', record);
-  else store.insertResource('events', record);
+  if (typeof store.append === 'function') store.append(EVENTS_COLLECTION, record);
+  else store.insertResource(EVENTS_COLLECTION, record);
 }
 
 // The optional CloudEvents attributes, which the events contract has an event

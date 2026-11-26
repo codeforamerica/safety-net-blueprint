@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # Every pull request, including one stacked on another's branch, so a
+  # stacked PR is tested before the ones below it merge.
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read

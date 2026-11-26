@@ -9,13 +9,14 @@
  *   node build.js --content=<path> [--resolved=<path>]
  */
 
-import { readFileSync, mkdtempSync, rmSync } from 'fs';
+import { existsSync, readFileSync, mkdtempSync, rmSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import yaml from 'js-yaml';
 import { resolveConfig } from './resolve-config.js';
+import { loadConfig } from '../lib/config.js';
 import { renderContextMap } from './render.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,8 +26,12 @@ const node = process.execPath;
  * @param {{ contentDir: string, resolvedDir: string }} opts
  */
 export function build({ contentDir, resolvedDir }) {
+  // The diagram's title and subtitle. A project without the file gets a title
+  // from its name.
   const mapConfigPath = resolve(contentDir, 'context-map', 'config', 'config.yaml');
-  const mapConfig = yaml.load(readFileSync(mapConfigPath, 'utf8'));
+  const mapConfig = existsSync(mapConfigPath)
+    ? yaml.load(readFileSync(mapConfigPath, 'utf8'))
+    : { title: `${loadConfig(contentDir).name} — Context Map` };
   const outDir = resolve(contentDir, 'context-map');
 
   const enrichedConfig = resolveConfig(resolvedDir, contentDir);

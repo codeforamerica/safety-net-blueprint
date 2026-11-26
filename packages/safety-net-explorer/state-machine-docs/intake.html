@@ -173,7 +173,7 @@
         </tr><tr>
           <td><code>eligibility.determination.completed</code></td>
           <td><a href="eligibility.html">Eligibility/Determination</a></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>false</code>:<ul style="margin:2px 0 0 14px;"><li>Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>Close the application when all determinations are in and no supervisor approval is required</li></ul></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>application is not null and application.status is "under_review"</code>:<ul style="margin:2px 0 0 14px;"><li>If <code>false</code>:<ul style="margin:2px 0 0 14px;"><li>Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>Close the application when all determinations are in and no supervisor approval is required</li></ul></li></ul></li></ul></td>
         </tr><tr>
           <td><code>eligibility.determination.expedited</code></td>
           <td><a href="eligibility.html">Eligibility/Determination</a></td>

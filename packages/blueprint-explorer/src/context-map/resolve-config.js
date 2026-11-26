@@ -5,9 +5,8 @@
  * contracts define.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
-import yaml from 'js-yaml';
+import { existsSync } from 'fs';
+import { loadConfig } from '../lib/config.js';
 import { discover, load } from '@codeforamerica/blueprint-core';
 
 /**
@@ -18,7 +17,7 @@ import { discover, load } from '@codeforamerica/blueprint-core';
  * @returns {Object} config.yaml, with `domains` from the contracts
  */
 export function resolveConfig(contractsDir, contentDir) {
-  const config = yaml.load(readFileSync(join(contentDir, 'config.yaml'), 'utf8'));
+  const config = loadConfig(contentDir);
   return {
     ...config,
     domains: domainsFromContracts(existsSync(contractsDir) ? discover(contractsDir).map(load) : [], config.domains || []),

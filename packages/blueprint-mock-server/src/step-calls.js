@@ -17,7 +17,7 @@
  * caught while a record only the machine may write, a pause entry, is allowed.
  */
 
-import { deriveCollectionName } from './collection-utils.js';
+import { storageName, eventDomainOf } from './collection-utils.js';
 import { emitEvent } from './emit-event.js';
 import { buildChanges } from './handlers/update-handler.js';
 import { extractExpandFields, applyExpand, propertiesOf } from './handlers/expand-utils.js';
@@ -48,6 +48,8 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
     .map((spec) => ({
       base: (spec.serverBasePath ?? '').split('/').filter(Boolean),
       domain: spec.domain,
+      // The domain its records are kept under (storageName).
+      storedIn: eventDomainOf(spec),
       doc: spec.doc,
       model: spec.doc.model(),
       follow: spec.resolve?.schema ?? ((x) => x),
@@ -105,8 +107,8 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
     throw new Error(`call: ${method} ${path} is not a route any API declares`);
   }
 
-  /** The collection a resource is stored in, as the mock names it. */
-  const collectionOf = (resource) => deriveCollectionName(resource.path('collection'), '');
+  /** The collection a call's resource is stored in, as its routes keep it. */
+  const collectionOf = (resolved) => storageName(resolved.api.storedIn, resolved.resource.path('collection'));
 
   /** A resource's schema, and how to follow a `$ref` from it. */
   function schemaOf(resolved) {
@@ -213,7 +215,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
    */
   function apply({ method, path, body = {} }, { caller, traceparent = null, causationid = null, now, runAction } = {}) {
     const resolved = resolve(method, path);
-    const collection = collectionOf(resolved.resource);
+    const collection = collectionOf(resolved);
     // Named for the resource, as a client's write is: a machine's write is
     // the same event.
     const event = (action, resourceId, data) => resolved.resource.eventName && emitEvent({
@@ -354,7 +356,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
     // the API sets it.
     const { schema, follow } = schemaOf(resolved);
     if (propertiesOf(schema, follow).some((p) => 'slaDeadline' in p)) clocks.slaDeadline = earliestDeadline(slaInfo);
-    return store.update(collectionOf(resolved.resource), record.id, clocks) ?? { ...record, ...clocks };
+    return store.update(collectionOf(resolved), record.id, clocks) ?? { ...record, ...clocks };
   }
 
   /**

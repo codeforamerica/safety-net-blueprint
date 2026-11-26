@@ -724,6 +724,7 @@ $defs:
   #
   #   Nested forEach is supported for multi-level iteration.
   #   Use a JSON Logic where: to filter on more than equality (see ContextBinding).
+  #   With no where:, every record.
   #
   # ---------------------------------------------------------------------------
   StepItem:
@@ -1024,7 +1025,7 @@ $defs:
             type: string
             description: Collection path to query (e.g., intake/application-members).
           where:
-            description: Filter condition — field-value equality pairs or JSON Logic.
+            description: Filter condition — field-value equality pairs or JSON Logic. With none, every record.
             oneOf:
               - type: object
                 additionalProperties: true

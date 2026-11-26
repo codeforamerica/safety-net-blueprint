@@ -866,7 +866,9 @@ export function isCollectionPath(path) {
  * an endpoint a single record — `/transcripts/{transcriptId}/entries` is a
  * list — and judging by the path alone let every nested list skip the list
  * rules. A collection path stays a list whatever it returns, so a list
- * response missing its `items` is still reported.
+ * response missing its `items` is still reported. A path ending in a
+ * parameter reads one record, never a list, even when that record has an
+ * `items` array of its own — a basket and the things in it.
  *
  * @param {Object} spec - The OpenAPI spec object
  * @param {string} path - The endpoint path
@@ -875,6 +877,7 @@ export function isCollectionPath(path) {
  */
 export function isListOperation(spec, path, operation) {
   if (isCollectionPath(path)) return true;
+  if (path.endsWith('}')) return false;
   let schema = operation.responses?.['200']?.content?.['application/json']?.schema;
   if (schema?.$ref) schema = resolveLocalRef(spec, schema.$ref);
   return [schema, ...(schema?.allOf ?? [])].some((candidate) => candidate?.properties?.items?.type === 'array');

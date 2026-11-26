@@ -1,5 +1,5 @@
 /**
- * Shared utilities for collection name derivation, state machine merging, and object path resolution.
+ * Shared utilities for collection names, state machine merging, and object path resolution.
  */
 
 /**
@@ -18,68 +18,38 @@ export function resolveDotPath(obj, path) {
 }
 
 /**
- * Determine whether a path represents a singleton sub-resource.
- * Convention: sub-resource collections use plural names; singletons use singular (no trailing 's').
- *   e.g., /applications/{applicationId}/interview → singleton (singular)
- *         /applications/{applicationId}/documents → collection (plural)
+ * Where a collection's records are kept: the domain it belongs to, then its
+ * path with the parameters left out. `/applications/{applicationId}/members`
+ * in intake is `intake/applications/members`.
  *
- * @param {string} path - OpenAPI-style path (may include {param} segments)
- * @returns {boolean}
+ * Keyed by domain, so `/settings` in two domains is two collections, and by
+ * the whole path, so a nested collection is named for where it sits, with
+ * nothing guessed from how its words are spelled. It is the form a state
+ * machine names a collection in — `from: intake/applications/members` — and
+ * the one core's validator indexes collections by.
+ *
+ * @param {string|null} domain - As the API declares it (eventDomainOf)
+ * @param {string} path - Relative to the server, as OpenAPI writes paths
+ * @returns {string}
  */
-export function isSingletonSubResource(path) {
-  const segments = path.split('/').filter(s => s && !s.startsWith('{'));
-  const lastSegment = segments[segments.length - 1];
-  return Boolean(lastSegment && !lastSegment.endsWith('s'));
+export function storageName(domain, path) {
+  const segments = String(path ?? '').split('/').filter((s) => s && !s.startsWith('{'));
+  return [domain, ...segments].filter(Boolean).join('/');
 }
 
 /**
- * Derive the database collection name from a path.
- * Works for both OpenAPI endpoint paths (with {param} segments) and entity paths
- * from rules (e.g., "intake/applications/documents").
+ * The collection a step names, `from: intake/applications/members` or a
+ * call's `POST: intake/applications/verifications`: the domain and path as
+ * written, or the shorthand core's validator also accepts for a nested
+ * collection (`intake/application-members`), through the mock's resource index.
  *
- * Sub-collection paths (2+ non-param segments, last is plural) are prefixed with
- * the parent resource singular to avoid cross-domain DB collection name collisions.
- *   e.g., /applications/{id}/documents → 'application-documents'
- *   e.g., intake/applications/documents → 'application-documents'
- *
- * Singleton sub-resources (2+ non-param segments, last is singular) are kept as-is.
- * The caller's path structure signals it is a singleton; pluralizing would create a
- * mismatch with the composition assembler and seeder which use the resource name directly.
- *   e.g., /applications/{id}/household-info → 'household-info'
- *   e.g., /applications/{id}/interview → 'interview'
- *
- * Top-level singleton paths (1 non-param segment, singular) are pluralized to match
- * the DB collection convention used by the seeder.
- *   e.g., /application → 'applications'
- *
- * @param {string} path - Path or entity reference to derive collection name from
- * @param {string} [basePath] - Prefix to strip before processing (e.g., "/intake" or "intake")
- * @returns {string} Collection name for database operations
+ * @param {string} reference - `{domain}/{path}`, with no record ids in it
+ * @param {{ aliases?: Map<string, string> }} [resources] - The mock's resource index (spec-loader.js `resourceIndex`)
+ * @returns {string}
  */
-export function deriveCollectionName(path, basePath) {
-  const resourcePath = basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length)
-    : path;
-  const segments = resourcePath.split('/').filter(s => s && !s.startsWith('{'));
-  const lastSegment = segments[segments.length - 1] || '';
-
-  if (segments.length >= 2) {
-    // Singleton sub-resource (singular last segment): keep as-is.
-    // The path structure signals it is a singleton; the composition assembler and seeder
-    // both use the resource name directly, so pluralizing would create a mismatch.
-    if (isSingletonSubResource(path)) return lastSegment;
-
-    // Sub-collection (plural last segment): prefix with parent singular to avoid
-    // cross-domain DB collection name collisions.
-    //   e.g., /applications/{id}/documents → 'application-documents'
-    const parentSegment = segments[segments.length - 2];
-    const parentSingular = parentSegment.endsWith('s') ? parentSegment.slice(0, -1) : parentSegment;
-    return `${parentSingular}-${lastSegment}`;
-  }
-
-  // Top-level singleton: pluralize to match the DB collection convention used by the seeder.
-  //   e.g., /application → 'applications'
-  return lastSegment && !lastSegment.endsWith('s') ? `${lastSegment}s` : lastSegment;
+export function collectionNamed(reference, resources) {
+  const name = storageName(null, reference);
+  return resources?.aliases?.get(name) ?? name;
 }
 
 /**
@@ -163,24 +133,11 @@ export function buildInlineRules(stateMachine, machine) {
 }
 
 /**
- * A collection name made singular, for an event's object: `applications` →
- * `application`, `transcript-entries` → `transcript-entry`. Stripping a final
- * `s`, which this replaced, made the second `transcript-entrie`.
- *
- * @param {string} collectionName
- * @returns {string}
- */
-export function singularOf(collectionName) {
-  if (collectionName.endsWith('ies')) return `${collectionName.slice(0, -3)}y`;
-  if (collectionName.endsWith('ss')) return collectionName;
-  return collectionName.replace(/s$/, '');
-}
-
-/**
  * The domain an API's events are named for: the one it declares, as written
  * — `case-management`, not `case_management`. A document declaring none falls
  * back to its server's base path, which is how the domain was read before
- * documents had to declare one.
+ * documents had to declare one. Its collections are kept under the same
+ * name (storageName).
  *
  * @param {{ domain?: string|null, serverBasePath?: string }} apiMetadata
  * @returns {string}

@@ -4,7 +4,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractPathParams, buildParameterIndex, inferTagFromPath, buildPathEntry } from '../../src/openapi/utils.js';
+import { extractPathParams, buildParameterIndex, inferTagFromPath, buildPathEntry, extractIndividualResources } from '../../src/openapi/utils.js';
 
 // ---------------------------------------------------------------------------
 // extractPathParams
@@ -127,5 +127,60 @@ describe('buildPathEntry', () => {
   test('omits x-relationship when not provided', () => {
     const entry = buildPathEntry('/applications', 'post', op);
     assert.equal(entry.post['x-relationship'], undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractIndividualResources
+// ---------------------------------------------------------------------------
+
+describe('extractIndividualResources', () => {
+  /** Run it with console.warn captured. */
+  const extracted = (examples) => {
+    const originalWarn = console.warn;
+    const warnings = [];
+    console.warn = (msg) => warnings.push(msg);
+    try {
+      return { resources: extractIndividualResources(examples), warnings };
+    } finally {
+      console.warn = originalWarn;
+    }
+  };
+
+  // A basket holds the things in it under `items`, and is still a record.
+  test('keeps a record that has an items array of its own', () => {
+    const { resources, warnings } = extracted({
+      BasketExample1: { id: 'b1', label: 'two apples', items: [{ name: 'apple', quantity: 2 }] },
+      BasketExample2: { id: 'b2', label: 'no items field' },
+    });
+    assert.deepEqual(resources.map((r) => r.key), ['BasketExample1', 'BasketExample2']);
+    assert.deepEqual(warnings, []);
+  });
+
+  test('keeps a record whose key says create, update or payload', () => {
+    const { resources } = extracted({
+      CreateRequestLogExample1: { id: 'r1' },
+      PayloadTemplateExample1: { id: 'p1' },
+      UpdateScheduleExample1: { id: 'u1' },
+    });
+    assert.equal(resources.length, 3);
+  });
+
+  test('leaves out a list response, with a warning naming it', () => {
+    const { resources, warnings } = extracted({
+      BasketListExample: { items: [{ id: 'b1' }], total: 1, limit: 25, offset: 0 },
+    });
+    assert.deepEqual(resources, []);
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0].includes('BasketListExample'));
+    assert.ok(warnings[0].includes('list response'));
+  });
+
+  test('leaves out an example with no id, such as a request body, with a warning naming it', () => {
+    const { resources, warnings } = extracted({ BasketCreateExample: { label: 'new basket' } });
+    assert.deepEqual(resources, []);
+    assert.equal(warnings.length, 1);
+    assert.ok(warnings[0].includes('BasketCreateExample'));
+    assert.ok(warnings[0].includes('no id'));
   });
 });

@@ -40,7 +40,7 @@ function bodyCheckFor(endpoint, apiMetadata, key, schemas) {
 }
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { operationsOf } from './operation-calls.js';
-import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
+import { storageName, eventDomainOf, extractPrimaryParam } from './collection-utils.js';
 import { editableResources, assembleEditable, createEditablePatchHandler, registerEditableOperation } from './editable-composition.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
@@ -61,59 +61,8 @@ function findSlaTypes(allSlaTypes, domain) {
   return (allSlaTypes ?? []).find((entry) => entry.domain === domain)?.slaTypes ?? [];
 }
 
-/**
- * Determine if a path is a flat collection endpoint (no path parameters).
- * e.g., /applications
- */
-function isCollectionEndpoint(path) {
-  return !path.includes('{') && !path.includes('}');
-}
-
-/**
- * Determine if a path is a flat item endpoint (exactly one {param}, last segment).
- * e.g., /applications/{applicationId}
- */
-function isItemEndpoint(path) {
-  const params = path.match(/\{[^}]+\}/g) || [];
-  return params.length === 1 && path.trimEnd().endsWith('}');
-}
-
-/**
- * Determine if a path is a sub-resource endpoint — a parent {param} precedes a
- * literal final segment. Matches both sub-collections and singletons.
- * e.g., /applications/{applicationId}/documents
- *       /applications/{applicationId}/interview
- */
-function isSubResourceEndpoint(path) {
-  return path.includes('{') && !path.trimEnd().endsWith('}');
-}
-
-/**
- * Determine if a path is a sub-item endpoint — ends with a {param} and has
- * more than one path parameter (at least one parent + the sub-resource id).
- * e.g., /applications/{applicationId}/documents/{documentId}
- */
-function isSubItemEndpoint(path) {
-  const params = path.match(/\{[^}]+\}/g) || [];
-  return path.trimEnd().endsWith('}') && params.length > 1;
-}
-
-
-/**
- * Derive the parent collection name from a sub-resource path.
- * Strips the sub-resource segment and applies deriveCollectionName to the parent path,
- * so nested sub-resources resolve to the correct DB collection.
- * e.g., /intake/applications/{applicationId}/documents → 'applications'
- * e.g., /intake/applications/{applicationId}/members/{memberId}/incomes → 'application-members'
- */
 function internalError(res, error) {
   res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: error.message }] });
-}
-
-function deriveParentCollection(path, basePath) {
-  const lastSlash = path.lastIndexOf('/');
-  const parentPath = path.slice(0, lastSlash);
-  return deriveCollectionName(parentPath, basePath);
 }
 
 /**
@@ -121,17 +70,17 @@ function deriveParentCollection(path, basePath) {
  * immediate parent is looked up, as a nested list always has.
  *
  * @param {object} store
- * @param {string|null} parentCollection
+ * @param {object} instance
+ * @param {{ collection: string, name: string|null }|null} parent - Where the parent's records are kept, and its resource's name
  * @param {string} parentId
  * @returns {Response|null}
  */
-function parentNotFound(store, instance, parentCollection, parentId) {
+function parentNotFound(store, instance, parent, parentId) {
   // A parent forwarded to a real service has its records there, not here.
-  if (!parentCollection || !heldHere(instance, parentCollection)) return null;
-  const { items } = store.findAll(parentCollection, { id: parentId }, { limit: 1 });
+  if (!parent || !heldHere(instance, parent.collection)) return null;
+  const { items } = store.findAll(parent.collection, { id: parentId }, { limit: 1 });
   if (items.length > 0) return null;
-  const label = capitalize(parentCollection.replace(/s$/, ''));
-  return Response.json({ code: 'NOT_FOUND', message: `${label} not found` }, { status: 404 });
+  return Response.json({ code: 'NOT_FOUND', message: `${parent.name ?? 'Parent'} not found` }, { status: 404 });
 }
 
 /**
@@ -161,7 +110,6 @@ function createSingletonGetHandler(endpoint, parentParam, parentField, deps = {}
  */
 function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parentField, deps = {}) {
   const { store, instance } = deps;
-  const resourceLabel = endpoint.collectionName.replace(/s$/, '');
   return async (request, { params }) => {
     const parentId = params[parentParam];
     const requestBody = (await readJsonBody(request)).value;
@@ -192,12 +140,13 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
       eventData = { changes: buildChanges(before, result) };
     }
 
-    try {
-      const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
+    // Named for the resource the API's model says this is, as every event
+    // is; a singleton the document gives no schema sends none.
+    if (endpoint.resource) try {
       emitEvent({
         instance,
-        domain,
-        object: resourceLabel,
+        domain: eventDomainOf(apiMetadata),
+        object: endpoint.resource.eventName,
         action,
         resourceId: result.id,
         source: apiMetadata.serverBasePath,
@@ -214,20 +163,19 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
 }
 
 /**
- * Find the state machine entry whose governed object matches a collection name.
- * Tries both simple-plural (e.g. "task" → "tasks") and kebab-plural
- * (e.g. "ApplicationDocument" → "application-documents") forms.
+ * The state machine governing a resource: the one core attached to it, in the
+ * same API document. Matched on the resource itself, so a `Delivery` served at
+ * `/deliveries` finds its machine however its collection is spelled.
  *
- * @param {Array} stateMachines - Loaded state machine entries
- * @param {string} collectionName - Collection name to match (e.g. "application-documents")
+ * @param {Array} stateMachines - Loaded state machine entries, each with the `resource` and `api` core found for it
+ * @param {object|null} resource - From core's model of the API document (spec-loader.js markResources)
+ * @param {object|null} [api] - The API document the resource is in
  * @returns {{ stateMachine, machine, object } | undefined}
  */
-function findStateMachineForCollection(stateMachines, collectionName) {
-  return (Array.isArray(stateMachines) ? stateMachines : []).find(s => {
-    const obj = s.object;
-    return obj?.toLowerCase() + 's' === collectionName ||
-      toKebabCase(obj ?? '') + 's' === collectionName;
-  });
+function machineFor(stateMachines, resource, api = null) {
+  if (!resource) return undefined;
+  return (Array.isArray(stateMachines) ? stateMachines : []).find((s) =>
+    s.resource?.path('collection') === resource.path('collection') && (!api || !s.api || s.api === api));
 }
 
 /**
@@ -335,20 +283,25 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
   for (const endpoint of sortedEndpoints) {
     const expressPath = convertPathFormat(endpoint.path);
     const method = endpoint.method.toLowerCase();
-    // For /me endpoints, derive the collection from the parent path (strip /me suffix)
-    // so the handler looks up records in the parent resource collection, not a phantom 'me' collection.
-    const collectionPath = endpoint.path.endsWith('/me')
-      ? endpoint.path.slice(0, -3)
-      : endpoint.path;
-    const collectionName = deriveCollectionName(collectionPath, apiMetadata.serverBasePath);
+    const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
+    // What the path is and the resource it serves, from core's model of the
+    // document (spec-loader.js markResources). A path the model has no
+    // resource for — and metadata built without a document — is served by its
+    // shape alone: a path ending in a parameter is an item, any other a
+    // collection.
+    const kind = endpoint.kind ?? null;
+    const resource = endpoint.modelResource ?? null;
+    const parent = resource?.parent
+      ? { collection: storageName(eventDomainOf(apiMetadata), resource.parent.path('collection')), name: resource.parent.name }
+      : null;
+    const collectionName = endpoint.collectionName ?? storageName(eventDomainOf(apiMetadata), relativePath);
     const endpointWithCollection = { ...endpoint, collectionName };
+    const isCollection = kind === 'collection' || (!kind && !endpoint.path.endsWith('}'));
+    const isItem = kind === 'item' || (!kind && endpoint.path.endsWith('}'));
 
     let handler = null;
     let description = '';
 
-    // Determine handler based on method and path type.
-    // Check order matters: sub-resource/sub-item checks must come before the flat
-    // item check because both contain '{' parameters.
     if (endpoint.operationId === 'uploadDocument') {
       addRoute(routes, 'POST', expressPath, createDocumentUploadHandler(baseUrl, deps),
         { operationId: endpoint.operationId, description: 'Upload document (multipart)' });
@@ -371,178 +324,182 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       // Cross-resource search endpoint — custom handler
       handler = createSearchHandler(apiMetadata, deps);
       description = 'Cross-resource search';
-    } else if (method === 'get' && endpoint.path.endsWith('/me')) {
-      // GET /resource/me — current-user singleton
+    } else if (kind === 'me') {
+      // GET /resource/me — the caller's own record, in the resource's collection
+      if (method !== 'get') {
+        console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on ${endpoint.path}`);
+        continue;
+      }
       handler = createCurrentUserHandler(apiMetadata, endpointWithCollection, deps);
       description = 'Get authenticated user';
-    } else if (method === 'get' && isCollectionEndpoint(endpoint.path)) {
-      // GET /resources - List/search
-      handler = createListHandler(apiMetadata, endpointWithCollection, deps);
-      description = 'List/search resources';
-    } else if (method === 'post' && isCollectionEndpoint(endpoint.path)) {
-      // POST /resources - Create
-      // Only pass state machine to the collection that matches the governed object.
-      // Use kebab-plural comparison to handle multi-word names (ApplicationDocument → application-documents).
-      const smEntry = findStateMachineForCollection(stateMachines, collectionName);
-      const smForEndpoint = smEntry?.stateMachine || null;
-      const machineForEndpoint = smEntry?.machine || null;
-      const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
-      const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
-      if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
-      if (Object.keys(requiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, requiredDefaults);
-      const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps, { defaults: requiredDefaults });
-      // A machine may guard the creation of its own object. There is no record
-      // yet, so its guards see only the body and the caller.
-      const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
-      const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
-      const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`, instance.schemas);
-      handler = createGovernors.length === 0 ? baseCreateHandler : async (request, ctx) => {
-        const sent = await jsonBody(request.clone());
-        const refused = checkGoverned({
-          governors: createGovernors,
-          verb: 'create',
-          params: ctx.params,
-          body: sent,
-          caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
-          store,
-          checkBody: checkCreateBody(sent),
-        });
-        if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
-        return baseCreateHandler(request, ctx);
-      };
-      description = 'Create resource';
-    } else if (isSubResourceEndpoint(endpoint.path)) {
-      // Sub-resource endpoint: /resources/{parentId}/sub or /resources/{parentId}/sub/{subId}
-      // Last path segment is a literal (not a {param}).
+    } else if (kind === 'singleton') {
+      // Singleton: at most one per parent (e.g., /applications/{applicationId}/interview)
       const parentParam = extractPrimaryParam(endpoint.path);
       const parentField = parentParam; // URL param name == field name on the sub-resource
-      if (isSingletonSubResource(endpoint.path)) {
-        // Singleton: at most one child per parent (e.g., /applications/{applicationId}/interview)
-        if (method === 'get') {
-          handler = createSingletonGetHandler(endpointWithCollection, parentParam, parentField, deps);
-          description = 'Get singleton sub-resource';
-        } else if (method === 'patch') {
-          handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField, deps);
-          description = 'Update singleton sub-resource';
-        } else if (method === 'post') {
-          // A transition is served from its state machine, which is what
-          // produced it (registerStateMachineRoutes), and the operation resolve
-          // generated for it is skipped when the document is loaded. One
-          // written by hand has no behavior of its own to serve; if a state
-          // machine action produces the same route, that serves it, and resolve
-          // refuses the pair.
-          console.warn(`    Warning: POST ${endpoint.path} is written by hand, not generated from a state machine, so it is not served as written`);
-          continue;
-        } else {
-          console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);
-          continue;
-        }
+      if (method === 'get') {
+        handler = createSingletonGetHandler(endpointWithCollection, parentParam, parentField, deps);
+        description = 'Get singleton sub-resource';
+      } else if (method === 'patch') {
+        handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField, deps);
+        description = 'Update singleton sub-resource';
       } else {
-        // Sub-collection: /resources/{parentId}/subResources
-        if (method === 'get') {
-          const parentCollection = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
-          const pagination = apiMetadata.pagination || {};
-          handler = (request, { params }) => {
-            const parentId = params[parentParam];
-            const noParent = parentNotFound(store, instance, parentCollection, parentId);
-            if (noParent) return noParent;
-            // List sub-resources filtered by parent ID plus any extra query field filters,
-            // calling findAll directly rather than routing through createListHandler.
-            const query = queryOf(request);
-            const limitDefault = pagination.limitDefault ?? PAGINATION_DEFAULTS.limitDefault;
-            const limitMax = pagination.limitMax ?? PAGINATION_DEFAULTS.limitMax;
-            const limit = Math.min(parseInt(query.limit) || limitDefault, limitMax);
-            const offset = parseInt(query.offset) || 0;
-            const reservedParams = new Set(['limit', 'offset', 'q', 'sort']);
-            const extraFilters = Object.fromEntries(
-              Object.entries(query).filter(([k]) => !reservedParams.has(k))
-            );
-            const filters = { [parentField]: parentId, ...extraFilters };
-            let items;
-            let total;
-            if (endpoint.sortable || query.sort || query.q) {
-              // Searched and ordered the same as a top-level list: every record
-              // under the parent, matched against `q`, sorted as the operation's
-              // x-sortable says, then paged.
-              let all = store.findAll(endpointWithCollection.collectionName, filters, { limit: null }).items;
-              if (query.q) all = filterItems(all, { q: query.q });
-              if (endpoint.sortable || query.sort) {
-                const sorted = sortItems(all, query, endpoint.sortable);
-                if (sorted.error) {
-                  const details = sorted.error.field !== undefined ? [{ field: sorted.error.field, message: sorted.error.message }] : [];
-                  return Response.json({ code: sorted.error.code, message: sorted.error.message, details }, { status: 400 });
-                }
-                all = sorted.items;
-              }
-              total = all.length;
-              items = all.slice(offset, offset + limit);
-            } else {
-              ({ items, total } = store.findAll(endpointWithCollection.collectionName, filters, { limit, offset }));
-            }
-            const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
-            const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema, instance.resources);
-            const expandedItems = expandFields.length > 0
-              ? items.map(item => applyExpand(item, expandFields, (c, id) => store.findById(c, id)))
-              : items;
-            return Response.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
-          };
-          description = 'List sub-resources';
-        } else if (method === 'post') {
-          const subResourceName = endpoint.path.split('/').pop();
-          const subSmEntry = findStateMachineForCollection(stateMachines, subResourceName);
-          const subSmForEndpoint = subSmEntry?.stateMachine || null;
-          const subMachineForEndpoint = subSmEntry?.machine || null;
-          const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
-          const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
-          if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
-          if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps, { defaults: subRequiredDefaults });
-          // The machines guarding this create, matched on the path as the API
-          // document writes it, without the server's base.
-          const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
-          const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
-          const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`, instance.schemas);
-          const parentCollection = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
-          handler = async (request, ctx) => {
-            // Nothing is created under a parent that isn't there, as nothing is listed under one.
-            const noParent = parentNotFound(store, instance, parentCollection, ctx.params[parentParam]);
-            if (noParent) return noParent;
-            // Spread ALL path params, not just the last one — sub-sub-resource
-            // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
-            // need every parent FK on the persisted record. See mergePathParamsIntoBody.
-            // Passed through ctx because a Request body cannot be reassigned.
-            const sent = await jsonBody(request);
-            const body = mergePathParamsIntoBody(sent, ctx.params);
-            const refused = checkGoverned({
-              governors: createGovernors,
-              verb: 'create',
-              params: ctx.params,
-              body,
-              caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
-              store,
-              checkBody: checkCreateBody(sent),
-            });
-            if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
-            // The body is validated as the client sent it, and the parent ids
-            // from the path merged in after — so a create schema that allows no
-            // extra fields still accepts a nested create, and the path's ids
-            // still win over anything the body says.
-            return baseCreateHandler(request, { ...ctx, body: sent, enrichmentData: { ...ctx.params } });
-          };
-          description = 'Create sub-resource';
-        } else {
-          console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on sub-collection ${endpoint.path}`);
-          continue;
-        }
+        console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);
+        continue;
       }
-    } else if (isSubItemEndpoint(endpoint.path)) {
-      // Sub-item: /resources/{parentId}/sub/{subId} — standard item handlers, correct collection
+    } else if (!kind && method === 'post' && /\}\/[^/{}]+$/.test(endpoint.path)) {
+      // A transition is served from its state machine, which is what
+      // produced it (registerStateMachineRoutes), and the operation resolve
+      // generated for it is skipped when the document is loaded. One
+      // written by hand has no behavior of its own to serve; if a state
+      // machine action produces the same route, that serves it, and resolve
+      // refuses the pair.
+      console.warn(`    Warning: POST ${endpoint.path} is written by hand, not generated from a state machine, so it is not served as written`);
+      continue;
+    } else if (isCollection && !parent) {
+      if (method === 'get') {
+        // GET /resources - List/search
+        handler = createListHandler(apiMetadata, endpointWithCollection, deps);
+        description = 'List/search resources';
+      } else if (method === 'post') {
+        // POST /resources - Create, with the state machine governing the
+        // resource, when one does.
+        const smEntry = machineFor(stateMachines, resource, apiMetadata.doc);
+        const smForEndpoint = smEntry?.stateMachine || null;
+        const machineForEndpoint = smEntry?.machine || null;
+        const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
+        const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
+        if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
+        if (Object.keys(requiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, requiredDefaults);
+        const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps, { defaults: requiredDefaults });
+        // A machine may guard the creation of its own object. There is no record
+        // yet, so its guards see only the body and the caller.
+        const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
+        const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`, instance.schemas);
+        handler = createGovernors.length === 0 ? baseCreateHandler : async (request, ctx) => {
+          const sent = await jsonBody(request.clone());
+          const refused = checkGoverned({
+            governors: createGovernors,
+            verb: 'create',
+            params: ctx.params,
+            body: sent,
+            caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+            store,
+            instance,
+            checkBody: checkCreateBody(sent),
+          });
+          if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
+          return baseCreateHandler(request, ctx);
+        };
+        description = 'Create resource';
+      } else {
+        console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on collection ${endpoint.path}`);
+        continue;
+      }
+    } else if (isCollection) {
+      // Nested collection: /resources/{parentId}/subResources
+      const parentParam = extractPrimaryParam(endpoint.path);
+      const parentField = parentParam; // URL param name == field name on the sub-resource
+      if (method === 'get') {
+        const pagination = apiMetadata.pagination || {};
+        handler = (request, { params }) => {
+          const parentId = params[parentParam];
+          const noParent = parentNotFound(store, instance, parent, parentId);
+          if (noParent) return noParent;
+          // List sub-resources filtered by parent ID plus any extra query field filters,
+          // calling findAll directly rather than routing through createListHandler.
+          const query = queryOf(request);
+          const limitDefault = pagination.limitDefault ?? PAGINATION_DEFAULTS.limitDefault;
+          const limitMax = pagination.limitMax ?? PAGINATION_DEFAULTS.limitMax;
+          const limit = Math.min(parseInt(query.limit) || limitDefault, limitMax);
+          const offset = parseInt(query.offset) || 0;
+          const reservedParams = new Set(['limit', 'offset', 'q', 'sort']);
+          const extraFilters = Object.fromEntries(
+            Object.entries(query).filter(([k]) => !reservedParams.has(k))
+          );
+          const filters = { [parentField]: parentId, ...extraFilters };
+          let items;
+          let total;
+          if (endpoint.sortable || query.sort || query.q) {
+            // Searched and ordered the same as a top-level list: every record
+            // under the parent, matched against `q`, sorted as the operation's
+            // x-sortable says, then paged.
+            let all = store.findAll(endpointWithCollection.collectionName, filters, { limit: null }).items;
+            if (query.q) all = filterItems(all, { q: query.q });
+            if (endpoint.sortable || query.sort) {
+              const sorted = sortItems(all, query, endpoint.sortable);
+              if (sorted.error) {
+                const details = sorted.error.field !== undefined ? [{ field: sorted.error.field, message: sorted.error.message }] : [];
+                return Response.json({ code: sorted.error.code, message: sorted.error.message, details }, { status: 400 });
+              }
+              all = sorted.items;
+            }
+            total = all.length;
+            items = all.slice(offset, offset + limit);
+          } else {
+            ({ items, total } = store.findAll(endpointWithCollection.collectionName, filters, { limit, offset }));
+          }
+          const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
+          const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema, instance.resources);
+          const expandedItems = expandFields.length > 0
+            ? items.map(item => applyExpand(item, expandFields, (c, id) => store.findById(c, id)))
+            : items;
+          return Response.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
+        };
+        description = 'List sub-resources';
+      } else if (method === 'post') {
+        const subSmEntry = machineFor(stateMachines, resource, apiMetadata.doc);
+        const subSmForEndpoint = subSmEntry?.stateMachine || null;
+        const subMachineForEndpoint = subSmEntry?.machine || null;
+        const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
+        const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
+        if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
+        if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
+        const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps, { defaults: subRequiredDefaults });
+        // The machines guarding this create, matched on the path as the API
+        // document writes it, without the server's base.
+        const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
+        const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`, instance.schemas);
+        handler = async (request, ctx) => {
+          // Nothing is created under a parent that isn't there, as nothing is listed under one.
+          const noParent = parentNotFound(store, instance, parent, ctx.params[parentParam]);
+          if (noParent) return noParent;
+          // Spread ALL path params, not just the last one — sub-sub-resource
+          // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
+          // need every parent FK on the persisted record. See mergePathParamsIntoBody.
+          // Passed through ctx because a Request body cannot be reassigned.
+          const sent = await jsonBody(request);
+          const body = mergePathParamsIntoBody(sent, ctx.params);
+          const refused = checkGoverned({
+            governors: createGovernors,
+            verb: 'create',
+            params: ctx.params,
+            body,
+            caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+            store,
+            instance,
+            checkBody: checkCreateBody(sent),
+          });
+          if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
+          // The body is validated as the client sent it, and the parent ids
+          // from the path merged in after — so a create schema that allows no
+          // extra fields still accepts a nested create, and the path's ids
+          // still win over anything the body says.
+          return baseCreateHandler(request, { ...ctx, body: sent, enrichmentData: { ...ctx.params } });
+        };
+        description = 'Create sub-resource';
+      } else {
+        console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on sub-collection ${endpoint.path}`);
+        continue;
+      }
+    } else if (isItem) {
+      // An item, top-level or nested: /resources/{id}, /resources/{parentId}/sub/{subId}
+      const label = parent ? 'sub-resource' : 'resource';
       if (method === 'get') {
         handler = createGetHandler(apiMetadata, endpointWithCollection, deps);
-        description = 'Get sub-resource by ID';
+        description = `Get ${label} by ID`;
       } else if (method === 'patch') {
-        const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, null, [], null, deps);
-        const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
+        const smEntry = machineFor(stateMachines, resource, apiMetadata.doc);
+        const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, smEntry?.stateMachine || null, [], smEntry?.machine || null, deps);
         const updateGovernors = governors.get(`update ${apiMetadata.domain} ${relativePath}`) ?? [];
         const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`, instance.schemas);
         handler = updateGovernors.length === 0 ? baseUpdateHandler : async (request, ctx) => {
@@ -554,51 +511,20 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             body: change,
             caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
             store,
+            instance,
             checkBody: checkUpdateBody(change),
           });
           if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
           return baseUpdateHandler(request, ctx);
         };
-        description = 'Update sub-resource';
+        description = `Update ${label}`;
       } else if (method === 'delete') {
         handler = createDeleteHandler(apiMetadata, endpointWithCollection, deps);
-        description = 'Delete sub-resource';
+        description = `Delete ${label}`;
       } else {
-        console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on sub-item ${endpoint.path}`);
+        console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on item ${endpoint.path}`);
         continue;
       }
-    } else if (method === 'get' && isItemEndpoint(endpoint.path)) {
-      // GET /resources/{id} - Get by ID
-      handler = createGetHandler(apiMetadata, endpointWithCollection, deps);
-      description = 'Get resource by ID';
-    } else if (method === 'patch' && isItemEndpoint(endpoint.path)) {
-      // PATCH /resources/{id} - Update
-      const smEntry = findStateMachineForCollection(stateMachines, collectionName);
-      const smForEndpoint = smEntry?.stateMachine || null;
-      const machineForEndpoint = smEntry?.machine || null;
-      const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint, deps);
-      const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
-      const updateGovernors = governors.get(`update ${apiMetadata.domain} ${relativePath}`) ?? [];
-      const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`, instance.schemas);
-      handler = updateGovernors.length === 0 ? baseUpdateHandler : async (request, ctx) => {
-        const change = await jsonBody(request.clone());
-        const refused = checkGoverned({
-          governors: updateGovernors,
-          verb: 'update',
-          params: ctx.params,
-          body: change,
-          caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
-          store,
-          checkBody: checkUpdateBody(change),
-        });
-        if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
-        return baseUpdateHandler(request, ctx);
-      };
-      description = 'Update resource';
-    } else if (method === 'delete' && isItemEndpoint(endpoint.path)) {
-      // DELETE /resources/{id} - Delete
-      handler = createDeleteHandler(apiMetadata, endpointWithCollection, deps);
-      description = 'Delete resource';
     } else {
       console.warn(`    Warning: Unsupported endpoint ${method.toUpperCase()} ${endpoint.path}`);
       continue;
@@ -618,7 +544,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
 
     // Where this collection's records are read, so an id pointing into it can
     // be checked here unless the route is later forwarded to a real service.
-    if (method === 'get' && /\}$/.test(endpoint.path) && !endpoint.path.endsWith('/me')) {
+    if (method === 'get' && isItem) {
       registerReadRoute(instance, collectionName, routes, routeKey('GET', templateOf(expressPath)));
     }
 
@@ -684,10 +610,22 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
 }
 
 /**
+ * Where an endpoint's records are kept: as markResources found, or, for
+ * metadata built without a document, under the endpoint's own path.
+ *
+ * @param {object} spec - Loaded API metadata
+ * @param {object} endpoint
+ * @returns {string}
+ */
+function collectionOfEndpoint(spec, endpoint) {
+  return endpoint.collectionName ?? storageName(eventDomainOf(spec), endpoint.path.slice((spec.serverBasePath ?? '').length));
+}
+
+/**
  * Build a map from resource collection name to the OpenAPI item path pattern.
  * Used to generate _links.self URLs for items when a section declares links: true.
  *
- * e.g. "application-members" → "/applications/{applicationId}/members/{memberId}"
+ * e.g. "intake/applications/members" → "/applications/{applicationId}/members/{memberId}"
  *
  * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
  * @returns {Map<string, string>}
@@ -698,7 +636,7 @@ function buildResourceItemPathMap(apiSpecs) {
     for (const endpoint of (spec.endpoints || [])) {
       if (endpoint.method.toLowerCase() !== 'get') continue;
       if (!endpoint.path.trimEnd().endsWith('}')) continue;
-      const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
+      const collectionName = collectionOfEndpoint(spec, endpoint);
       if (collectionName && !map.has(collectionName)) {
         map.set(collectionName, endpoint.path);
       }
@@ -715,7 +653,7 @@ function buildResourceItemPathMap(apiSpecs) {
  * a record names its schema; the collection is the one the route generator
  * stores that path's records in.
  *
- * e.g. "Child" → "childrens", "Application" → "applications"
+ * e.g. "Child" → "intake/applications/children", "Application" → "intake/applications"
  *
  * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
  * @returns {Map<string, string>}
@@ -726,7 +664,7 @@ function buildResourceCollectionNameMap(apiSpecs) {
     for (const endpoint of (spec.endpoints || [])) {
       const name = endpoint.responseSchemaRef?.match(/^#\/components\/schemas\/(.+)$/)?.[1];
       if (!name || map.has(name)) continue;
-      const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
+      const collectionName = collectionOfEndpoint(spec, endpoint);
       if (collectionName) map.set(name, collectionName);
     }
   }
@@ -758,6 +696,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
     // from it — its server base, schemas and pagination.
     const apiSpec = loadedFrom(apiSpecs, api);
     const basePath = apiSpec?.serverBasePath ?? '';
+    const storageDomain = eventDomainOf(apiSpec ?? { domain });
 
     // Every route this file adds belongs to its domain. Tagged once, after
     // the loop, rather than at each of the many `addRoute` calls in it — the
@@ -767,9 +706,8 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
       const endpointPath = composition.endpoint?.path;
       if (!endpointPath) continue;
 
-      const fullPath = basePath && !endpointPath.startsWith(basePath)
-        ? `${basePath}${endpointPath}`
-        : endpointPath;
+      // Relative to the server, as every OpenAPI path is.
+      const fullPath = `${basePath}${endpointPath}`;
 
       const indexExpressPath = toExpressPath(fullPath);
       const panelExpressPath = `${indexExpressPath}/:section`;
@@ -798,7 +736,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
       const stateDefaults = loadStateDefaults(composition.state, apiSpec);
 
       const paginationDefaults = apiSpec?.pagination || {};
-      const assemblerOpts = { resourceItemPathMap, resourceCollectionNameMap, serverBasePath: basePath, store };
+      const assemblerOpts = { resourceItemPathMap, resourceCollectionNameMap, serverBasePath: basePath, domain: storageDomain, store };
 
       const rootCollectionName = resourceCollectionNameMap.get(composition.resource) ?? composition.resource;
 
@@ -904,7 +842,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
 
       // Register state resource routes if the composition declares state:
       if (composition.state) {
-        const stateInfo = deriveStateResource(composition.state, endpointPath, basePath);
+        const stateInfo = deriveStateResource(composition.state, endpointPath, storageDomain);
         if (stateInfo) {
           const stateEndpoints = registerStateRoutes(
             routes, composition, compositionName, stateInfo, stateDefaults,
@@ -976,9 +914,7 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
   // e.g. /applications/{applicationId}/review → /applications/{applicationId}
   const parentBase = endpointPath.replace(/\/[^/]+$/, '');
   const stateResourcePath = `${parentBase}/${stateInfo.pathSegment}`;
-  const stateFullPath = basePath && !stateResourcePath.startsWith(basePath)
-    ? `${basePath}${stateResourcePath}`
-    : stateResourcePath;
+  const stateFullPath = `${basePath}${stateResourcePath}`;
 
   const stateExpressBase = toExpressPath(stateFullPath);
   const sectionPath = `${stateExpressBase}/:section`;
@@ -1093,8 +1029,8 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
     const basePath = `${serverBase}${sm.resource.path('item')}`; // e.g., /workflow/tasks/{taskId}
     const paramName = sm.resource.item.parameter;
 
-    // Derive collection name from the resource path
-    const collectionName = deriveCollectionName(basePath, serverBase);
+    // Kept where the resource's records are, as its routes keep them
+    const collectionName = storageName(eventDomainOf(loaded ?? { domain: sm.domain }), sm.resource.path('collection'));
 
     console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
 

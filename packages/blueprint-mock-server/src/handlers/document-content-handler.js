@@ -13,6 +13,7 @@
  */
 
 import { assertFetchShaped } from '../http/request.js';
+import { DOCUMENT_VERSIONS } from './document-upload-handler.js';
 
 /**
  * Create handler for GET /document-versions/{documentVersionId}/content.
@@ -24,7 +25,7 @@ export function createDocumentContentHandler({ store } = {}) {
     assertFetchShaped(request, 'createDocumentContentHandler');
     const { documentVersionId } = params;
 
-    const version = store.findById('document-versions', documentVersionId);
+    const version = store.findById(DOCUMENT_VERSIONS, documentVersionId);
     if (!version) {
       return Response.json({ code: 'NOT_FOUND', message: 'Document version not found' }, { status: 404 });
     }

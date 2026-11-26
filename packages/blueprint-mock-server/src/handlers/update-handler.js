@@ -9,6 +9,7 @@ import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, ca
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
+import { withoutEngineFields } from '../sla-engine.js';
 
 export function deepEqual(a, b) {
   if (a === b) return true;
@@ -130,19 +131,12 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         }
       }
 
-      // For PATCH, merge with existing data first, then validate the complete merged object.
-      // Exclude null values for fields the client didn't send — those are null-initialized
-      // placeholders from record creation and should not trigger validation failures.
-      const mergedData = { ...existing, ...requestBody };
-
-      // Validate merged data (422 for validation errors)
+      // The change is checked against the update schema, as the client sent
+      // it: a closed update schema allows only the fields it names, and never
+      // the record's id or timestamps.
       if (endpoint.requestSchema) {
-        const clientFields = new Set(Object.keys(requestBody));
-        const dataForValidation = Object.fromEntries(
-          Object.entries(mergedData).filter(([k, v]) => v !== null || clientFields.has(k))
-        );
         const { valid, errors } = instance.schemas.validate(
-          dataForValidation,
+          requestBody,
           endpoint.requestSchema,
           `${endpoint.collectionName}-update`,
           { relativePath: apiMetadata.relativePath, ref: endpoint.requestSchemaRef }
@@ -159,6 +153,35 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       });
       if (missing.length > 0) {
         return Response.json(createErrorResponse(missing, 422), { status: 422 });
+      }
+
+      // And the record it leaves is checked against the resource's own schema,
+      // as the API would return it: related records the contract shows
+      // expanded, its derived fields, and none of the engine's own. A null the
+      // client didn't send is a placeholder from when the record was made, and
+      // is left out.
+      if (endpoint.responseSchema) {
+        const clientFields = new Set(Object.keys(requestBody));
+        let record = withoutEngineFields(Object.fromEntries(
+          Object.entries({ ...existing, ...requestBody }).filter(([k, v]) => v !== null || clientFields.has(k))
+        ));
+        const follow = apiMetadata.resolve?.schema;
+        const expand = extractExpandFields(endpoint.responseSchema, follow, instance.resources);
+        const links = extractLinksFields(endpoint.responseSchema, follow, instance.resources);
+        const derived = extractDerivedFields(endpoint.responseSchema, follow);
+        if (expand.length > 0) record = applyExpand(record, expand, store.findById);
+        if (links.length > 0) record = applyLinks(record, links, (c, id) => store.findById(c, id), instance.resources);
+        if (derived.length > 0) record = applyDerivedFields(record, derived);
+        const { valid, errors } = instance.schemas.validate(
+          record,
+          endpoint.responseSchema,
+          `${endpoint.collectionName}-record`,
+          { relativePath: apiMetadata.relativePath, ref: endpoint.responseSchemaRef }
+        );
+
+        if (!valid) {
+          return Response.json(createErrorResponse(errors, 422), { status: 422 });
+        }
       }
 
       // Snapshot existing state before any mutations
