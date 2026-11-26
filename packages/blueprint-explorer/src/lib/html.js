@@ -68,7 +68,8 @@ export function breadcrumb(segments) {
     }
     return `<a href="${seg.href}" style="color:${COLORS.lightBlue};text-decoration:none;">${esc(seg.label)}</a>`;
   });
-  return `<div style="background:${COLORS.darkBlue};padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:${FONT};color:${COLORS.lightBlue};">${parts.join(sep)}</div>`;
+  // Marked, so the Try it switch can sit at its end (lib/control-panel.js).
+  return `<div class="page-crumbs" style="background:${COLORS.darkBlue};padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:${FONT};color:${COLORS.lightBlue};">${parts.join(sep)}</div>`;
 }
 
 // ── Inline expand helpers ──────────────────────────────────────────────────
@@ -139,9 +140,28 @@ export function apiReferenceHref(domain, method, path, base = '../api-reference'
   return `${base}/${domain}.html#${apiEndpointSlug(method, path)}`;
 }
 
-/** URL to a state-machine-docs action. */
-export function stateMachineDocsHref(domain, actionId, base = '../state-machine-docs') {
-  return `${base}/${domain}.html#action-${actionId}`;
+/**
+ * A machine's object as it appears in anchors: `ApplicationMember` and
+ * `application_member` are both `applicationmember`, so an annotation key and
+ * a schema name land on the same machine.
+ */
+export function objectSlug(object) {
+  return String(object).replace(/[^a-z0-9]/gi, '').toLowerCase();
+}
+
+/** The element id of a machine's action on its state-machine-docs page. */
+export function actionAnchor(object, actionId) {
+  return `action-${objectSlug(object)}-${actionId}`;
+}
+
+/** The element id of a machine's subscription to an event on its state-machine-docs page. */
+export function subscriptionAnchor(object, eventType) {
+  return `on-${objectSlug(object)}-${eventType}`;
+}
+
+/** URL to a state-machine-docs action. Actions are named per machine, so the machine is part of the anchor. */
+export function stateMachineDocsHref(domain, object, actionId, base = '../state-machine-docs') {
+  return `${base}/${domain}.html#${actionAnchor(object, actionId)}`;
 }
 
 /** URL to a rules-docs ruleset page, optionally anchored to a fact. */
@@ -149,9 +169,15 @@ export function rulesDocsHref(domain, ruleset, factName = null, base = '../rules
   return `${base}/${domain}-${ruleset}.html${factName ? `#fact-${factName}` : ''}`;
 }
 
-/** URL to an event-catalog entry. */
+/**
+ * URL to an event-catalog entry, on its domain's page: `intake.application.submitted`
+ * is on intake.html. The domain is the part three from the end, after any bus
+ * namespace (`ca.intake.…`) and before a version (`….v2`).
+ */
 export function eventCatalogHref(eventKey, base = '../event-catalog') {
-  return `${base}/index.html#event-${eventKey}`;
+  const parts = eventKey.split('.');
+  if (/^v\d+$/.test(parts.at(-1))) parts.pop();
+  return `${base}/${parts.at(-3) ?? parts[0]}.html#event-${eventKey}`;
 }
 
 // ── Cross-artifact link renderers ──────────────────────────────────────────────

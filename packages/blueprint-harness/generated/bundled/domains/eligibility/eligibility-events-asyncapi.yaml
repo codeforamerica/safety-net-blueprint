@@ -60,7 +60,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -186,6 +186,24 @@ channels:
                               type: string
                               format: uri-reference
                               description: Link to the related Application resource.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.created event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.created
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                id: 33333333-3333-4333-8333-333333333333
+                applicationId: 11111111-1111-4111-8111-111111111111
+                status: pending
+                expedited: false
+                createdAt: "2026-02-01T09:20:00Z"
+                updatedAt: "2026-02-01T09:20:00Z"
   eligibility.determination.updated:
     address: eligibility.determination.updated
     messages:
@@ -241,7 +259,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -338,12 +356,28 @@ channels:
                                 description: Value of the field before the update.
                               after:
                                 description: Value of the field after the update.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.updated event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.updated
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                changes:
+                  - field: applicationId
+                    before: 11111111-1111-4111-8111-111111111111
+                    after: example
   eligibility.determination.complete:
     address: eligibility.determination.complete
     messages:
       EligibilityDeterminationComplete:
         name: eligibility.determination.complete
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -393,7 +427,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -458,12 +492,23 @@ channels:
                     type:
                       type: string
                       const: eligibility.determination.complete
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.complete event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.complete
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
   intake.application.submitted:
     address: intake.application.submitted
     messages:
       IntakeApplicationSubmitted:
         name: intake.application.submitted
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when an application is submitted for review. Eligibility creates a pending determination for it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -513,7 +558,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -589,6 +634,20 @@ channels:
                           items:
                             type: string
                           description: The programs the household applied for, which eligibility screens.
+        examples:
+          - name: Example
+            summary: An example intake.application.submitted event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /intake
+              type: intake.application.submitted
+              subject: 11111111-1111-4111-8111-111111111111
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                programsAppliedFor:
+                  - snap
 operations:
   sendEligibilityDeterminationCreated:
     action: send
@@ -647,7 +706,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -773,6 +832,24 @@ operations:
                                 type: string
                                 format: uri-reference
                                 description: Link to the related Application resource.
+          examples:
+            - name: Example
+              summary: An example eligibility.determination.created event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /eligibility
+                type: eligibility.determination.created
+                subject: 33333333-3333-4333-8333-333333333333
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
+                data:
+                  id: 33333333-3333-4333-8333-333333333333
+                  applicationId: 11111111-1111-4111-8111-111111111111
+                  status: pending
+                  expedited: false
+                  createdAt: "2026-02-01T09:20:00Z"
+                  updatedAt: "2026-02-01T09:20:00Z"
     messages:
       - name: eligibility.determination.created
         summary: A Determination was created. Carries the record as created.
@@ -825,7 +902,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -951,6 +1028,24 @@ operations:
                               type: string
                               format: uri-reference
                               description: Link to the related Application resource.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.created event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.created
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                id: 33333333-3333-4333-8333-333333333333
+                applicationId: 11111111-1111-4111-8111-111111111111
+                status: pending
+                expedited: false
+                createdAt: "2026-02-01T09:20:00Z"
+                updatedAt: "2026-02-01T09:20:00Z"
   sendEligibilityDeterminationUpdated:
     action: send
     channel:
@@ -1008,7 +1103,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1105,6 +1200,22 @@ operations:
                                   description: Value of the field before the update.
                                 after:
                                   description: Value of the field after the update.
+          examples:
+            - name: Example
+              summary: An example eligibility.determination.updated event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /eligibility
+                type: eligibility.determination.updated
+                subject: 33333333-3333-4333-8333-333333333333
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
+                data:
+                  changes:
+                    - field: applicationId
+                      before: 11111111-1111-4111-8111-111111111111
+                      after: example
     messages:
       - name: eligibility.determination.updated
         summary: A Determination was changed. Carries each changed field, before and after.
@@ -1157,7 +1268,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1254,6 +1365,22 @@ operations:
                                 description: Value of the field before the update.
                               after:
                                 description: Value of the field after the update.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.updated event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.updated
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                changes:
+                  - field: applicationId
+                    before: 11111111-1111-4111-8111-111111111111
+                    after: example
   sendEligibilityDeterminationComplete:
     action: send
     channel:
@@ -1261,7 +1388,7 @@ operations:
       messages:
         EligibilityDeterminationComplete:
           name: eligibility.determination.complete
-          summary: TODO — describe when this event is emitted and who consumes it.
+          summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
           payload:
             schemaFormat: application/vnd.oai.openapi;version=3.1.0
             schema:
@@ -1311,7 +1438,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1376,9 +1503,20 @@ operations:
                       type:
                         type: string
                         const: eligibility.determination.complete
+          examples:
+            - name: Example
+              summary: An example eligibility.determination.complete event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /eligibility
+                type: eligibility.determination.complete
+                subject: 33333333-3333-4333-8333-333333333333
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
     messages:
       - name: eligibility.determination.complete
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -1428,7 +1566,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1493,6 +1631,17 @@ operations:
                     type:
                       type: string
                       const: eligibility.determination.complete
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.complete event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.complete
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
   receiveIntakeApplicationSubmitted:
     action: receive
     channel:
@@ -1500,7 +1649,7 @@ operations:
       messages:
         IntakeApplicationSubmitted:
           name: intake.application.submitted
-          summary: TODO — describe when this event is emitted and who consumes it.
+          summary: Published when an application is submitted for review. Eligibility creates a pending determination for it.
           payload:
             schemaFormat: application/vnd.oai.openapi;version=3.1.0
             schema:
@@ -1550,7 +1699,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1626,9 +1775,23 @@ operations:
                             items:
                               type: string
                             description: The programs the household applied for, which eligibility screens.
+          examples:
+            - name: Example
+              summary: An example intake.application.submitted event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /intake
+                type: intake.application.submitted
+                subject: 11111111-1111-4111-8111-111111111111
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
+                data:
+                  programsAppliedFor:
+                    - snap
     messages:
       - name: intake.application.submitted
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when an application is submitted for review. Eligibility creates a pending determination for it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -1678,7 +1841,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1754,6 +1917,20 @@ operations:
                           items:
                             type: string
                           description: The programs the household applied for, which eligibility screens.
+        examples:
+          - name: Example
+            summary: An example intake.application.submitted event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /intake
+              type: intake.application.submitted
+              subject: 11111111-1111-4111-8111-111111111111
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                programsAppliedFor:
+                  - snap
 components:
   messages:
     EligibilityDeterminationCreated:
@@ -1808,7 +1985,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1934,6 +2111,24 @@ components:
                             type: string
                             format: uri-reference
                             description: Link to the related Application resource.
+      examples:
+        - name: Example
+          summary: An example eligibility.determination.created event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /eligibility
+            type: eligibility.determination.created
+            subject: 33333333-3333-4333-8333-333333333333
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              id: 33333333-3333-4333-8333-333333333333
+              applicationId: 11111111-1111-4111-8111-111111111111
+              status: pending
+              expedited: false
+              createdAt: "2026-02-01T09:20:00Z"
+              updatedAt: "2026-02-01T09:20:00Z"
     EligibilityDeterminationUpdated:
       name: eligibility.determination.updated
       summary: A Determination was changed. Carries each changed field, before and after.
@@ -1986,7 +2181,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2083,9 +2278,25 @@ components:
                               description: Value of the field before the update.
                             after:
                               description: Value of the field after the update.
+      examples:
+        - name: Example
+          summary: An example eligibility.determination.updated event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /eligibility
+            type: eligibility.determination.updated
+            subject: 33333333-3333-4333-8333-333333333333
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              changes:
+                - field: applicationId
+                  before: 11111111-1111-4111-8111-111111111111
+                  after: example
     EligibilityDeterminationComplete:
       name: eligibility.determination.complete
-      summary: TODO — describe when this event is emitted and who consumes it.
+      summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -2135,7 +2346,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2200,6 +2411,17 @@ components:
                   type:
                     type: string
                     const: eligibility.determination.complete
+      examples:
+        - name: Example
+          summary: An example eligibility.determination.complete event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /eligibility
+            type: eligibility.determination.complete
+            subject: 33333333-3333-4333-8333-333333333333
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
   schemas:
     EligibilityDeterminationCreatedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
@@ -2248,7 +2470,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2421,7 +2643,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2565,7 +2787,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).

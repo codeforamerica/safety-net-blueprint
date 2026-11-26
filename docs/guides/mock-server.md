@@ -145,7 +145,7 @@ curl -X POST http://localhost:1080/platform/events \
   -H "Content-Type: application/json" \
   -d '{
     "specversion": "1.0",
-    "type": "org.codeforamerica.safety-net-blueprint.data-exchange.call.completed",
+    "type": "data-exchange.call.completed",
     "source": "/data-exchange",
     "subject": "<service-call-id>",
     "data": { "result": "conclusive", "serviceType": "fdsh_ssa" }
@@ -186,27 +186,31 @@ The response envelope is built by merging: an entity ID derived from the trigger
 
 Timer stubs are a variant for `platform.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `response` block is needed — the stub engine reads them directly.
 
-```bash
-# Register a stub for creation_deadline timers
-curl -X POST http://localhost:1080/mock/stubs/events \
-  -H "Content-Type: application/json" \
-  -d '{
-    "on": "platform.timer.requested",
-    "match": { "data.callback.event": "workflow.creation_deadline" }
-  }'
+A timer stub fires one timer and is used up. Registering it fires the oldest matching timer that's already waiting — asked for, not fired, not cancelled — at once; with none waiting, it fires the next one asked for.
 
-# Create a task — task creation schedules the timer, stub fires it immediately
+Name the timer you mean by its `timerId`, `{domain}.{timerType}.{objectId}`: do what asks for the timer, then register a stub for it.
+
+```bash
+# Create a task — creating it asks for its creation_deadline timer
 curl -X POST http://localhost:1080/workflow/tasks \
   -H "Content-Type: application/json" \
   -H "X-Caller-Id: 00000002-0000-0000-0000-000000000001" -H "X-Caller-Roles: caseworker" \
   -d '{"name":"Test","taskType":"application_review","subjectType":"application","subjectId":"00000000-0000-0000-0000-000000000001"}'
 
+# Fire that task's timer — it's waiting, so the stub fires it now
+curl -X POST http://localhost:1080/mock/stubs/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "on": "platform.timer.requested",
+    "match": { "data.timerId": "workflow.creation_deadline.<task-id>" }
+  }'
+
 # Task should now be escalated
-curl http://localhost:1080/workflow/tasks/<id> | jq .status
+curl http://localhost:1080/workflow/tasks/<task-id> | jq .status
 # → "escalated"
 ```
 
-Match on `data.callback.event` — the event type embedded in the scheduling request. Omit `match` to match any timer request regardless of type.
+Match only `data.callback.event`, the event the timer sends, when nothing else of that kind can be waiting. Where one mock runs several flows, as a test suite or a set of scenarios does, an earlier flow's timer may still be waiting, and the stub fires that one instead. Omit `match` to fire any timer.
 
 ### Managing event stubs
 
@@ -271,7 +275,7 @@ curl -X POST http://localhost:1080/mock/stubs/http \
 # 2. Trigger the flow (SNAP application creates a Decision → fires eligibility.decision.created
 #    → evaluateSnapExpedited procedure → POST /eligibility-adapter/evaluate/expedited-screening)
 curl -X POST http://localhost:1080/platform/events \
-  -d '{"specversion":"1.0","type":"org.codeforamerica.safety-net-blueprint.intake.application.submitted","source":"/test","subject":"app-123","data":{"programs":["snap"]}}'
+  -d '{"specversion":"1.0","type":"intake.application.submitted","source":"/test","subject":"app-123","data":{"programs":["snap"]}}'
 
 # 3. Verify stub was consumed
 curl http://localhost:1080/mock/stubs/http
@@ -498,18 +502,18 @@ A page holds no secrets, so a route to a service from a page can reach only one 
 
 A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has, or runs a workflow it has, refers only to earlier steps, and names only actors the scenario lists in `info.x-actors` (extensions.yaml).
 
-The same file runs as a test, is one of the walkthroughs in the demo page's Show me around, drawn a step at a time, and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
+The same file runs as a test, is one of the scenarios on the explorer's Scenarios page, drawn a step at a time, and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
 
 - steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload` — sent as JSON, or for an upload as `multipart/form-data`, where a part the operation declares as a file is given as `{ fileName, contentType, content }`
 - reusable parameters, `{ reference: $components.parameters.<name> }`
 - runtime expressions — `$statusCode`, `$response.body#/<pointer>`, `$response.header.<name>`, `$steps.<id>.outputs.<name>`, `$inputs.<name>` — whole, or embedded in a string as `{$…}`
 - selectors (Arazzo 1.1), `{ context, selector, type }`, in outputs, parameter values and request bodies — `type: jsonpath` to pick items out of a list by what they hold, `type: jsonpointer` for a value at a fixed place. A JSONPath's shape follows the query, as RFC 9535 sorts them: one made only of names and indexes (`$.items[0].id`) gives that value, and fails the step when it isn't there; one with a filter or a wildcard (`$.items[?@.status == 'proposed'].id`) gives a list, which may be empty. To use one item of such a list later, select `/0` from it with a JSON Pointer
 - `successCriteria` comparisons joined by `&&`, and `jsonpath` conditions, which pass when they match anything; and `outputs`
-- workflows that depend on earlier ones, `dependsOn`, reading what they produced as `$workflows.<id>.outputs.<name>` — a long scenario in sections, one workflow each, on the same mock throughout; the demo page heads each section with its workflow's `summary`
+- workflows that depend on earlier ones, `dependsOn`, reading what they produced as `$workflows.<id>.outputs.<name>` — a long scenario in sections, one workflow each, on the same mock throughout; the Scenarios page heads each section with its workflow's `summary`
 - `onFailure` actions of type `retry`, with `retryAfter` in seconds and `retryLimit` — for a step checking what the mock does after it answers, such as a state machine's reaction to an event, which may not have run the moment the step before it returns
-- steps that run another workflow, `workflowId`, passing its inputs as parameters with no `in` and reading what it produced as `$outputs.<name>` — for steps several workflows share, such as connecting. A workflow in another Arazzo document is named `$sourceDescriptions.<name>.<workflowId>`, where `<name>` is a source of type `arazzo`; give the runner that document in `documents`, matched to the source by the file name its `url` ends in. A document other scenarios run workflows from this way isn't a scenario of its own: the demo page leaves it out of Show me around, and shows its workflows inside the steps that run them
-- a choice of workflows to run, `workflows: [<workflowId>, …]`, each with every workflow it depends on, in the document's order. By default the runner runs every workflow no step runs, since a workflow a step runs runs there. Name one to run it on its own as well — a scenario's opening, say, that is the first workflow of its main path and the first step of each other situation. A scenario that marks its workflows `x-branch: main` or `x-branch: other` is walked a branch at a time on the demo page; to run all of it, name every workflow that has an `x-branch`
-- `startScenario`, which runs a scenario a step at a time on the same server, as the demo page's tours do; `runScenario` runs it through, or `until` a given step
+- steps that run another workflow, `workflowId`, passing its inputs as parameters with no `in` and reading what it produced as `$outputs.<name>` — for steps several workflows share, such as connecting. A workflow in another Arazzo document is named `$sourceDescriptions.<name>.<workflowId>`, where `<name>` is a source of type `arazzo`; give the runner that document in `documents`, matched to the source by the file name its `url` ends in. A document other scenarios run workflows from this way isn't a scenario of its own: the Scenarios page leaves it out, and shows its workflows inside the steps that run them
+- a choice of workflows to run, `workflows: [<workflowId>, …]`, each with every workflow it depends on, in the document's order. By default the runner runs every workflow no step runs, since a workflow a step runs runs there. Name one to run it on its own as well — a scenario's opening, say, that is the first workflow of its main path and the first step of each other situation. A scenario that marks its workflows `x-branch: main` or `x-branch: other` is walked a branch at a time on the Scenarios page; to run all of it, name every workflow that has an `x-branch`
+- `startScenario`, which runs a scenario a step at a time on the same server, as the Scenarios page's tours do; `runScenario` runs it through, or `until` a given step
 - more than one source, with each step's operation qualified as `$sourceDescriptions.<name>.<operationId>`, as Arazzo requires
 - steps that send or receive a message (Arazzo 1.1), naming an AsyncAPI operation with `action: send` or `receive`. On an events document, receiving waits for the event on the mock's event stream, read as `$message.payload#/<pointer>`, and sending publishes one. On a document with `servers`, such as a relay's, both go over the mock's WebSocket for it, one connection per workflow, answered by [WebSocket stubs](#websocket-stubs). The step that opens the connection may give the subprotocols it offers, a token among them, as a `Sec-WebSocket-Protocol` header parameter, the one header of a WebSocket's opening request that software sets: `{ name: Sec-WebSocket-Protocol, in: header, value: '{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}' }`. A receive step takes the first message of its kind, not taken by an earlier step, that meets its `successCriteria`, so it can pick its own record's event out of several by `subject`. It waits up to its `timeout`, in milliseconds, or 2 seconds when it gives none. A step's `dependsOn` may name earlier steps
 
@@ -531,17 +535,13 @@ workflow.passed; // and workflow.steps: each request, response and check
 
 A failed step stops its workflow, since later steps would act on what it did not produce.
 
-A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the demo page shows under What to notice. Any Arazzo tool shows the same text. A name in backticks in those bullets links to where the contracts declare it, shown when you hover or tap it. That works for the step operation's own parameters, fields and responses, and across the set for actions, procedures, reactions (by the event they listen for), rulesets, facts, compositions, SLA types, registry entries and schemas. A workflow's `description` is shown under its section's heading, in the same form.
+A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the Scenarios page shows under What to notice. Any Arazzo tool shows the same text. A name in backticks in those bullets links to where the contracts declare it, shown when you hover or tap it. That works for the step operation's own parameters, fields and responses, and across the set for actions, procedures, reactions (by the event they listen for), rulesets, facts, compositions, SLA types, registry entries and schemas. A workflow's `description` is shown under its section's heading, in the same form.
 
 ## The mock's own endpoints
 
-The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. Show it in Swagger beside a contract set by passing `--spec` twice:
+The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. A scenario calls them through it, as [Scenarios](#scenarios) describes.
 
-```bash
-npx blueprint-swagger --spec=./resolved --spec=node_modules/@codeforamerica/blueprint-mock-server/contracts
-```
-
-It is for reading, not for the mock: passed to `blueprint-mock` as a contract, it declares routes the mock already serves, and the server refuses to start.
+It is for scenarios and for reading, not for the mock: passed to `blueprint-mock` as a contract, it declares routes the mock already serves, and the server refuses to start.
 
 ## Record shape on create
 

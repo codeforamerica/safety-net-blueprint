@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: >
     The routes the mock server serves itself, which no contract declares:
-    health, stubs, reset and reseed. For Swagger and for reading — do not pass
-    this to the mock as a contract. It already serves these routes, and refuses
+    health, stubs, reset and reseed. For scenarios that call these routes, and
+    for reading — do not pass this to the mock as a contract. It already serves these routes, and refuses
     to start when a contract declares one of them.
 servers:
   - url: http://localhost:1080
@@ -41,12 +41,43 @@ paths:
       operationId: registerEventStub
       tags: [Event stubs]
       summary: Register an event stub
+      description: >
+        Answer the next event of type `on` whose envelope matches `match`, once.
+        The mock emits `response` right after that event, and then removes the
+        stub. Register one stub for each event you want answered.
+
+
+        A stub on `platform.timer.requested` stands in for the timer service:
+        it fires a timer it matches now, instead of when it is due, by emitting
+        the callback event the timer request carries. A timer already asked for
+        and still waiting — not fired, not cancelled — is fired as soon as the
+        stub is registered: the oldest one it matches, if several are waiting.
+        With none waiting, the stub fires the next timer it matches, as soon as
+        it is asked for. Either way it fires one, and is used up. To fire one
+        particular timer, match its `data.timerId`.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '../schemas/stubs-schema.json#/definitions/EventStub'
+            examples:
+              oneTimer:
+                summary: Fire one timer, by its id, now or as soon as it's asked for
+                value:
+                  on: platform.timer.requested
+                  match:
+                    data.timerId: decision-support.suggestion_expiry.4b3c2d1e-0000-4000-8000-000000000001
+              nextTimer:
+                summary: Fire a waiting timer, or else the next one asked for
+                value:
+                  on: platform.timer.requested
+              nextSuggestionExpiry:
+                summary: Fire a waiting suggestion expiry timer, or else the next one asked for
+                value:
+                  on: platform.timer.requested
+                  match:
+                    data.callback.event: decision-support.suggestion.suggestion_expiry
       responses:
         '201':
           description: Registered, with the id it was given.
@@ -101,6 +132,21 @@ paths:
           application/json:
             schema:
               $ref: '../schemas/stubs-schema.json#/definitions/HttpStub'
+            examples:
+              adapter:
+                summary: Answer the transcription adapter's connection request
+                value:
+                  match: {method: POST, url: /issue-connection}
+                  response:
+                    status: 200
+                    body:
+                      provider: fake-transcription
+                      protocol: websocket
+                      url: wss://fake-transcription.example/stream
+                      subprotocol: blueprint.transcripts.relay.v1
+                      accessToken: fake-service-token
+                      tokenType: Bearer
+                      expiresIn: 300
       responses:
         '201':
           description: Registered, with the id it was given.
@@ -160,6 +206,13 @@ paths:
           application/json:
             schema:
               $ref: '../schemas/stubs-schema.json#/definitions/WsStub'
+            examples:
+              started:
+                summary: Answer a relay's start with started
+                value:
+                  channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+                  on: start
+                  send: [{type: started}]
       responses:
         '201':
           description: Registered, with the id it was given.

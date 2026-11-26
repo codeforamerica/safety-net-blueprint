@@ -198,7 +198,7 @@ $defs:
         type: array
         description: >
           Timer type declarations for this machine. Each entry names a timer type used by this machine.
-          The scheduling service emits the callback event named "{domain}.{id}" when the timer fires.
+          The scheduling service emits the callback event named "{domain}.{resource}.{id}" when the timer fires.
           Timer types are declared here so they are visible alongside the state machine that uses them.
         items:
           $ref: "#/$defs/TimerDeclaration"
@@ -769,7 +769,7 @@ $defs:
       emit:
         oneOf:
           - type: string
-            pattern: "^[a-z][a-z0-9_-]*$"
+            pattern: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
             description: The id of an event the machine declares under emits.
           - type: object
             additionalProperties: false
@@ -779,7 +779,7 @@ $defs:
             properties:
               event:
                 type: string
-                pattern: "^[a-z][a-z0-9_-]*$"
+                pattern: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
                 description: The id of an event the machine declares under emits.
               type:
                 type: string
@@ -807,8 +807,8 @@ $defs:
     properties:
       id:
         type: string
-        pattern: "^[a-z][a-z0-9_-]*$"
-        description: Its short name, e.g. `paused`. The full name is `{domain}.{resource}.{id}`.
+        pattern: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
+        description: Its short name in snake_case, e.g. `paused` or `auto_resumed`. The full name is `{domain}.{resource}.{id}`.
       description:
         type: string
         description: What happened, for a subscriber.
@@ -1159,8 +1159,9 @@ $defs:
     type: object
     description: >
       Declares a timer type used by a machine. The full callback event name is
-      "{domain}.{id}" by convention (e.g., "workflow.creation_deadline" for id: creation_deadline
-      in domain: workflow). The scheduling service fires this event when the timer expires.
+      "{domain}.{resource}.{id}", like every other event the resource sends (e.g.,
+      "workflow.task.creation_deadline" for id: creation_deadline on the workflow
+      domain's Task machine). The scheduling service fires this event when the timer expires.
     required:
       - id
     additionalProperties: false
@@ -1169,8 +1170,9 @@ $defs:
         type: string
         pattern: "^[a-z][a-z0-9]*(_[a-z0-9]+)*$"
         description: >
-          Timer type identifier (snake_case). Combined with the domain name to form the
-          callback event name: {domain}.{id} (e.g., workflow.creation_deadline).
+          Timer type identifier (snake_case). Combined with the domain and the machine's
+          resource to form the callback event name: {domain}.{resource}.{id} (e.g.,
+          workflow.task.creation_deadline).
       description:
         type: string
         description: Human-readable explanation of what this timer is for.

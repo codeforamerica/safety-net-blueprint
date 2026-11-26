@@ -311,6 +311,7 @@ post:
   x-relationship:
     type: state-machine-action
     domain: intake
+    resource: Application
     id: submit
 
 # Operation — generated from a rules contract ruleset
@@ -335,7 +336,7 @@ get:
 | Field | Required | Description |
 |---|---|---|
 | `type` | No | Kind of relationship. Defaults to `fk` when absent. Valid values: `fk`, `state-machine-action`, `ruleset`, `composition`. |
-| `resource` | FK only | Related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`). Required when `type` is `fk` or absent. |
+| `resource` | FK and `state-machine-action` | For FK: related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`), required when `type` is `fk` or absent. For `state-machine-action`: the resource whose machine declares the action, since two machines in a domain can each have an action of the same name. |
 | `domain` | FK: optional; others: required | The blueprint domain that owns the referenced artifact. For FK fields, omit for same-domain references. |
 | `style` | FK only | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only.** Supported values: `expand` inlines the related resource, named without the `Id` suffix, in place of the FK field — which stays as well where it is a writable field; `links-only` adds a `links` navigation object. `expand` applies only to forward references; back-references are silently downgraded to `links-only`. See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | FK only | Subset of fields to include when `style: expand`. Supports dot notation. Must be non-empty when specified. |

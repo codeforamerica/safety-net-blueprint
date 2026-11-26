@@ -61,7 +61,7 @@ machines:
             reason:
               type: string
               description: Why the task was escalated.
-      - id: de-escalated
+      - id: de_escalated
         description: Records de-escalation of a task.
       - id: cancelled
         description: >-
@@ -249,7 +249,7 @@ machines:
         steps:
           - call: assignToQueue
           - call: setPriority
-          - emit: {event: de-escalated, description: Emit a domain event recording the de-escalation}
+          - emit: {event: de_escalated, description: Emit a domain event recording the de-escalation}
       - id: cancel
         description: "POST /tasks/{taskId}/cancel — Supervisor cancels a task from any active state"
         guards:
@@ -442,23 +442,23 @@ machines:
             then: [{call: assignToQueue}]
           - if: this.data.changes.exists(c, c.field == "slaDeadline") && has(object.slaDeadline) && object.slaDeadline != null
             then: [{call: scheduleSlaWarning}, {call: scheduleSlaBreachTimer}]
-      - type: workflow.creation_deadline
+      - type: workflow.task.creation_deadline
         description: Auto-escalate after 72-business-hour creation deadline
         steps:
           - call: {POST: workflow/tasks/$this.subject/sla-escalate, requestBody: {payload: {reason: deadline_exceeded}}, description: Auto-escalate after 72h creation deadline}
-      - type: workflow.sla_warning
+      - type: workflow.task.sla_warning
         description: Auto-escalate 48 hours before SLA deadline
         steps:
           - call: {POST: workflow/tasks/$this.subject/sla-escalate, requestBody: {payload: {reason: sla_deadline_approaching}}, description: Auto-escalate 48h before SLA deadline}
-      - type: workflow.sla_breach
+      - type: workflow.task.sla_breach
         description: Escalate and record SLA breach at deadline
         steps:
           - call: {POST: workflow/tasks/$this.subject/sla-escalate, requestBody: {payload: {reason: sla_deadline_exceeded}}, description: Escalate and record SLA breach at deadline}
-      - type: workflow.client_timeout
+      - type: workflow.task.client_timeout
         description: Auto-cancel after 30 calendar days of client unresponsiveness
         steps:
           - call: {POST: workflow/tasks/$this.subject/auto-cancel, requestBody: {payload: {reason: client_unresponsive}}, description: Auto-cancel after 30 days client unresponsive}
-      - type: workflow.verification_timeout
+      - type: workflow.task.verification_timeout
         description: Auto-resume after 7 calendar days waiting on verification
         steps:
           - call: {POST: workflow/tasks/$this.subject/auto-resume, requestBody: {payload: {causationid: $this.id}}, description: Auto-resume after 7 days verification timeout; passes timer event ID as causationid}
@@ -599,7 +599,7 @@ procedures:
     with:
       $merge: $params
       timerId: "workflow.{$params.timerType}.{$object.id}"
-      callback: {event: "workflow.{$params.timerType}", data: {}}
+      callback: {event: "workflow.task.{$params.timerType}", data: {}}
   - id: cancelWorkflowTimer
     description: Cancel a workflow timer by type; idempotent.
     parameters: [timerType]
@@ -789,5 +789,5 @@ $defs:
         format: uuid
         description: >
           ID of the event that triggered this resumption (e.g., the
-          workflow.verification_timeout or data-exchange.call.completed event).
+          workflow.task.verification_timeout or data-exchange.call.completed event).
           Propagated to the emitted workflow.task.resumed event envelope.

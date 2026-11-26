@@ -8,7 +8,7 @@
 
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve, relative, sep } from 'path';
+import { dirname, join, resolve } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,51 +17,6 @@ const HARNESS = resolve(__dirname, '..');
 const LOCAL_ENV = join(HARNESS, 'environments/local.env');
 const CLI = resolve(__dirname, '../../blueprint-cli/scripts');
 const VALIDATE = join(CLI, 'validate.js');
-
-/**
- * Where this checkout's contracts are readable, derived rather than written
- * down.
- *
- * A literal URL pins a repository, a path inside it and a branch, and goes
- * stale silently on all three — a file added on a feature branch links to a
- * 404 on main, which is exactly what happened the first time this was
- * hardcoded. Everything here comes from git, so the links point at the code
- * the page was actually built from.
- *
- * Returns null outside a repository, or with no remote, and the page then
- * names its files without linking.
- */
-function sourceUrl() {
-  const git = (...args) => {
-    const result = spawnSync('git', args, { cwd: HARNESS, encoding: 'utf8' });
-    return result.status === 0 ? result.stdout.trim() : null;
-  };
-
-  const remote = git('remote', 'get-url', 'origin');
-  const root = git('rev-parse', '--show-toplevel');
-
-  // The repository's default branch, not the one checked out. The built page
-  // is committed, so using the current branch would put the branch name into
-  // tracked output — every feature branch would diff against main for no
-  // reason, and CI would produce different bytes again. The cost is that a
-  // file added on a branch links to a 404 until it merges, which is the right
-  // way round: the links describe what has landed. A checkout without
-  // origin/HEAD, such as CI's, asks the remote, so it builds the same bytes.
-  const ref = (git('rev-parse', '--abbrev-ref', 'origin/HEAD') ?? '').replace(/^origin\//, '')
-    || (git('ls-remote', '--symref', 'origin', 'HEAD') ?? '').match(/^ref: refs\/heads\/(\S+)\s+HEAD/m)?.[1];
-  if (!remote || !root || !ref) return null;
-
-  // git@host:owner/repo.git and https://host/owner/repo.git both become a
-  // browsable https base.
-  const browsable = remote
-    .replace(/^git@([^:]+):/, 'https://$1/')
-    .replace(/\.git$/, '');
-  if (!browsable.startsWith('https://')) return null;
-
-  const contracts = join(HARNESS, 'contracts');
-  const fromRoot = relative(root, contracts).split(sep).join('/');
-  return `${browsable}/blob/${ref}/${fromRoot}`;
-}
 
 function run(script, args) {
   const result = spawnSync(process.execPath, [script, ...args], { stdio: 'inherit' });
@@ -104,11 +59,12 @@ console.log('  [5/8] Building explorer...');
 // the engine as it was at the last install. generate-artifacts.sh does the
 // same before building the safety-net explorer.
 run(resolve(__dirname, '../../blueprint-rules-engine/scripts/build-browser.js'), []);
+// The same for the mock server the explorer's pages run.
+run(resolve(__dirname, '../../blueprint-explorer/scripts/build-browser.js'), []);
 run(join(CLI, 'build-explorer.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,
   `--out=${join(HARNESS, 'generated/explorer')}`,
   `--config=${join(HARNESS, 'explorer')}`,
-  `--clients=${join(HARNESS, 'generated/clients')}`,
 ]);
 
 console.log('  [6/8] Generating Postman collection...');
@@ -123,14 +79,11 @@ run(join(CLI, 'export-schemas.js'), [
   `--out=${join(HARNESS, 'generated/schemas')}`,
 ]);
 
-console.log('  [8/8] Building the browser mock page...');
-run(join(__dirname, 'build-mock-page.js'), [
+console.log('  [8/8] Bundling the contract set into one artifact...');
+// The contract set as one file, which the mock server's tests boot from.
+run(join(CLI, 'bundle-contracts.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,
-  `--source=${join(HARNESS, 'contracts')}`,
-  `--overlay=${join(HARNESS, 'contracts/overlays')}`,
-  '--first-tour=scenarios/framework-features.arazzo.yaml',
-  ...(sourceUrl() ? [`--source-url=${sourceUrl()}`] : []),
-  `--out=${join(HARNESS, 'generated/mock')}`,
+  `--out=${join(HARNESS, 'generated/contracts.json')}`,
 ]);
 
 console.log('Done.');

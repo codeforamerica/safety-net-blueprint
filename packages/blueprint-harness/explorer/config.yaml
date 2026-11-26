@@ -1,4 +1,5 @@
 name: "Blueprint Harness"
+first_tour: scenarios/framework-features.arazzo.yaml
 repo:
   url: "https://github.com/codeforamerica/safety-net-blueprint"
   branch: main

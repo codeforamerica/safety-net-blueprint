@@ -19,7 +19,7 @@ import { apiSpecsFromDocs } from '../../src/spec-loader.js';
 import { operationsOf } from '../../src/operation-calls.js';
 import { operationIndex } from '../../src/arazzo.js';
 
-const artifact = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
+const artifact = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 const eligibility = artifact.docs.find((d) => d.relativePath === 'domains/eligibility/eligibility-openapi.yaml');
 // intake declares getApplicationSummary at /applications/{applicationId}/summary.
 eligibility.content.paths['/summary'] = { get: { operationId: 'getApplicationSummary', responses: { 200: { description: 'OK' } } } };

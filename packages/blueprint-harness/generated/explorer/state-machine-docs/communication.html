@@ -39,15 +39,200 @@
   </style>
 </head>
 <body>
-  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Communication</a></div>
+  <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Communication</a></div>
   <div style="background:#2B1A78;padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid #5650BE;">
-  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="communication.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Communication</a><a href="communication.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Communication</a><a href="decision-support.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Decision Support</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Intake</a></nav>
+  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="communication.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Communication</a><a href="decision-support.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Decision Support</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Intake</a></nav>
 </div><div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
     <div style="margin-bottom:2rem;">
       <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Communication State Machine</h1>
-      <p style="font-size:12px;color:#666;">Domain: <code>communication</code> · API: <code>communication-transcripts-openapi.yaml</code></p>
+      <p style="font-size:12px;color:#666;">Domain: <code>communication</code> · API: <code>communication-transcription-sessions-openapi.yaml</code>, <code>communication-transcripts-openapi.yaml</code></p>
     </div>
-    <section id="machine-transcript" style="margin-bottom:2.5rem;">
+    <section id="machine-transcriptionsession" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">TranscriptionSession</h2>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
+      <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
+        <table>
+          <thead><tr>
+            <th>State</th><th>Description</th><th style="text-align:center;">SLA clock</th>
+          </tr></thead>
+          <tbody><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">created</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Started, not yet connecting.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">connecting</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">The software has, or is getting, where to connect and a credential, and is opening the connection.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">connected</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Audio is going to the service and text is coming back.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">disconnected</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">The connection dropped, and the software is trying again.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">paused</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Off the record. The connection is closed, so no audio leaves the page.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">stopping</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Stop was asked for; the last audio is sent and the last text is still coming.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">closed</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Done, and the transcript is closed. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">failed</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">The software gave up connecting or reconnecting. The transcript stays open; a new session can carry on under it. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr></tbody>
+        </table>
+      </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Actions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table>
+            <thead><tr>
+              <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
+            </tr></thead>
+            <tbody><tr id="action-transcriptionsession-get-connection">
+          <td><strong style="color:#2B1A78;">get-connection</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-get-connection" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Get where to connect and a short-lived credential, starting the transcript the first time.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">created</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">disconnected</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connecting</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connecting</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>!has(object.transcriptId)</code>:<ul style="margin:2px 0 0 14px;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts"><code style="color:#5650BE;">POST /communication/transcripts</code></a> with profileId, model, client, startedAt, subjectType, subjectId</li><li><code>sets transcriptId</code></li></ul></li><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-get-connection"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/get-connection</code></a> with audio, protocols</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.connecting" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>connecting</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-renew-connection">
+          <td><strong style="color:#2B1A78;">renew-connection</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-renew-connection" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Get a fresh credential while connected, with no change to the session.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="color:#999;font-size:11px;">no state change</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-get-connection"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/get-connection</code></a> with audio, protocols</li></ul></td>
+        </tr><tr id="action-transcriptionsession-connect">
+          <td><strong style="color:#2B1A78;">connect</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-connect" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connecting</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connected</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>has(request.gap)</code>:<ul style="margin:2px 0 0 14px;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/entries</code></a> with kind, startedAt, endedAt, cause</li></ul></li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.connected" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>connected</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-disconnect">
+          <td><strong style="color:#2B1A78;">disconnect</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-disconnect" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">The connection to the service dropped; the software will try again.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connected</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">disconnected</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.disconnected" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>disconnected</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-update-line">
+          <td><strong style="color:#2B1A78;">update-line</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-update-line" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">A line in progress, to show. Nothing is kept; it's tied to its finished line by its key.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="color:#999;font-size:11px;">no state change</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.line_updated" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>line_updated</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-add-line">
+          <td><strong style="color:#2B1A78;">add-line</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-add-line" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">A finished line, added to the transcript with its key, so a retry adds it once. Allowed while paused, for the last text before the pause; the transcript keeps it if it started before.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="color:#999;font-size:11px;">no state change</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/entries</code></a> with kind, startedAt, endedAt, text, speaker, speakerLabel, confidence, language</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.line_added" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>line_added</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-pause">
+          <td><strong style="color:#2B1A78;">pause</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-pause" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Take the conversation off the record. The transcript keeps the pause; the software closes the connection.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connected</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">paused</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-pause"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/pause</code></a> with at</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>paused</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-resume">
+          <td><strong style="color:#2B1A78;">resume</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-resume" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">created</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">paused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connecting</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-resume"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/resume</code></a> with at</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.connecting" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>connecting</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-stop">
+          <td><strong style="color:#2B1A78;">stop</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-stop" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Finish. The software sends the end of the audio and waits for the last text, or closes at once when no connection is open.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connected</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">paused</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">disconnected</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">stopping</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.stopping" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>stopping</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-close">
+          <td><strong style="color:#2B1A78;">close</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-close" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">The last text is in and the connection is closed; the transcript closes.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">stopping</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">closed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/close</code></a> with at</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>closed</a></li></ul></td>
+        </tr><tr id="action-transcriptionsession-fail">
+          <td><strong style="color:#2B1A78;">fail</strong> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions-transcriptionSessionId-fail" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">The software gave up connecting or reconnecting. The transcript stays open.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">connecting</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">disconnected</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">failed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.failed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>failed</a></li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Event Subscriptions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%">
+              <col style="width:20%">
+              <col style="width:50%">
+            </colgroup>
+            <thead><tr>
+              <th>Event</th><th>Published by</th><th>Handler steps</th>
+            </tr></thead>
+            <tbody><tr id="on-transcriptionsession-communication.transcript.paused">
+          <td><a href="../event-catalog/communication.html#event-communication.transcript.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>paused</a></td>
+          <td><span style="font-size:11px;color:#666;">State machine action:</span><br><a href="../state-machine-docs/communication.html#action-transcript-pause">Communication › Transcript › pause</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>paused</a></li></ul></td>
+        </tr><tr id="on-transcriptionsession-communication.transcript.closed">
+          <td><a href="../event-catalog/communication.html#event-communication.transcript.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>closed</a></td>
+          <td><span style="font-size:11px;color:#666;">State machine action:</span><br><a href="../state-machine-docs/communication.html#action-transcript-close">Communication › Transcript › close</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/communication.html#event-communication.transcription_session.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>closed</a></li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Publishes</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup><col style="width:50%"><col style="width:50%"></colgroup>
+            <thead><tr><th>Event</th><th>Published by</th></tr></thead>
+            <tbody><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>closed</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-close">close</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/close</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.created" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>created</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-get-connection">get-connection</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts"><code style="color:#5650BE;">POST /communication/transcripts</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>paused</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-pause">pause</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-pause"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/pause</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.resumed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>resumed</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-resume">resume</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-resume"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/resume</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript_entry.created" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript_entry.<wbr>created</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-connect">connect</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/entries</code></a><br><a href="#action-transcriptionsession-add-line">add-line</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/entries</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>closed</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-close">close</a><br><a href="#on-transcriptionsession-communication.transcript.closed">on <code>communication.transcript.closed</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.connected" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>connected</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-connect">connect</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.connecting" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>connecting</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-get-connection">get-connection</a><br><a href="#action-transcriptionsession-resume">resume</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.disconnected" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>disconnected</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-disconnect">disconnect</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.failed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>failed</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-fail">fail</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.line_added" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>line_added</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-add-line">add-line</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.line_updated" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>line_updated</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-update-line">update-line</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>paused</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-pause">pause</a><br><a href="#on-transcriptionsession-communication.transcript.paused">on <code>communication.transcript.paused</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcription_session.stopping" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcription_session.<wbr>stopping</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-stop">stop</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/platform.html#event-platform.timer.cancelled" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.<wbr>timer.<wbr>cancelled</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-close">close</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/close</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/platform.html#event-platform.timer.requested" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.<wbr>timer.<wbr>requested</a></td>
+              <td style="font-size:12px;"><a href="#action-transcriptionsession-resume">resume</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-resume"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/resume</code></a></td>
+            </tr></tbody>
+          </table>
+        </div>
+    </section><section id="machine-transcript" style="margin-bottom:2.5rem;">
       <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Transcript</h2>
       <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
       <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
@@ -76,26 +261,26 @@
             <thead><tr>
               <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
             </tr></thead>
-            <tbody><tr id="action-pause">
-          <td><strong style="color:#2B1A78;">pause</strong> <a href="../api-reference/communication.html#op-post-transcription-sessions-transcriptionSessionId-pause" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Take the conversation off the record, at the time the client says.</span></td>
+            <tbody><tr id="action-transcript-pause">
+          <td><strong style="color:#2B1A78;">pause</strong> <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-pause" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Take the conversation off the record, at the time the client says.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">recording</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">paused</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>{"POST":"communication/transcripts/$object.id/entries","requestBody":{"payload":{"kind":"pause","startedAt":"$request.at","endedAt":null}}}</li><li>Emit <a href="../event-catalog/index.html#event-communication.transcript.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.transcript.paused</a></li></ul></td>
-        </tr><tr id="action-resume">
-          <td><strong style="color:#2B1A78;">resume</strong> <a href="../api-reference/communication.html#op-post-transcription-sessions-transcriptionSessionId-resume" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Put the conversation back on the record, at the time the client says. Already recording, nothing changes.</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/entries</code></a> with kind, startedAt, endedAt</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcript.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>paused</a></li></ul></td>
+        </tr><tr id="action-transcript-resume">
+          <td><strong style="color:#2B1A78;">resume</strong> <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-resume" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Put the conversation back on the record, at the time the client says. Already recording, nothing changes.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">paused</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">recording</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">recording</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>openPause is not null</code>:<ul style="margin:2px 0 0 14px;"><li>{"PATCH":"communication/transcripts/$object.id/entries/$openPause.id","requestBody":{"payload":{"endedAt":"$request.at"}}}</li><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li><li>Emit <a href="../event-catalog/index.html#event-communication.transcript.resumed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.transcript.resumed</a></li></ul></li></ul></td>
-        </tr><tr id="action-get-connection">
-          <td><strong style="color:#2B1A78;">get-connection</strong> <a href="../api-reference/communication.html#op-post-transcription-sessions-transcriptionSessionId-get-connection" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>openPause is not null</code>:<ul style="margin:2px 0 0 14px;"><li>Call <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId-entries-entryId"><code style="color:#5650BE;">PATCH /communication/transcripts/{transcriptId}/entries/{entryId}</code></a> with endedAt</li><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcript.resumed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>resumed</a></li></ul></li></ul></td>
+        </tr><tr id="action-transcript-get-connection">
+          <td><strong style="color:#2B1A78;">get-connection</strong> <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-get-connection" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="color:#999;font-size:11px;">no state change</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>{"operationId":"issueTranscriptConnection","requestBody":{"payload":{"provider":"$profile.provider","model":"$object.model","languages":"$profile.languages","audio":"$request.audio","protocols":"$request.protocols","metadata":{"transcriptId":"$object.id"}}}}</li></ul></td>
-        </tr><tr id="action-close">
-          <td><strong style="color:#2B1A78;">close</strong> <a href="../api-reference/communication.html#op-post-transcription-sessions-transcriptionSessionId-close" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">End the transcript, at the time the client says. A pause still open ends then too.</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/communication-transcripts-audio-adapter.html#op-post-issue-connection"><code style="color:#5650BE;">POST /issue-connection</code></a> with provider, model, languages, audio, protocols, metadata</li></ul></td>
+        </tr><tr id="action-transcript-close">
+          <td><strong style="color:#2B1A78;">close</strong> <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">End the transcript, at the time the client says. A pause still open ends then too.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">recording</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">paused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">closed</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets closedAt</code></li><li>If <code>openPause is not null</code>:<ul style="margin:2px 0 0 14px;"><li>{"PATCH":"communication/transcripts/$object.id/entries/$openPause.id","requestBody":{"payload":{"endedAt":"$request.at"}}}</li></ul></li><li>Emit <a href="../event-catalog/index.html#event-communication.transcript.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.transcript.closed</a></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets closedAt</code></li><li>If <code>openPause is not null</code>:<ul style="margin:2px 0 0 14px;"><li>Call <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId-entries-entryId"><code style="color:#5650BE;">PATCH /communication/transcripts/{transcriptId}/entries/{entryId}</code></a> with endedAt</li></ul></li><li>Cancel the idle check of a transcript that was closed. One that already fired is closing it, and the cancel does nothing.</li><li>Emit <a href="../event-catalog/communication.html#event-communication.transcript.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>closed</a></li></ul></td>
         </tr></tbody>
           </table>
         </div>
@@ -108,21 +293,53 @@
               <col style="width:50%">
             </colgroup>
             <thead><tr>
-              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+              <th>Event</th><th>Published by</th><th>Handler steps</th>
             </tr></thead>
-            <tbody><tr>
-          <td><code>communication.transcript.created</code></td>
-          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+            <tbody><tr id="on-transcript-communication.transcript.created">
+          <td><a href="../event-catalog/communication.html#event-communication.transcript.created" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>created</a></td>
+          <td><span style="font-size:11px;color:#666;">Endpoint:</span><br><a href="../api-reference/communication-transcripts.html#op-post-transcripts">Communication › POST /transcripts</a></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li></ul></td>
-        </tr><tr>
-          <td><code>communication.transcript_entry.created</code></td>
-          <td><span style="color:#999;font-size:11px;">unknown</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>this.data.kind is not "pause"</code>:<ul style="margin:2px 0 0 14px;"><li>{"PATCH":"communication/transcripts/$this.data.transcriptId","requestBody":{"payload":{"lastActivityAt":"$this.data.endedAt"}}}</li></ul></li></ul></td>
-        </tr><tr>
-          <td><code>communication.idle_check</code></td>
-          <td><span style="color:#999;font-size:11px;">unknown</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>newActivity is not null</code>:<ul style="margin:2px 0 0 14px;"><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>If <code>has(object.lastActivityAt)</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"communication/transcripts/$object.id/close","requestBody":{"payload":{"at":"$object.lastActivityAt"}}}</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>{"POST":"communication/transcripts/$object.id/close","requestBody":{"payload":{"at":"$object.startedAt"}}}</li></ul></li></ul></li></ul></td>
+        </tr><tr id="on-transcript-communication.transcript_entry.created">
+          <td><a href="../event-catalog/communication.html#event-communication.transcript_entry.created" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript_entry.<wbr>created</a></td>
+          <td><span style="font-size:11px;color:#666;">Endpoint:</span><br><a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries">Communication › POST /transcripts/{transcriptId}/entries</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>this.data.kind is not "pause"</code>:<ul style="margin:2px 0 0 14px;"><li>Call <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId"><code style="color:#5650BE;">PATCH /communication/transcripts/{transcriptId}</code></a> with lastActivityAt</li></ul></li></ul></td>
+        </tr><tr id="on-transcript-communication.transcript.idle_check">
+          <td><a href="../event-catalog/communication.html#event-communication.transcript.idle_check" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>idle_check</a></td>
+          <td><span style="font-size:12px;">The timer service, when the timer fires</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>newActivity is not null</code>:<ul style="margin:2px 0 0 14px;"><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>If <code>has(object.lastActivityAt)</code>:<ul style="margin:2px 0 0 14px;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/close</code></a> with at</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>Call <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/close</code></a> with at</li></ul></li></ul></li></ul></td>
         </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Publishes</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup><col style="width:50%"><col style="width:50%"></colgroup>
+            <thead><tr><th>Event</th><th>Published by</th></tr></thead>
+            <tbody><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>closed</a></td>
+              <td style="font-size:12px;"><a href="#action-transcript-close">close</a><br><a href="#on-transcript-communication.transcript.idle_check">on <code>communication.transcript.idle_check</code></a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/close</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.paused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>paused</a></td>
+              <td style="font-size:12px;"><a href="#action-transcript-pause">pause</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.resumed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>resumed</a></td>
+              <td style="font-size:12px;"><a href="#action-transcript-resume">resume</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript.updated" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript.<wbr>updated</a></td>
+              <td style="font-size:12px;"><a href="#on-transcript-communication.transcript_entry.created">on <code>communication.transcript_entry.created</code></a>, through <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId"><code style="color:#5650BE;">PATCH /communication/transcripts/{transcriptId}</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript_entry.created" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript_entry.<wbr>created</a></td>
+              <td style="font-size:12px;"><a href="#action-transcript-pause">pause</a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/entries</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/communication.html#event-communication.transcript_entry.updated" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">communication.<wbr>transcript_entry.<wbr>updated</a></td>
+              <td style="font-size:12px;"><a href="#action-transcript-resume">resume</a>, through <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId-entries-entryId"><code style="color:#5650BE;">PATCH /communication/transcripts/{transcriptId}/entries/{entryId}</code></a><br><a href="#action-transcript-close">close</a>, through <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId-entries-entryId"><code style="color:#5650BE;">PATCH /communication/transcripts/{transcriptId}/entries/{entryId}</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/platform.html#event-platform.timer.cancelled" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.<wbr>timer.<wbr>cancelled</a></td>
+              <td style="font-size:12px;"><a href="#action-transcript-close">close</a><br><a href="#on-transcript-communication.transcript.idle_check">on <code>communication.transcript.idle_check</code></a>, through <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-close"><code style="color:#5650BE;">POST /communication/transcripts/{transcriptId}/close</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/platform.html#event-platform.timer.requested" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.<wbr>timer.<wbr>requested</a></td>
+              <td style="font-size:12px;"><a href="#action-transcript-resume">resume</a><br><a href="#on-transcript-communication.transcript.created">on <code>communication.transcript.created</code></a><br><a href="#on-transcript-communication.transcript.idle_check">on <code>communication.transcript.idle_check</code></a></td>
+            </tr></tbody>
           </table>
         </div>
     </section></div>
@@ -139,5 +356,76 @@
     });
     
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<style>
+  #try-it-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 600 12px system-ui, sans-serif;
+    color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 100px; padding: 2px 4px 2px 10px; cursor: pointer; }
+  #try-it-switch .knob { width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.3); position: relative; transition: background .15s; }
+  #try-it-switch .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  #try-it-switch[aria-checked="true"] .knob { background: #22c55e; }
+  #try-it-switch[aria-checked="true"] .knob::after { left: 14px; }
+  #try-it-switch.floating { position: fixed; top: 8px; right: 16px; z-index: 1001; background: #2B1A78; }
+  html[data-try-it="on"] body { padding-right: var(--mock-panel-width, 30rem); }
+  /* Narrow, the panel docks along the bottom instead, as developer tools do. */
+  @media (max-width: 1200px) { html[data-try-it="on"] body { padding-right: 0; padding-bottom: var(--mock-panel-height, 40vh); } }
+</style>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const scope = new URL('mock/', root).href;
+  const key = 'blueprint-try-it:' + scope;
+  const stored = () => { try { return sessionStorage.getItem(key) === 'on'; } catch { return false; } };
+  const remember = (on) => { try { if (on) sessionStorage.setItem(key, 'on'); else sessionStorage.removeItem(key); } catch { /* this page only */ } };
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+
+  const toggle = document.createElement('button');
+  toggle.id = 'try-it-switch';
+  toggle.type = 'button';
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-controls', 'mock-panel');
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  const crumbs = document.querySelector('.page-crumbs');
+  if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
+
+  const show = (on) => {
+    document.documentElement.dataset.tryIt = on ? 'on' : 'off';
+    toggle.setAttribute('aria-checked', String(on));
+    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+  };
+  const turn = (on) => {
+    remember(on);
+    show(on);
+    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+  };
+  toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
+  // The panel's own Close turns it off too.
+  addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
+  show(stored());
+  if (stored()) turn(true);
+})();
+</script>
 </body>
 </html>

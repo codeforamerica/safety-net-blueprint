@@ -21,7 +21,7 @@ A mock API server that reads resolved OpenAPI specs and state machine definition
 
 - **Auto-discovers specs** — generates all routes from `*-openapi.yaml` files at startup
 - **Database per domain** — each domain gets its own in-memory database with full CRUD support
-- **Seeding** — populates databases from example files; generates faker-based seed data when none exists
+- **Seeding** — loads sample records from `*-mock-data.yaml` files
 - **State machine enforcement** — validates RPC transitions against guard conditions, actor restrictions, and current state
 - **Rules and compositions** — serves every ruleset's and composition's endpoint, at the path it declares
 - **SLA enforcement** — tracks SLA clocks and fires timer events when deadlines are reached
@@ -30,7 +30,6 @@ A mock API server that reads resolved OpenAPI specs and state machine definition
 - **Document upload** — accepts multipart uploads and records what it measured about each file; the bytes are never stored
 - **Metrics endpoints** — computes and serves metrics from live database records
 - **Search and filtering** — full-text search, filtering, sorting, and pagination on all list endpoints
-- **Swagger UI** — browse and test all endpoints interactively at `http://localhost:3000`
 
 See the [Mock Server guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md) for full usage.
 
@@ -38,15 +37,13 @@ See the [Mock Server guide](https://github.com/codeforamerica/safety-net-bluepri
 
 ```json
 "scripts": {
-  "mock": "blueprint-mock --spec=./resolved",
-  "swagger": "blueprint-swagger --spec=./resolved"
+  "mock": "blueprint-mock --spec=./resolved"
 }
 ```
 
 | Command | Port | Description |
 |---------|------|-------------|
 | `blueprint-mock` | 1080 | Mock API server |
-| `blueprint-swagger` | 3000 | Swagger UI |
 
 `--spec` takes a directory of resolved contracts, or a single `contracts.json`
 built by `blueprint-bundle-contracts`:
@@ -61,15 +58,22 @@ whatever is on disk now, and it is the same file a browser boots from.
 
 ## Seeding
 
-Place `*-mock-data.yaml` files alongside your resolved specs. The server loads them on startup and on `POST /mock/reset`.
+Place `*-mock-data.yaml` files alongside your resolved specs, or in the directory `--seed` names. The server loads them on startup and on `POST /mock/reseed`. `POST /mock/reset` empties every collection and clears the stubs, then puts back only the records the contracts' config files define.
+
+Each record's key is the name of the schema it's an example of, then `Example` and a number: `ApplicationExample1` is an `Application`. The schema decides which collection the record goes in.
 
 ```yaml
 # intake-mock-data.yaml
-applications:
-  - id: app-001
-    status: draft
-    programsAppliedFor: [snap]
+domain: intake
+
+ApplicationExample1:
+  id: 11111111-1111-4111-8111-111111111111
+  status: submitted
+  programsAppliedFor: [snap]
+  channel: online
 ```
+
+With no files, collections start empty. The server doesn't make up records; `cli/generate-mock-data.js` writes a file of made-up ones, from the schemas, for you to edit and keep.
 
 ## Stores
 
@@ -245,9 +249,8 @@ createMockServer({ contracts, basePath: location.pathname.replace(/\/[^/]*$/, ''
 The prefix is stripped once, before matching, so handlers and HTTP stubs never
 see it.
 
-`blueprint-harness` builds a worked example of both — a served version and a
-single self-contained file — in `packages/blueprint-harness/generated/mock/`.
-The page it is built from is `packages/blueprint-harness/mock/index.html`.
+The explorer's Scenarios page, which `blueprint-build-explorer` builds, is a
+worked example. Its source is `packages/blueprint-explorer/src/try-it/page.html`.
 
 ## References are not dereferenced
 

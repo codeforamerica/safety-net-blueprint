@@ -175,6 +175,7 @@ machines:
               - call:
                   PATCH: communication/transcripts/$object.id/entries/$openPause.id
                   requestBody: {payload: {endedAt: $request.at}}
+          - call: cancelIdleCheck
           - emit: closed
     on:
       - type: communication.transcript.created
@@ -192,7 +193,7 @@ machines:
               - call:
                   PATCH: communication/transcripts/$this.data.transcriptId
                   requestBody: {payload: {lastActivityAt: $this.data.endedAt}}
-      - type: communication.idle_check
+      - type: communication.transcript.idle_check
         description: Close a transcript that has gone quiet; ask again if something arrived since the last check.
         transition: {from: recording}
         context:
@@ -221,7 +222,13 @@ machines:
               data:
                 timerId: "communication.idle_check.{$object.id}"
                 fireAfter: $profile.idleTimeout
-                callback: {event: communication.idle_check, data: {since: $now}}
+                callback: {event: communication.transcript.idle_check, data: {since: $now}}
+      - id: cancelIdleCheck
+        description: Cancel the idle check of a transcript that was closed. One that already fired is closing it, and the cancel does nothing.
+        emit:
+          type: platform.timer.cancelled
+          data:
+            timerId: "communication.idle_check.{$object.id}"
     resources:
       Transcript:
         create:

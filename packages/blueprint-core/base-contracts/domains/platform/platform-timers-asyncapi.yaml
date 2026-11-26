@@ -36,12 +36,42 @@ components:
         Cancels a pending timer; a no-op if it has already fired.
       payload:
         $ref: '#/components/schemas/TimerCancelledEvent'
+      examples:
+        - name: Example
+          summary: Cancels the timer requested in the platform.timer.requested example, by its id.
+          payload:
+            specversion: '1.0'
+            id: 00000000-0000-4000-8000-000000000002
+            source: /decision-support
+            type: platform.timer.cancelled
+            subject: 00000000-0000-4000-8000-000000000001
+            time: '2024-01-01T00:00:00Z'
+            datacontenttype: application/json
+            data:
+              timerId: decision-support.suggestion_expiry.00000000-0000-4000-8000-000000000001
     TimerRequestedMessage:
       name: platform.timer.requested
       summary: >-
         Asks for a timer; the scheduler registers it and publishes the callback event when it fires.
       payload:
         $ref: '#/components/schemas/TimerRequestedEvent'
+      examples:
+        - name: Example
+          summary: Asks for decision-support.suggestion.suggestion_expiry to be sent about a suggestion when it expires.
+          payload:
+            specversion: '1.0'
+            id: 00000000-0000-4000-8000-000000000000
+            source: /decision-support
+            type: platform.timer.requested
+            subject: 00000000-0000-4000-8000-000000000001
+            time: '2024-01-01T00:00:00Z'
+            datacontenttype: application/json
+            data:
+              timerId: decision-support.suggestion_expiry.00000000-0000-4000-8000-000000000001
+              fireAt: '2024-01-02T00:00:00Z'
+              callback:
+                event: decision-support.suggestion.suggestion_expiry
+                data: {}
   schemas:
     TimerCancelledEvent:
       allOf:

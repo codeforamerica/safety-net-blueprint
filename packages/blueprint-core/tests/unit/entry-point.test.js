@@ -349,16 +349,17 @@ describe('extract', () => {
       'intake-openapi.yaml': openapi({
         paths: {
           '/applications/{id}/submit': {
-            post: { 'x-relationship': { type: 'state-machine-action', domain: 'intake', id: 'submit' } },
+            post: { 'x-relationship': { type: 'state-machine-action', domain: 'intake', resource: 'Application', id: 'submit' } },
           },
         },
       }),
     });
     try {
       const index = extract(discover(dir).map(load), 'relationships');
-      assert.deepEqual(index.get('state-machine-action:intake:submit'), {
+      assert.deepEqual(index.get('state-machine-action:intake:Application:submit'), {
         path: '/applications/{id}/submit',
         method: 'post',
+        file: 'intake-openapi.yaml',
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });

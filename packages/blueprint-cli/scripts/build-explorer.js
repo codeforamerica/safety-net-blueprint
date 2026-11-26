@@ -18,9 +18,8 @@
  *               building so that tool scripts can find them there.
  *   --authored  Path to authored HTML pages source directory. Defaults to the
  *               blueprint-explorer package's built-in authored/ directory.
- *   --clients   Path to generated TypeScript clients (output of blueprint-generate-ts-clients).
  *   --only      Build one tool only: context-map, data-dictionaries,
- *               state-machine-docs, rules-docs, event-catalog, api-reference, client-reference
+ *               state-machine-docs, rules-docs, event-catalog, api-reference, scenarios
  */
 
 import { cpSync, existsSync, mkdirSync } from 'fs';
@@ -33,7 +32,7 @@ import {
   buildRulesDocs,
   buildEventCatalog,
   buildApiReference,
-  buildClientReference,
+  buildTryIt,
   buildHub,
 } from '@codeforamerica/blueprint-explorer';
 
@@ -44,10 +43,9 @@ const specArg     = args.find(a => a.startsWith('--spec='));
 const outArg      = args.find(a => a.startsWith('--out='));
 const configArg   = args.find(a => a.startsWith('--config='));
 const authoredArg = args.find(a => a.startsWith('--authored='));
-const clientsArg  = args.find(a => a.startsWith('--clients='));
 
 if (!specArg || !outArg) {
-  console.error('Usage: node build-explorer.js --spec=<resolved-dir> --out=<out-dir> [--config=<config-dir>] [--authored=<path>] [--clients=<path>] [--only=<tool>]');
+  console.error('Usage: node build-explorer.js --spec=<resolved-dir> --out=<out-dir> [--config=<config-dir>] [--authored=<path>] [--only=<tool>]');
   process.exit(1);
 }
 
@@ -55,7 +53,6 @@ const specDir    = resolve(process.cwd(), specArg.slice('--spec='.length));
 const outDir     = resolve(process.cwd(), outArg.slice('--out='.length));
 const configDir  = configArg ? resolve(process.cwd(), configArg.slice('--config='.length)) : outDir;
 const authoredDir = authoredArg ? resolve(process.cwd(), authoredArg.slice('--authored='.length)) : undefined;
-const clientsDir  = clientsArg  ? resolve(process.cwd(), clientsArg.slice('--clients='.length))  : undefined;
 
 // When config and out differ, copy authored config files to outDir so that
 // tool scripts (which read from their --content arg) can find them there.
@@ -77,7 +74,7 @@ if (doBuild('state-machine-docs')) buildStateMachineDocs({ contentDir, resolvedD
 if (doBuild('rules-docs'))        buildRulesDocs({ contentDir, resolvedDir });
 if (doBuild('event-catalog'))     buildEventCatalog({ contentDir, resolvedDir });
 if (doBuild('api-reference'))     await buildApiReference({ contentDir, resolvedDir });
-if (doBuild('client-reference'))  buildClientReference({ contentDir, resolvedDir, clientsDir });
+if (doBuild('scenarios'))         buildTryIt({ contentDir, resolvedDir });
 
 // Hub is always rebuilt last so it can scan all tool output directories
 buildHub({ contentDir, authoredDir });

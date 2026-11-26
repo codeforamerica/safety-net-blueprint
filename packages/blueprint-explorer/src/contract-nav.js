@@ -96,11 +96,20 @@ function getPathsForObject(doc, schema, prefix = '') {
  * emit nested inside a branch is reachable by plain recursion.
  *
  * @param {import('@codeforamerica/blueprint-core').Doc[]} stateMachines
- * @returns {{ emitters: Record<string, { domain, object }>, subscribers: Record<string, Array<{ domain, object }>> }}
+ * @returns {{ emitters: Record<string, { domain, object, action }>, subscribers: Record<string, Array<{ domain, object }>>, timerCallbacks: Set<string> }}
+ *   `timerCallbacks` holds the events a machine asks the timer service to send
+ *   back — the `callback.event` of a timer request, however it is made.
  */
 export function buildEventIndex(stateMachines) {
   const emitters = {};
   const subscribers = {};
+  const timerCallbacks = new Set();
+  const findCallbacks = (node) => {
+    if (Array.isArray(node)) return node.forEach(findCallbacks);
+    if (!node || typeof node !== 'object') return;
+    if (typeof node.callback?.event === 'string') timerCallbacks.add(node.callback.event);
+    Object.values(node).forEach(findCallbacks);
+  };
 
   for (const doc of stateMachines) {
     const sm = stateMachineView(doc);
@@ -108,7 +117,7 @@ export function buildEventIndex(stateMachines) {
     for (const machine of sm.machines) {
       for (const op of (machine.actions || [])) {
         for (const eventType of emittedTypes(op.steps)) {
-          emitters[eventType] = { domain: sm.domain, object: machine.object };
+          emitters[eventType] ??= { domain: sm.domain, object: machine.object, action: op.id };
         }
       }
       for (const sub of machine.on || []) {
@@ -116,10 +125,12 @@ export function buildEventIndex(stateMachines) {
         subscribers[sub.type].push({ domain: sm.domain, object: machine.object });
       }
     }
+    findCallbacks(doc.content?.machines);
   }
 
-  return { emitters, subscribers };
+  return { emitters, subscribers, timerCallbacks };
 }
+
 
 
 const SCHEMA_SUFFIXES = ['List', 'Create', 'Update', 'Writable'];

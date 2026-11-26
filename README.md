@@ -35,7 +35,7 @@ The monorepo separates domain-agnostic framework tooling from safety-net-specifi
 | `packages/blueprint-cli` | `@codeforamerica/blueprint-cli` | Tooling | CLI scripts: `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, etc. |
 | `packages/blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Tooling | Explorer build tooling (outputs to `packages/safety-net-explorer/`) |
 | `packages/safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Reference contracts | Safety-net domain contracts: OpenAPI specs, state machines, overlays |
-| `packages/blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Reference implementation | Mock API server: `blueprint-mock`, `blueprint-swagger`. For development and demos, not production |
+| `packages/blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Reference implementation | Mock API server: `blueprint-mock`. For development and demos, not production |
 | `packages/blueprint-rules-engine` | `@codeforamerica/blueprint-rules-engine` | Reference implementation | Evaluates rulesets, in Node or the browser |
 | `packages/generated` | — | — | Generated artifacts: resolved specs, TypeScript clients, Postman collection (gitignored) |
 
@@ -67,11 +67,11 @@ Using the framework to define a new contract-driven API domain — whether exten
 ```bash
 npm install
 
-# Start mock server + Swagger UI
-npm run mock:start:all
+# Start the mock server
+npm start
 ```
 
-Visit `http://localhost:3000` for interactive API docs.
+The mock server runs at `http://localhost:1080`. To browse the APIs and try them, open the explorer's API reference: `packages/safety-net-explorer/index.html`, or the [Explorer hub](https://codeforamerica.github.io/safety-net-blueprint/packages/safety-net-explorer/) online.
 
 ## Contributing
 
@@ -81,7 +81,7 @@ After cloning, run the one-time setup to install the pre-push git hook:
 npm run setup:hooks
 ```
 
-This installs a hook that runs before every push. The hook rebuilds explorer outputs and commits them if stale, then runs `npm run preflight` — which validates specs, runs tests, and runs integration tests. Use `git push --no-verify` to skip for work-in-progress pushes.
+This installs a hook that runs before every push. The hook checks that the committed explorer outputs and other generated files are up to date, and stops the push if they aren't. It doesn't run tests: run `npm run preflight` yourself before opening a PR. Use `git push --no-verify` to skip the hook for work-in-progress pushes.
 
 If your change affects a published package, include a changeset before opening a PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidance on writing changeset descriptions and how the release process works.
 
@@ -90,11 +90,10 @@ If your change affects a published package, include a changeset before opening a
 | Command | Description |
 |---------|-------------|
 | `npm start` | Start mock server |
-| `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate OpenAPI specs |
 | `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>` | Resolve overlays against base specs |
 | `npm run build --workspace=packages/blueprint-explorer` | Build all explorer reference tools |
-| `node packages/blueprint-explorer/build.js --resolved=<dir> --clients=<dir>` | Build explorer from state-specific resolved specs |
+| `node packages/blueprint-explorer/build.js --resolved=<dir>` | Build explorer from state-specific resolved specs |
 | `npm run api:new` | Scaffold a new API spec |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |

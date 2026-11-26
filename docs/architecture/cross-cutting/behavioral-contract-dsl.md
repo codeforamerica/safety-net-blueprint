@@ -382,7 +382,7 @@ A step requests a timer by emitting `platform.timer.requested`, and cancels it b
       timerId: "intake.snap_deadline.{$object.id}"
       fireAfter: P30D   # ISO 8601 duration; use fireAt + fireOffset for deadline-relative
       calendarType: calendar   # or: business
-      callback: {event: intake.snap_deadline, data: {}}
+      callback: {event: intake.application.snap_deadline, data: {}}
 - emit:
     type: platform.timer.cancelled
     data: {timerId: "intake.snap_deadline.{$object.id}"}
@@ -403,7 +403,7 @@ To store a deadline on the object, set it to a time from now: `$now`, then `+` o
     data:
       timerId: "decision-support.suggestion_expiry.{$object.id}"
       fireAt: $object.expiresAt
-      callback: {event: decision-support.suggestion_expiry, data: {}}
+      callback: {event: decision-support.suggestion.suggestion_expiry, data: {}}
 ```
 
 ### Receiving the callback
@@ -416,12 +416,12 @@ timers:
     description: 30-calendar-day SNAP processing deadline
 
 on:
-  - type: intake.snap_deadline
+  - type: intake.application.snap_deadline
     steps:
       - call: {POST: intake/applications/$this.subject/auto-deny, requestBody: {payload: {reason: snap_deadline_exceeded}}}
 ```
 
-The `timers:` section declares the timer types the machine uses. The event name follows the convention `{domain}.{id}` — `intake.snap_deadline` for a timer declared in the `intake` domain with id `snap_deadline`. The timer service fires the callback event exactly as specified in the original request; no dispatch on a `timerType` field is needed.
+The `timers:` section declares the timer types the machine uses. The event is named like every other event the resource sends, `{domain}.{resource}.{id}` — `intake.application.snap_deadline` for a timer with id `snap_deadline` declared on the `intake` domain's `Application` machine. The timer service fires the callback event exactly as specified in the original request; no dispatch on a `timerType` field is needed.
 
 The timer service is a separate contract boundary — see [Timers](timers.md) for the full event contract, timer ID conventions, and implementation guidance. Because timers are events, timer behavior is testable via the same event stub mechanism used for all other events.
 

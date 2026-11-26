@@ -43,12 +43,10 @@ export function emitEventEnvelope(envelope, instance) {
     time: envelope.time || new Date().toISOString(),
     partitionkey: envelope.partitionkey ?? partitionKeyOf(envelope.type, envelope.subject, envelope.data, instance),
   });
-  // Infrastructure events (scheduling, etc.) are broadcast for stub interception
-  // but not persisted — they are not domain events observable via /platform/events.
-  const isInfrastructureEvent = record.type?.startsWith('platform.timer.');
-  if (!isInfrastructureEvent) {
-    saveEvent(store, record);
-  }
+  // Every event is logged, timer requests and cancellations too: they are the
+  // platform domain's events, and the log is every domain's
+  // (platform-events-openapi.yaml).
+  saveEvent(store, record);
   instance.bus.emit('domain-event', record);
   return record;
 }

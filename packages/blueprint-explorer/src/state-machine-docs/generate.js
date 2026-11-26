@@ -37,7 +37,8 @@ function machineLink(domain, object, allStateMachines) {
 
 function renderInvokeCompact(inv) {
   const entry = Object.entries(inv).find(([k]) => ['GET','POST','PUT','PATCH','DELETE'].includes(k));
-  return entry ? `\`${entry[0]} ${entry[1]}\`` : JSON.stringify(inv);
+  if (entry) return `\`${entry[0]} ${entry[1]}\``;
+  return inv.operationId ? `\`${inv.operationId}\`` : JSON.stringify(inv);
 }
 
 function allProcedures(machine, sm) {

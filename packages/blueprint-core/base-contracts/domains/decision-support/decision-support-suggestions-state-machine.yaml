@@ -153,10 +153,10 @@ machines:
               data:
                 timerId: "decision-support.suggestion_expiry.{$object.id}"
                 fireAt: $object.expiresAt
-                callback: {event: decision-support.suggestion_expiry, data: {}}
+                callback: {event: decision-support.suggestion.suggestion_expiry, data: {}}
       # A timer that fires after the suggestion was decided finds it in no open
       # state, so it does nothing.
-      - type: decision-support.suggestion_expiry
+      - type: decision-support.suggestion.suggestion_expiry
         description: Expire a suggestion nobody decided by its expiresAt.
         transition: {from: [proposed, refused]}
         steps:

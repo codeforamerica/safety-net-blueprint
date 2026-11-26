@@ -31,6 +31,14 @@ export const PAGINATION_DEFAULTS = { limitDefault: 25, limitMax: 100, offsetDefa
 // State records are internal (not user-facing paginated lists), so a higher cap is used.
 export const STATE_RECORDS_LIMIT_MAX = 1000;
 
+/**
+ * The event log's time bounds (platform-events-openapi.yaml listEvents), each
+ * to the comparison it makes with an event's `time`. Only where the operation
+ * declares the parameter: with no declaration, as a composition section
+ * filters, `start` is a field like any other.
+ */
+const TIME_BOUNDS = { start: '>=', end: '<=' };
+
 export function buildSearchConditions(queryParams = {}, searchableFields = []) {
   const whereClauses = [];
   const params = [];
@@ -80,6 +88,17 @@ export function buildSearchConditions(queryParams = {}, searchableFields = []) {
         if (value !== undefined && value !== null && value !== '') {
           whereClauses.push(`json_extract(data, '$.traceparent') LIKE ?`);
           params.push(`%-${value}-%`);
+        }
+        continue;
+      }
+
+      // start and end bound an event's time, at or after and at or before
+      // (docs/conventions/events.yaml): ISO 8601 timestamps in UTC compare
+      // as strings.
+      if (TIME_BOUNDS[key] && searchableFields.includes(key)) {
+        if (value !== undefined && value !== null && value !== '') {
+          whereClauses.push(`json_extract(data, '$.time') ${TIME_BOUNDS[key]} ?`);
+          params.push(String(value));
         }
         continue;
       }
@@ -253,6 +272,16 @@ export function filterItems(items, queryParams = {}, searchableFields = []) {
           const tp = getNestedValue(item, 'traceparent');
           if (tp === undefined) return false;
           return String(tp).includes(`-${value}-`);
+        });
+        continue;
+      }
+
+      // start and end bound an event's time, as buildSearchConditions does.
+      if (TIME_BOUNDS[key] && searchableFields.includes(key)) {
+        result = result.filter(item => {
+          const time = getNestedValue(item, 'time');
+          if (time === undefined) return false;
+          return TIME_BOUNDS[key] === '>=' ? String(time) >= String(value) : String(time) <= String(value);
         });
         continue;
       }

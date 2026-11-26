@@ -62,7 +62,7 @@ All blueprint events use the [CloudEvents 1.0](https://cloudevents.io/) envelope
 | Attribute | Description |
 |-----------|-------------|
 | `id` | Unique event identifier |
-| `type` | Event type — `org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}` |
+| `type` | Event type — `{domain}.{resource}.{event}`, with the state's namespace in front when it sets `x-event-type-prefix` |
 | `source` | Domain that produced the event — `/intake`, `/workflow`, etc. |
 | `subject` | Entity ID the event pertains to |
 | `time` | When the event occurred |
@@ -113,7 +113,7 @@ Transitions declare their own events explicitly in the state machine YAML. Each 
 
 All events — both auto-emitted and declarative — use the same `emitEvent()` utility, which constructs the CloudEvents envelope, persists it to the shared `/platform/events` log, and broadcasts it over the SSE stream.
 
-The `type` field is always derived implicitly: `org.codeforamerica.safety-net-blueprint.{domain}.{object}.{action}`. There is no ambiguity about what constitutes a valid type — it always reflects a real operation on a real resource.
+The `type` field is always derived implicitly: `{domain}.{resource}.{event}`. There is no ambiguity about what constitutes a valid type — it always reflects a real operation on a real resource.
 
 **What does not emit events**
 
@@ -186,8 +186,8 @@ Pub/sub creates semantic coupling — payload shape is a contract. New fields ma
 The `.v2` suffix convention on the event type is common (used by Confluent, AWS EventBridge, and others) and keeps the version visible in routing rules and logs:
 
 ```
-org.codeforamerica.safety-net-blueprint.intake.application.submitted
-org.codeforamerica.safety-net-blueprint.intake.application.submitted.v2
+intake.application.submitted
+intake.application.submitted.v2
 ```
 
 Both types are published in parallel until all consumers have migrated. The old type is then retired.

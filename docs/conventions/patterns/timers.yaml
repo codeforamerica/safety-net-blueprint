@@ -24,7 +24,7 @@ do_not_use_when:
 rules:
   - >-
     Declare each timer type in the machine's timers: section; its event is
-    {domain}.{id}.
+    {domain}.{resource}.{id}, named like every other event the resource sends.
   - >-
     Ask for it with the requestTimer procedure and cancel it with
     cancelTimer. Use fireAt with fireOffset when the deadline is stored on the
@@ -40,7 +40,7 @@ rules:
     needs in callback.data, which comes back unchanged.
 
 example: >
-  When a SNAP application is submitted, intake asks for intake.snap_deadline
+  When a SNAP application is submitted, intake asks for intake.application.snap_deadline
   30 days on; if the application is decided first it cancels the timer, and
   if the timer fires, intake's reaction acts on the overdue application.
 

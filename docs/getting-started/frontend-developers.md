@@ -65,13 +65,13 @@ REACT_APP_API_URL=http://localhost:1080 npm start
 
 ### Exploring the API
 
-Browse all endpoints — REST and RPC — via Swagger UI:
+Browse all endpoints — REST and RPC — and their schemas in the explorer's API reference. Build it from your resolved specs:
 
 ```bash
-STATE=<your-state> npm run mock:start:all
+npx blueprint-build-explorer --spec=./resolved --out=./explorer
 ```
 
-Visit http://localhost:3000 to see all endpoints and schemas.
+Open `explorer/index.html`, and turn on Try it at the top of an API page: each operation then sends its request to a mock running in the page, so it works with no server. To call the mock server on port 1080 instead, copy the request from the curl tab.
 
 ### Generated TypeScript Clients
 

@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Workflow events</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  /* An operation's sections: plain headings and lists, one box only, the card. */
+  /* Closed, an operation is one line tinted by its method, as Swagger lists
+     them: method, path, name. Open, it's the two columns. */
+  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  .op-name { font-size: 13px; color: #555; }
+  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
+  .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
+  .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
+  .content-item.op-delete { border-color: #AF121D !important; } .op-delete > details > summary { background: #F9C8CB88; }
+  .content-item > details[open] > summary { border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .op-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; padding: 2px 18px 16px; font-size: 12.5px; line-height: 1.45; }
+  /* The request and the responses beside the docs, where there's room. */
+  @media (min-width: 1100px) {
+    .op-body:has(.op-side:not(:empty)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .op-side { align-self: start; }
+  }
+  .op-side:empty { display: none; }
+  /* Evenly spaced, whatever is showing: hidden items take no room. */
+  .op-side { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+  .op-side > * { margin-top: 0 !important; flex-shrink: 0; }
+  .op-section { margin-top: 12px; }
+  .op-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: #1a1a1a; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid #ececec; }
+  .param, .field { padding: 5px 0; }
+  .field-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fname { font: 600 12.5px monospace; color: #1a1a1a; }
+  .ftype { font: 11.5px monospace; color: #777; }
+  .fpreview { font: 11.5px monospace; color: #999; }
+  .freq { font-size: 11.5px; color: #AF121D; }
+  .fdesc { display: block; color: #555; margin-top: 1px; }
+  .fdesc p { margin: 0; }
+  .values { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; }
+  .values-label { font-size: 11px; color: #888; margin-right: 4px; }
+  .value-chip { font: 11.5px monospace; border: 1px solid #ddd; border-radius: 4px; padding: 0 6px; background: #fff; }
+  .nested { margin: 0 0 2px 5px; padding-left: 12px; border-left: 2px solid #eeeaf8; }
+  .field-summary { list-style: none; cursor: pointer; display: block; padding: 0; background: none !important; }
+  .field-summary .chevron { font-size: 9px; color: #aaa; }
+  details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
+  details.more[open] > summary { margin-bottom: 4px; }
+  .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
+  .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
+  .pill-req { color: #AF121D; border-color: #f3c2c2; }
+  .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
+  .resp-tab { font: 600 12px monospace; padding: 3px 10px; border: 0; border-bottom: 2px solid transparent; background: none; color: #888; cursor: pointer; margin-bottom: -1px; }
+  .resp-tab.on { color: #1a1a1a; border-bottom-color: #5650BE; }
+  .resp-tab.resp-ok.on { border-bottom-color: #006152; }
+  .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
+
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
+  .op-docs a { color: #5650BE; text-decoration: none; }
+  .op-docs .who-kind { color: #666; }
+  .op-docs .how { margin-top: 4px; font-size: 12px; color: #666; }
+  .event-example { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e8e6ff; border-radius: 6px; font-size: 11.5px; overflow: auto; max-height: 28rem; }
+  .op-docs a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Event Catalog</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Workflow events</a></div>
+    <div style="background:#2B1A78;color:#FFFFFF;">
+    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">Workflow events</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">27 events</span>
+    </div>
+    <div style="padding:0 1.25rem 0.6rem;font-size:11px;color:rgba(255,255,255,0.55);">What each event carries, who publishes it and who subscribes to it</div>
+  </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+    <div class="nav-section-label">queue</div>
+    <a href="#event-workflow.queue.created" class="nav-link nav-op" title="A Queue was created. Carries the record as created.">
+      <span class="nav-op-path">created</span>
+    </a><a href="#event-workflow.queue.deleted" class="nav-link nav-op" title="A Queue was deleted. The subject is the record's id.">
+      <span class="nav-op-path">deleted</span>
+    </a><a href="#event-workflow.queue.updated" class="nav-link nav-op" title="A Queue was changed. Carries each changed field, before and after.">
+      <span class="nav-op-path">updated</span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label">task</div>
+    <a href="#event-workflow.task.approved" class="nav-link nav-op" title="Records supervisor approval of a submitted-for-review task.">
+      <span class="nav-op-path">approved</span>
+    </a><a href="#event-workflow.task.assigned" class="nav-link nav-op" title="Records direct assignment of a task to a worker or queue.">
+      <span class="nav-op-path">assigned</span>
+    </a><a href="#event-workflow.task.awaiting_client" class="nav-link nav-op" title="Records that the task is blocked waiting on client action.">
+      <span class="nav-op-path">awaiting_client</span>
+    </a><a href="#event-workflow.task.awaiting_verification" class="nav-link nav-op" title="Records that the task is blocked waiting on a verification result.">
+      <span class="nav-op-path">awaiting_verification</span>
+    </a><a href="#event-workflow.task.cancelled" class="nav-link nav-op" title="Records cancellation of a task. When system-triggered (e.g., client unresponsive), `causationid` carries the ID of the triggering event and `reason` is `client_unresponsive`.">
+      <span class="nav-op-path">cancelled</span>
+    </a><a href="#event-workflow.task.claimed" class="nav-link nav-op" title="Records the claim and who claimed the task.">
+      <span class="nav-op-path">claimed</span>
+    </a><a href="#event-workflow.task.client_timeout" class="nav-link nav-op" title="30-calendar-day limit on client unresponsiveness before auto-cancellation Published by the timer service when the timer fires; the subject is the record the timer is for.">
+      <span class="nav-op-path">client_timeout</span>
+    </a><a href="#event-workflow.task.completed" class="nav-link nav-op" title="Records the completion and its outcome.">
+      <span class="nav-op-path">completed</span>
+    </a><a href="#event-workflow.task.created" class="nav-link nav-op" title="A Task was created. Carries the record as created.">
+      <span class="nav-op-path">created</span>
+    </a><a href="#event-workflow.task.creation_deadline" class="nav-link nav-op" title="72-business-hour deadline to act on a newly created task before auto-escalation Published by the timer service when the timer fires; the subject is the record the timer is for.">
+      <span class="nav-op-path">creation_deadline</span>
+    </a><a href="#event-workflow.task.de_escalated" class="nav-link nav-op" title="Records de-escalation of a task.">
+      <span class="nav-op-path">de_escalated</span>
+    </a><a href="#event-workflow.task.deleted" class="nav-link nav-op" title="A Task was deleted. The subject is the record's id.">
+      <span class="nav-op-path">deleted</span>
+    </a><a href="#event-workflow.task.escalated" class="nav-link nav-op" title="Records the escalation and its reason.">
+      <span class="nav-op-path">escalated</span>
+    </a><a href="#event-workflow.task.priority_changed" class="nav-link nav-op" title="Records the priority change.">
+      <span class="nav-op-path">priority_changed</span>
+    </a><a href="#event-workflow.task.released" class="nav-link nav-op" title="Records the release and its reason.">
+      <span class="nav-op-path">released</span>
+    </a><a href="#event-workflow.task.reopened" class="nav-link nav-op" title="Records the reopen and its reason.">
+      <span class="nav-op-path">reopened</span>
+    </a><a href="#event-workflow.task.resumed" class="nav-link nav-op" title="Records resumption from an awaiting state. When system-triggered (timer or verification result), `causationid` carries the ID of the triggering event.">
+      <span class="nav-op-path">resumed</span>
+    </a><a href="#event-workflow.task.returned_to_worker" class="nav-link nav-op" title="Records the return for revision and its reason.">
+      <span class="nav-op-path">returned_to_worker</span>
+    </a><a href="#event-workflow.task.sla_breach" class="nav-link nav-op" title="Fired at the task SLA deadline to record a breach and escalate Published by the timer service when the timer fires; the subject is the record the timer is for.">
+      <span class="nav-op-path">sla_breach</span>
+    </a><a href="#event-workflow.task.sla_breached" class="nav-link nav-op" title="Records an SLA deadline breach for federal compliance reporting.">
+      <span class="nav-op-path">sla_breached</span>
+    </a><a href="#event-workflow.task.sla_warning" class="nav-link nav-op" title="Warning fired 48 hours before the task SLA deadline Published by the timer service when the timer fires; the subject is the record the timer is for.">
+      <span class="nav-op-path">sla_warning</span>
+    </a><a href="#event-workflow.task.submitted_for_review" class="nav-link nav-op" title="Records submission for supervisor review.">
+      <span class="nav-op-path">submitted_for_review</span>
+    </a><a href="#event-workflow.task.updated" class="nav-link nav-op" title="A Task was changed. Carries each changed field, before and after.">
+      <span class="nav-op-path">updated</span>
+    </a><a href="#event-workflow.task.verification_timeout" class="nav-link nav-op" title="7-calendar-day wait on a verification result before auto-resuming Published by the timer service when the timer fires; the subject is the record the timer is for.">
+      <span class="nav-op-path">verification_timeout</span>
+    </a>
+  </div>
+      </div>
+    </nav>
+    <main id="content">
+      <div id="event-workflow.queue.created" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.queue.created</code>
+        <span class="op-name">A Queue was created. Carries the record as created.</span>
+      </span>
+      <a href="#event-workflow.queue.created" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/workflow.html#op-post-queues">Workflow › POST /queues</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.queue.created&quot;,
+  &quot;subject&quot;: &quot;ae5ed10f-657d-55f3-b53c-b381ec583a1e&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;id&quot;: &quot;ae5ed10f-657d-55f3-b53c-b381ec583a1e&quot;,
+    &quot;name&quot;: &quot;snap-intake&quot;,
+    &quot;description&quot;: &quot;Queue for SNAP program intake tasks.&quot;,
+    &quot;source&quot;: &quot;system&quot;,
+    &quot;createdAt&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+    &quot;updatedAt&quot;: &quot;2024-01-01T00:00:00Z&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.queue.deleted" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.queue.deleted</code>
+        <span class="op-name">A Queue was deleted. The subject is the record's id.</span>
+      </span>
+      <a href="#event-workflow.queue.deleted" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/workflow.html#op-delete-queues-queueId">Workflow › DELETE /queues/{queueId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.queue.deleted&quot;,
+  &quot;subject&quot;: &quot;ae5ed10f-657d-55f3-b53c-b381ec583a1e&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {}
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.queue.updated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.queue.updated</code>
+        <span class="op-name">A Queue was changed. Carries each changed field, before and after.</span>
+      </span>
+      <a href="#event-workflow.queue.updated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/workflow.html#op-patch-queues-queueId">Workflow › PATCH /queues/{queueId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.queue.updated&quot;,
+  &quot;subject&quot;: &quot;ae5ed10f-657d-55f3-b53c-b381ec583a1e&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;changes&quot;: [
+      {
+        &quot;field&quot;: &quot;source&quot;,
+        &quot;before&quot;: &quot;system&quot;,
+        &quot;after&quot;: &quot;example&quot;
+      }
+    ]
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.approved" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.approved</code>
+        <span class="op-name">Records supervisor approval of a submitted-for-review task.</span>
+      </span>
+      <a href="#event-workflow.task.approved" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-approve">Workflow › Task › approve</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.approved&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;outcome&quot;: &quot;example&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.assigned" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.assigned</code>
+        <span class="op-name">Records direct assignment of a task to a worker or queue.</span>
+      </span>
+      <a href="#event-workflow.task.assigned" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-assign">Workflow › Task › assign</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.assigned&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;assignedToId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+    &quot;queueId&quot;: &quot;ae5ed10f-657d-55f3-b53c-b381ec583a1e&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.awaiting_client" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.awaiting_client</code>
+        <span class="op-name">Records that the task is blocked waiting on client action.</span>
+      </span>
+      <a href="#event-workflow.task.awaiting_client" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-await-client">Workflow › Task › await-client</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.awaiting_client&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.awaiting_verification" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.awaiting_verification</code>
+        <span class="op-name">Records that the task is blocked waiting on a verification result.</span>
+      </span>
+      <a href="#event-workflow.task.awaiting_verification" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-await-verification">Workflow › Task › await-verification</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.awaiting_verification&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.cancelled" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.cancelled</code>
+        <span class="op-name">Records cancellation of a task. When system-triggered (e.g., client unresponsive), `causationid` carries the ID of the triggering event and `reason` is `client_unresponsive`.</span>
+      </span>
+      <a href="#event-workflow.task.cancelled" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-cancel">Workflow › Task › cancel</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.cancelled&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;reason&quot;: &quot;client_unresponsive&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.claimed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.claimed</code>
+        <span class="op-name">Records the claim and who claimed the task.</span>
+      </span>
+      <a href="#event-workflow.task.claimed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-claim">Workflow › Task › claim</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/intake.html#on-application-workflow.task.claimed">Intake › Application</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.claimed&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;assignedToId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.client_timeout" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.client_timeout</code>
+        <span class="op-name">30-calendar-day limit on client unresponsiveness before auto-cancellation Published by the timer service when the timer fires; the subject is the record the timer is for.</span>
+      </span>
+      <a href="#event-workflow.task.client_timeout" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/workflow.html#on-task-workflow.task.client_timeout">Workflow › Task</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.client_timeout&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;timerId&quot;: &quot;workflow.client_timeout.00000009-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.completed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.completed</code>
+        <span class="op-name">Records the completion and its outcome.</span>
+      </span>
+      <a href="#event-workflow.task.completed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-complete">Workflow › Task › complete</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.completed&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;outcome&quot;: &quot;example&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.created" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.created</code>
+        <span class="op-name">A Task was created. Carries the record as created.</span>
+      </span>
+      <a href="#event-workflow.task.created" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/workflow.html#op-post-tasks">Workflow › POST /tasks</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/workflow.html#on-task-workflow.task.created">Workflow › Task</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.created&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;id&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+    &quot;name&quot;: &quot;Review SNAP application - fixture household&quot;,
+    &quot;status&quot;: &quot;pending&quot;,
+    &quot;programType&quot;: &quot;snap&quot;,
+    &quot;isExpedited&quot;: false,
+    &quot;queueId&quot;: &quot;ae5ed10f-657d-55f3-b53c-b381ec583a1e&quot;,
+    &quot;priority&quot;: 3,
+    &quot;createdAt&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+    &quot;updatedAt&quot;: &quot;2024-01-01T00:00:00Z&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.creation_deadline" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.creation_deadline</code>
+        <span class="op-name">72-business-hour deadline to act on a newly created task before auto-escalation Published by the timer service when the timer fires; the subject is the record the timer is for.</span>
+      </span>
+      <a href="#event-workflow.task.creation_deadline" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/workflow.html#on-task-workflow.task.creation_deadline">Workflow › Task</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.creation_deadline&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;timerId&quot;: &quot;workflow.creation_deadline.00000009-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.de_escalated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.de_escalated</code>
+        <span class="op-name">Records de-escalation of a task.</span>
+      </span>
+      <a href="#event-workflow.task.de_escalated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-de-escalate">Workflow › Task › de-escalate</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.de_escalated&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.deleted" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.deleted</code>
+        <span class="op-name">A Task was deleted. The subject is the record's id.</span>
+      </span>
+      <a href="#event-workflow.task.deleted" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/workflow.html#op-delete-tasks-taskId">Workflow › DELETE /tasks/{taskId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.deleted&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {}
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.escalated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.escalated</code>
+        <span class="op-name">Records the escalation and its reason.</span>
+      </span>
+      <a href="#event-workflow.task.escalated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-escalate">Workflow › Task › escalate</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.escalated&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;reason&quot;: &quot;example&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.priority_changed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.priority_changed</code>
+        <span class="op-name">Records the priority change.</span>
+      </span>
+      <a href="#event-workflow.task.priority_changed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-set-priority">Workflow › Task › set-priority</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.priority_changed&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;priority&quot;: 3
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.released" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.released</code>
+        <span class="op-name">Records the release and its reason.</span>
+      </span>
+      <a href="#event-workflow.task.released" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-release">Workflow › Task › release</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.released&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;reason&quot;: &quot;example&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.reopened" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.reopened</code>
+        <span class="op-name">Records the reopen and its reason.</span>
+      </span>
+      <a href="#event-workflow.task.reopened" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-reopen">Workflow › Task › reopen</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.reopened&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;reason&quot;: &quot;example&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.resumed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.resumed</code>
+        <span class="op-name">Records resumption from an awaiting state. When system-triggered (timer or verification result), `causationid` carries the ID of the triggering event.</span>
+      </span>
+      <a href="#event-workflow.task.resumed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-resume">Workflow › Task › resume</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.resumed&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.returned_to_worker" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.returned_to_worker</code>
+        <span class="op-name">Records the return for revision and its reason.</span>
+      </span>
+      <a href="#event-workflow.task.returned_to_worker" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-return-to-worker">Workflow › Task › return-to-worker</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.returned_to_worker&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;reason&quot;: &quot;example&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.sla_breach" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.sla_breach</code>
+        <span class="op-name">Fired at the task SLA deadline to record a breach and escalate Published by the timer service when the timer fires; the subject is the record the timer is for.</span>
+      </span>
+      <a href="#event-workflow.task.sla_breach" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/workflow.html#on-task-workflow.task.sla_breach">Workflow › Task</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.sla_breach&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;timerId&quot;: &quot;workflow.sla_breach.00000009-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.sla_breached" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.sla_breached</code>
+        <span class="op-name">Records an SLA deadline breach for federal compliance reporting.</span>
+      </span>
+      <a href="#event-workflow.task.sla_breached" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-sla-escalate">Workflow › Task › sla-escalate</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.sla_breached&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;reason&quot;: &quot;example&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.sla_warning" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.sla_warning</code>
+        <span class="op-name">Warning fired 48 hours before the task SLA deadline Published by the timer service when the timer fires; the subject is the record the timer is for.</span>
+      </span>
+      <a href="#event-workflow.task.sla_warning" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/workflow.html#on-task-workflow.task.sla_warning">Workflow › Task</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.sla_warning&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;timerId&quot;: &quot;workflow.sla_warning.00000009-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.submitted_for_review" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.submitted_for_review</code>
+        <span class="op-name">Records submission for supervisor review.</span>
+      </span>
+      <a href="#event-workflow.task.submitted_for_review" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/workflow.html#action-task-submit-for-review">Workflow › Task › submit-for-review</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.submitted_for_review&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.updated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.updated</code>
+        <span class="op-name">A Task was changed. Carries each changed field, before and after.</span>
+      </span>
+      <a href="#event-workflow.task.updated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/workflow.html#op-patch-tasks-taskId">Workflow › PATCH /tasks/{taskId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/workflow.html#on-task-workflow.task.updated">Workflow › Task</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.updated&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;changes&quot;: []
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-workflow.task.verification_timeout" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">workflow.task.verification_timeout</code>
+        <span class="op-name">7-calendar-day wait on a verification result before auto-resuming Published by the timer service when the timer fires; the subject is the record the timer is for.</span>
+      </span>
+      <a href="#event-workflow.task.verification_timeout" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/workflow.html#on-task-workflow.task.verification_timeout">Workflow › Task</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">domains/workflow/workflow-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/workflow&quot;,
+  &quot;type&quot;: &quot;workflow.task.verification_timeout&quot;,
+  &quot;subject&quot;: &quot;00000009-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;timerId&quot;: &quot;workflow.verification_timeout.00000009-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
+    
+  </script>
+<script>
+  document.addEventListener('click', (event) => {
+    const tab = event.target.closest('.resp-tab');
+    if (!tab) return;
+    const section = tab.closest('.responses-section');
+    for (const other of section.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
+    for (const panel of section.querySelectorAll('.resp-panel')) panel.hidden = panel.dataset.resp !== tab.dataset.resp;
+  });
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  // The sidebar goes to an operation without putting it in the address, so a
+  // reload starts from the top; an operation's own # link is the one to share.
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-op');
+    if (!link) return;
+    const target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    const details = target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+</script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<style>
+  #try-it-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 600 12px system-ui, sans-serif;
+    color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 100px; padding: 2px 4px 2px 10px; cursor: pointer; }
+  #try-it-switch .knob { width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.3); position: relative; transition: background .15s; }
+  #try-it-switch .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  #try-it-switch[aria-checked="true"] .knob { background: #22c55e; }
+  #try-it-switch[aria-checked="true"] .knob::after { left: 14px; }
+  #try-it-switch.floating { position: fixed; top: 8px; right: 16px; z-index: 1001; background: #2B1A78; }
+  html[data-try-it="on"] body { padding-right: var(--mock-panel-width, 30rem); }
+  /* Narrow, the panel docks along the bottom instead, as developer tools do. */
+  @media (max-width: 1200px) { html[data-try-it="on"] body { padding-right: 0; padding-bottom: var(--mock-panel-height, 40vh); } }
+</style>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const scope = new URL('mock/', root).href;
+  const key = 'blueprint-try-it:' + scope;
+  const stored = () => { try { return sessionStorage.getItem(key) === 'on'; } catch { return false; } };
+  const remember = (on) => { try { if (on) sessionStorage.setItem(key, 'on'); else sessionStorage.removeItem(key); } catch { /* this page only */ } };
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+
+  const toggle = document.createElement('button');
+  toggle.id = 'try-it-switch';
+  toggle.type = 'button';
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-controls', 'mock-panel');
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  const crumbs = document.querySelector('.page-crumbs');
+  if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
+
+  const show = (on) => {
+    document.documentElement.dataset.tryIt = on ? 'on' : 'off';
+    toggle.setAttribute('aria-checked', String(on));
+    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+  };
+  const turn = (on) => {
+    remember(on);
+    show(on);
+    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+  };
+  toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
+  // The panel's own Close turns it off too.
+  addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
+  show(stored());
+  if (stored()) turn(true);
+})();
+</script>
+</body>
+</html>

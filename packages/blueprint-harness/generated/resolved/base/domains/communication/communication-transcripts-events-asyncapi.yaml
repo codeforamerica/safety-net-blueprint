@@ -56,11 +56,11 @@ channels:
     messages:
       CommunicationTranscriptClosed:
         $ref: "#/components/messages/CommunicationTranscriptClosed"
-  communication.idle_check:
-    address: communication.idle_check
+  communication.transcript.idle_check:
+    address: communication.transcript.idle_check
     messages:
-      CommunicationIdleCheck:
-        $ref: "#/components/messages/CommunicationIdleCheck"
+      CommunicationTranscriptIdleCheck:
+        $ref: "#/components/messages/CommunicationTranscriptIdleCheck"
 operations:
   sendCommunicationTranscriptCreated:
     action: send
@@ -134,12 +134,12 @@ operations:
       $ref: "#/channels/communication.transcript_entry.created"
     messages:
       - $ref: "#/channels/communication.transcript_entry.created/messages/CommunicationTranscriptEntryCreated"
-  receiveCommunicationIdleCheck:
+  receiveCommunicationTranscriptIdleCheck:
     action: receive
     channel:
-      $ref: "#/channels/communication.idle_check"
+      $ref: "#/channels/communication.transcript.idle_check"
     messages:
-      - $ref: "#/channels/communication.idle_check/messages/CommunicationIdleCheck"
+      - $ref: "#/channels/communication.transcript.idle_check/messages/CommunicationTranscriptIdleCheck"
 components:
   messages:
     CommunicationTranscriptCreated:
@@ -149,6 +149,28 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptCreatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript.created event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript.created
+            subject: 7a1e0c2d-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              id: 7a1e0c2d-0000-4000-8000-000000000001
+              subjectType: interview
+              subjectId: 7a1e0c2d-0000-4000-8000-0000000000a1
+              profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
+              model: standard
+              client: interview-assistant/0.1.0
+              status: recording
+              startedAt: "2026-10-11T14:00:00Z"
+              createdAt: "2026-10-11T14:00:00Z"
+              updatedAt: "2026-10-11T14:00:00Z"
     CommunicationTranscriptUpdated:
       name: communication.transcript.updated
       summary: A Transcript was changed. Carries each changed field, before and after.
@@ -156,6 +178,22 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptUpdatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript.updated event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript.updated
+            subject: 7a1e0c2d-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              changes:
+                - field: subjectType
+                  before: interview
+                  after: chat
     CommunicationTranscriptDeleted:
       name: communication.transcript.deleted
       summary: A Transcript was deleted. The subject is the record's id.
@@ -163,6 +201,18 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptDeletedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript.deleted event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript.deleted
+            subject: 7a1e0c2d-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data: {}
     CommunicationTranscriptEntryCreated:
       name: communication.transcript_entry.created
       summary: A TranscriptEntry was created. Carries the record as created.
@@ -170,6 +220,29 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptEntryCreatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript_entry.created event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript_entry.created
+            subject: 7a1e0c2d-0000-4000-8000-0000000000e1
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              id: 7a1e0c2d-0000-4000-8000-0000000000e1
+              transcriptId: 7a1e0c2d-0000-4000-8000-000000000001
+              kind: line
+              startedAt: "2026-10-11T14:00:05Z"
+              endedAt: "2026-10-11T14:00:09Z"
+              text: Thanks for coming in. Can you tell me who lives in your household?
+              speaker: staff
+              speakerLabel: spk_0
+              confidence: 0.96
+              createdAt: "2026-10-11T14:00:10Z"
+              updatedAt: "2026-10-11T14:00:10Z"
     CommunicationTranscriptEntryUpdated:
       name: communication.transcript_entry.updated
       summary: A TranscriptEntry was changed. Carries each changed field, before and after.
@@ -177,6 +250,22 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptEntryUpdatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript_entry.updated event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript_entry.updated
+            subject: 7a1e0c2d-0000-4000-8000-0000000000e1
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              changes:
+                - field: kind
+                  before: line
+                  after: example
     CommunicationTranscriptionProfileCreated:
       name: communication.transcription_profile.created
       summary: A TranscriptionProfile was created. Carries the record as created.
@@ -184,6 +273,18 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionProfileCreatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_profile.created event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_profile.created
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data: {}
     CommunicationTranscriptionProfileUpdated:
       name: communication.transcription_profile.updated
       summary: A TranscriptionProfile was changed. Carries each changed field, before and after.
@@ -191,6 +292,19 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionProfileUpdatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_profile.updated event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_profile.updated
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              changes: []
     CommunicationTranscriptPaused:
       name: communication.transcript.paused
       summary: The conversation went off the record. Anything said until it resumes is not stored.
@@ -198,6 +312,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptPausedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript.paused event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript.paused
+            subject: 7a1e0c2d-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptResumed:
       name: communication.transcript.resumed
       summary: The conversation is back on the record.
@@ -205,6 +330,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptResumedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript.resumed event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript.resumed
+            subject: 7a1e0c2d-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptClosed:
       name: communication.transcript.closed
       summary: The transcript has ended.
@@ -212,13 +348,37 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptClosedEvent"
-    CommunicationIdleCheck:
-      name: communication.idle_check
-      summary: Whether a recording transcript has gone quiet for its profile's idleTimeout. Sent by the timer service when the timer fires; the subject is the record the timer is for.
+      examples:
+        - name: Example
+          summary: An example communication.transcript.closed event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript.closed
+            subject: 7a1e0c2d-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+    CommunicationTranscriptIdleCheck:
+      name: communication.transcript.idle_check
+      summary: Whether a recording transcript has gone quiet for its profile's idleTimeout. Published by the timer service when the timer fires; the subject is the record the timer is for.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
-          $ref: "#/components/schemas/CommunicationIdleCheckEvent"
+          $ref: "#/components/schemas/CommunicationTranscriptIdleCheckEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcript.idle_check event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcript.idle_check
+            subject: 7a1e0c2d-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              timerId: communication.idle_check.7a1e0c2d-0000-4000-8000-000000000001
   schemas:
     CommunicationTranscriptCreatedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
@@ -334,7 +494,7 @@ components:
               type:
                 type: string
                 const: communication.transcript.closed
-    CommunicationIdleCheckEvent:
+    CommunicationTranscriptIdleCheckEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
       schema:
         allOf:
@@ -343,6 +503,6 @@ components:
             properties:
               type:
                 type: string
-                const: communication.idle_check
+                const: communication.transcript.idle_check
               data:
                 $ref: ../../schemas/events.yaml#/TimerCallbackEvent

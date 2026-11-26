@@ -11,7 +11,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateEvents } from '../../../src/validator/event-validator.js';
+import { validateEvents, eventNameError } from '../../../src/validator/event-validator.js';
 
 /**
  * A state-machine Doc, with `model()` as a method the way `load` builds it.
@@ -85,8 +85,9 @@ describe('validateEvents', () => {
     const doc = stateMachineDoc({
       domain: 'intake',
       machines: [{
+        object: 'Application',
         timers: [{ id: 'review_reminder' }],
-        on: [{ type: 'intake.review_reminder', steps: [] }],
+        on: [{ type: 'intake.application.review_reminder', steps: [] }],
       }],
     });
 
@@ -99,8 +100,9 @@ describe('validateEvents', () => {
     const doc = stateMachineDoc({
       domain: 'intake',
       machines: [{
+        object: 'Application',
         timers: [{ id: 'review_reminder' }],
-        on: [{ type: 'ca.intake.review_reminder', steps: [] }],
+        on: [{ type: 'ca.intake.application.review_reminder', steps: [] }],
       }],
     });
 
@@ -108,12 +110,13 @@ describe('validateEvents', () => {
   });
 
   test('the exemption is anchored on the separator', () => {
-    // "xintake.review_reminder" is a different event, not a namespaced one.
+    // "xintake.application.review_reminder" is a different event, not a namespaced one.
     const doc = stateMachineDoc({
       domain: 'intake',
       machines: [{
+        object: 'Application',
         timers: [{ id: 'review_reminder' }],
-        on: [{ type: 'xintake.review_reminder', steps: [] }],
+        on: [{ type: 'xintake.application.review_reminder', steps: [] }],
       }],
     });
 
@@ -126,6 +129,7 @@ describe('validateEvents', () => {
     const doc = stateMachineDoc({
       domain: 'intake',
       machines: [{
+        object: 'Application',
         timers: [{ id: 'review_reminder' }],
         on: [{ type: 'ca.intake.other_reminder', steps: [] }],
       }],
@@ -134,5 +138,46 @@ describe('validateEvents', () => {
     const errors = validateEvents(doc, channels([]));
     assert.equal(errors.length, 1);
     assert.equal(errors[0].rule, 'subscription-type-undeclared');
+  });
+});
+
+describe('event names', () => {
+  const domains = new Set(['intake', 'decision-support']);
+
+  test('takes domain.resource.event', () => {
+    assert.equal(eventNameError('intake.application.submitted', domains), null);
+    assert.equal(eventNameError('decision-support.suggestion.auto_resolved', domains), null);
+  });
+
+  test('takes a bus namespace ahead of the domain', () => {
+    assert.equal(eventNameError('ca.intake.application.submitted', domains), null);
+    assert.equal(eventNameError('gov.ca.dss.intake.application.submitted', domains), null);
+  });
+
+  test('takes a version after the event', () => {
+    assert.equal(eventNameError('intake.application.submitted.v2', domains), null);
+    assert.equal(eventNameError('intake.application.submitted.extra', domains)?.rule, 'event-name-shape');
+  });
+
+  test('refuses a name with no resource', () => {
+    assert.equal(eventNameError('intake.review_reminder', domains)?.rule, 'event-name-shape');
+    assert.equal(eventNameError('ca.intake.review_reminder', domains)?.rule, 'event-name-shape');
+  });
+
+  test('refuses a hyphen in the resource or the event', () => {
+    assert.equal(eventNameError('intake.application.review-reminder', domains)?.rule, 'event-name-shape');
+  });
+
+  test('refuses a domain the set does not define', () => {
+    assert.equal(eventNameError('billing.invoice.paid', domains)?.rule, 'event-name-shape');
+  });
+
+  test('reports a machine that subscribes to a two-part name', () => {
+    const doc = stateMachineDoc({
+      domain: 'intake',
+      machines: [{ object: 'Application', on: [{ type: 'intake.review_reminder', steps: [] }] }],
+    });
+    const rules = validateEvents(doc, channels(['intake.review_reminder']), domains).map((error) => error.rule);
+    assert.deepEqual(rules, ['event-name-shape']);
   });
 });

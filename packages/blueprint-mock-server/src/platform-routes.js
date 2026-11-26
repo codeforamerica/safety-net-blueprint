@@ -16,6 +16,7 @@
 
 import { createSseHandler } from './handlers/sse-handler.js';
 import { emitEventEnvelope } from './emit-event.js';
+import { fireWaitingTimer } from './mock-stub-engine.js';
 import { seedConfigs } from './config-registry.js';
 import { seedAllDatabases } from './seeder.js';
 import { addRoute, routeKey, tagRoutesAddedBy } from './http/route-table.js';
@@ -38,11 +39,12 @@ export function registerPlatformRoutes(routes, deps) {
  *
  * The mock's own routes are registered first and first registration wins, so
  * a contract declaring `/mock/stubs/http` or `/health` would be shadowed:
- * declared, listed in Swagger, and never served. Detected from the routes
+ * declared, documented, and never served. Detected from the routes
  * rather than a list of reserved prefixes, so a route the mock adds later is
  * covered without anyone remembering to add it. The mock's own OpenAPI
- * document is the likeliest cause — it describes these routes for Swagger,
- * and passed to the mock as a contract it would collide with every one.
+ * document is the likeliest cause — it describes these routes for scenarios
+ * and for reading, and passed to the mock as a contract it would collide with
+ * every one.
  *
  * @param {Map<string, object>} routes
  * @param {Array} apiSpecs - As `apiSpecsFromDocs` returns them
@@ -59,7 +61,7 @@ export function refuseOwnRouteCollisions(routes, apiSpecs) {
   throw new Error(
     'These contract routes are ones the mock serves itself, so they would never be reached:\n  '
     + collisions.join('\n  ')
-    + '\nThe mock\'s own OpenAPI document is for Swagger; do not pass it to the mock as a contract.',
+    + '\nThe mock\'s own OpenAPI document is for scenarios and for reading; do not pass it to the mock as a contract.',
   );
 }
 
@@ -87,7 +89,10 @@ function registerOwnRoutes(routes, { store, instance, apiNames = [], readDocs, c
   // Event stub registry — pre-program event responses for integration tests.
   addRoute(routes, 'POST', '/mock/stubs/events', async (request) => {
     try {
-      return Response.json(stubs.registerStub(await jsonBody(request)), { status: 201 });
+      // A timer stub also fires a timer already waiting, and is used up doing it.
+      const registered = stubs.registerStub(await jsonBody(request));
+      fireWaitingTimer(registered, instance);
+      return Response.json(registered, { status: 201 });
     } catch (err) {
       return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
     }

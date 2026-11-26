@@ -73,11 +73,35 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  .ann-card { border-radius: 6px; margin-bottom: 0.4rem; background: #fff; }
+  .ann-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1rem; cursor: pointer; list-style: none; }
+  .ann-row::-webkit-details-marker { display: none; }
+  .ann-row::before { content: '\25B8'; font-size: 10px; color: #888; }
+  details[open] > .ann-row::before { content: '\25BE'; }
+  details[open] > .ann-row { border-bottom: 1px solid #eee; }
+  .ann-entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0.75rem 1rem 0.9rem; }
+  @media (min-width: 1100px) { .ann-entry { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .ann-side { min-width: 0; font-size: 12px; }
+  .ann-side .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font: 600 12px monospace; color: #333; }
+  .ann-side select { font: 12px monospace; padding: 3px 6px; border: 1px solid #c7c4ea; border-radius: 4px; background: #fff; }
+  .try-code { border: 1px solid #e3e1f5; border-radius: 4px; overflow: hidden; }
+  .try-code .tabs { display: flex; align-items: center; gap: 2px; padding: 4px 6px; background: #f6f5fd; border-bottom: 1px solid #e3e1f5; font-size: 11px; }
+  .try-code .tabs .tab { font: 600 11px sans-serif; padding: 3px 10px; border-radius: 3px; background: #2B1A78; color: #fff; }
+  .try-code .tabs .target { margin-left: auto; color: #777; font: 11px monospace; }
+  .try-code .tabs button.copy { margin-left: 8px; font: 600 11px sans-serif; padding: 3px 10px; border: 1px solid #c7c4ea; border-radius: 3px; background: #fff; color: #555; cursor: pointer; }
+  .try-code pre { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e6e4f5; font: 11.5px/1.5 monospace; overflow: auto; white-space: pre; }
+  .try-code .foot { display: flex; justify-content: flex-end; padding: 6px 8px; background: #1e1b3a; border-top: 1px solid #2f2a5c; }
+  .try-code .run { font: 600 12px sans-serif; padding: 4px 16px; border-radius: 4px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; }
+  .ann-result { margin-top: 8px; }
+  .ann-result .label { font: 600 12px monospace; border-bottom: 2px solid #006152; display: inline-block; padding: 2px 8px; }
+  .ann-result .note { color: #15803d; font-weight: 700; margin: 6px 0 0; }
+  .ann-result pre { margin: 6px 0 0; padding: 8px 10px; background: #fff; border: 1px solid #eee; border-radius: 4px; max-height: 22rem; overflow: auto; white-space: pre-wrap; font-size: 11px; }
+
   </style>
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Blueprint Harness</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">policies</a></div>
+    <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Blueprint Harness</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">policies</a></div>
     
       <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
         <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">policies</code></div>
@@ -215,263 +239,321 @@
       <div style="padding:2rem 0.5rem;">
       <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>policies</code></h1>
       <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">29 entries · <span style="color:#c0392b;">5 unused</span></p>
-      <div id="entry--snap-application-acceptance" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-application-acceptance</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP application acceptance requirements — agencies must accept applications on the day of initial contact and must not discourage or delay submission.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+      <div id="entry--snap-application-acceptance" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-application-acceptance</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP application acceptance requirements — agencies must accept applications on the day of initial contact and must not discourage or delay submission.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-right-to-apply" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-right-to-apply</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP right-to-apply — any household wishing to participate must be allowed to file an application, and the filing date establishes the benefit month.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-application-acceptance" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-right-to-apply" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-right-to-apply</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP right-to-apply — any household wishing to participate must be allowed to file an application, and the filing date establishes the benefit month.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-processing-clock" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-processing-clock</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-right-to-apply" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-processing-clock" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-processing-clock</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submittedAt</code></a> <a href="../event-catalog/index.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
-        </div></div>
-      </div><div id="entry--medicaid-processing-clock" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">medicaid-processing-clock</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid application processing standards — 45-day processing clock for most applicants; 90 days for disability-based applicants.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submittedAt</code></a> <a href="../event-catalog/intake.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-processing-clock" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--medicaid-processing-clock" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">medicaid-processing-clock</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid application processing standards — 45-day processing clock for most applicants; 90 days for disability-based applicants.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submittedAt</code></a> <a href="../event-catalog/index.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-notice-of-action" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-notice-of-action</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP notice of adverse action — agencies must provide timely and adequate written notice before reducing, suspending, or terminating benefits.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submittedAt</code></a> <a href="../event-catalog/intake.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="medicaid-processing-clock" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-notice-of-action" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-notice-of-action</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP notice of adverse action — agencies must provide timely and adequate written notice before reducing, suspending, or terminating benefits.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-withdraw" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.withdraw</code></a> <a href="../event-catalog/index.html#event-intake.application.withdrawn" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.withdrawn</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-notice-of-eligibility" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-notice-of-eligibility</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP notice of eligibility determination — written notice of approval or denial with reason, rights, and certification period.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-withdraw" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.withdraw</code></a> <a href="../event-catalog/intake.html#event-intake.application.withdrawn" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.withdrawn</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-notice-of-action" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-notice-of-eligibility" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-notice-of-eligibility</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP notice of eligibility determination — written notice of approval or denial with reason, rights, and certification period.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].eligible</code></a> <a href="../event-catalog/index.html#event-eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">eligibility.determination.complete</code></a></div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].eligible</code></a> <a href="../event-catalog/eligibility.html#event-eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">eligibility.determination.complete</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.close</code></a> <a href="../event-catalog/index.html#event-intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.closed</code></a></div>
-        </div></div>
-      </div><div id="entry--medicaid-notice-of-eligibility" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">medicaid-notice-of-eligibility</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid notice of eligibility determination — written notice of approval or denial with reason, appeal rights, and effective date.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.close</code></a> <a href="../event-catalog/intake.html#event-intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.closed</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-notice-of-eligibility" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--medicaid-notice-of-eligibility" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">medicaid-notice-of-eligibility</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid notice of eligibility determination — written notice of approval or denial with reason, appeal rights, and effective date.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].eligible</code></a> <a href="../event-catalog/index.html#event-eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">eligibility.determination.complete</code></a></div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].eligible</code></a> <a href="../event-catalog/eligibility.html#event-eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">eligibility.determination.complete</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.close</code></a> <a href="../event-catalog/index.html#event-intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.closed</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-fair-hearing-rights" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-fair-hearing-rights</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP fair hearing rights — households have the right to request a fair hearing within 90 days of any adverse action notice.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.close</code></a> <a href="../event-catalog/intake.html#event-intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.closed</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="medicaid-notice-of-eligibility" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-fair-hearing-rights" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-fair-hearing-rights</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP fair hearing rights — households have the right to request a fair hearing within 90 days of any adverse action notice.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].eligible</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.close</code></a> <a href="../event-catalog/index.html#event-intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.closed</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-interview-toolkit" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-interview-toolkit</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">FNS SNAP Interview Toolkit — six essential interview functions, probe triggers for inconsistency flags, verification requirements, and interview conclusion standards.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.close</code></a> <a href="../event-catalog/intake.html#event-intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.closed</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-fair-hearing-rights" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-interview-toolkit" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-interview-toolkit</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">FNS SNAP Interview Toolkit — six essential interview functions, probe triggers for inconsistency flags, verification requirements, and interview conclusion standards.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.incomeBelowExpenses" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.incomeBelowExpenses</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-general-work-requirement" class="content-item" style="border:1px solid rgba(220,80,80,0.4);border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;background:rgba(220,80,80,0.04);">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-general-work-requirement</code>
-          <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP general work requirements — able-bodied adults aged 16–59 must register for work, accept suitable employment, and participate in assigned employment and training programs. Exemptions include physical/mental incapacity, caregiving, school enrollment, and participation in other programs.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div>
-      </div><div id="entry--snap-abawd-work-requirement" class="content-item" style="border:1px solid rgba(220,80,80,0.4);border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;background:rgba(220,80,80,0.04);">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-abawd-work-requirement</code>
-          <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP able-bodied adults without dependents (ABAWD) work requirement — individuals aged 18–54 without dependents are limited to 3 months of benefits in any 36-month period unless they meet work, exemption, or waiver criteria.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div>
-      </div><div id="entry--snap-student-eligibility" class="content-item" style="border:1px solid rgba(220,80,80,0.4);border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;background:rgba(220,80,80,0.04);">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-student-eligibility</code>
-          <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP eligibility rules for students enrolled at least half-time in higher education — generally ineligible unless they meet one of the statutory exceptions (employment, work-study, dependent care, TANF participation, etc.).</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div>
-      </div><div id="entry--snap-expedited-processing" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-expedited-processing</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP expedited service — households with gross monthly income below $150 and liquid resources below $100 (or migrant/seasonal farmworkers) must receive benefits within 7 days of application.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-interview-toolkit" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-general-work-requirement" class="content-item">
+        <details class="ann-card" style="border:1px solid rgba(220,80,80,0.4);background:rgba(220,80,80,0.04);">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-general-work-requirement</code>
+            <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP general work requirements — able-bodied adults aged 16–59 must register for work, accept suitable employment, and participate in assigned employment and training programs. Exemptions include physical/mental incapacity, caregiving, school enrollment, and participation in other programs.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div></div></div>
+        </details>
+      </div><div id="entry--snap-abawd-work-requirement" class="content-item">
+        <details class="ann-card" style="border:1px solid rgba(220,80,80,0.4);background:rgba(220,80,80,0.04);">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-abawd-work-requirement</code>
+            <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP able-bodied adults without dependents (ABAWD) work requirement — individuals aged 18–54 without dependents are limited to 3 months of benefits in any 36-month period unless they meet work, exemption, or waiver criteria.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div></div></div>
+        </details>
+      </div><div id="entry--snap-student-eligibility" class="content-item">
+        <details class="ann-card" style="border:1px solid rgba(220,80,80,0.4);background:rgba(220,80,80,0.04);">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-student-eligibility</code>
+            <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP eligibility rules for students enrolled at least half-time in higher education — generally ineligible unless they meet one of the statutory exceptions (employment, work-study, dependent care, TANF participation, etc.).</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div></div></div>
+        </details>
+      </div><div id="entry--snap-expedited-processing" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-expedited-processing</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP expedited service — households with gross monthly income below $150 and liquid resources below $100 (or migrant/seasonal farmworkers) must receive benefits within 7 days of application.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.expedited" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.expedited</code></a> <a href="../rules-docs/eligibility-expeditedSnap.html#fact-isExpeditedEligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">expeditedSnap.isExpeditedEligible</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-expedited-screening" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-expedited-screening</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP expedited screening criteria — agencies must screen all applications on the day of receipt and identify households entitled to expedited service.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-expedited-processing" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-expedited-screening" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-expedited-screening</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP expedited screening criteria — agencies must screen all applications on the day of receipt and identify households entitled to expedited service.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.expedited" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.expedited</code></a> <a href="../rules-docs/eligibility-expeditedSnap.html#fact-isLowIncome" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">expeditedSnap.isLowIncome</code></a></div>
-        </div></div>
-      </div><div id="entry--qualified-alien-eligibility" class="content-item" style="border:1px solid rgba(220,80,80,0.4);border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;background:rgba(220,80,80,0.04);">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">qualified-alien-eligibility</code>
-          <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP eligibility for non-citizens — only qualified aliens are eligible; status categories include LPRs, refugees, asylees, and other federally defined categories with varying waiting periods.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div>
-      </div><div id="entry--prwora-sponsor-deeming" class="content-item" style="border:1px solid rgba(220,80,80,0.4);border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;background:rgba(220,80,80,0.04);">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">prwora-sponsor-deeming</code>
-          <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">PRWORA sponsor income deeming — income and resources of a sponsor who signed an I-864 Affidavit of Support on or after December 19, 1997 are deemed available to the sponsored non-citizen for SNAP purposes.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div>
-      </div><div id="entry--snap-household-composition" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-household-composition</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP household composition rules — defines who must be included in a SNAP household, including mandatory household members, separate household rules, and treatment of boarders, roommates, and institutionalized individuals.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-expedited-screening" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--qualified-alien-eligibility" class="content-item">
+        <details class="ann-card" style="border:1px solid rgba(220,80,80,0.4);background:rgba(220,80,80,0.04);">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">qualified-alien-eligibility</code>
+            <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP eligibility for non-citizens — only qualified aliens are eligible; status categories include LPRs, refugees, asylees, and other federally defined categories with varying waiting periods.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div></div></div>
+        </details>
+      </div><div id="entry--prwora-sponsor-deeming" class="content-item">
+        <details class="ann-card" style="border:1px solid rgba(220,80,80,0.4);background:rgba(220,80,80,0.04);">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">prwora-sponsor-deeming</code>
+            <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">PRWORA sponsor income deeming — income and resources of a sponsor who signed an I-864 Affidavit of Support on or after December 19, 1997 are deemed available to the sponsored non-citizen for SNAP purposes.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div></div></div>
+        </details>
+      </div><div id="entry--snap-household-composition" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-household-composition</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP household composition rules — defines who must be included in a SNAP household, including mandatory household members, separate household rules, and treatment of boarders, roommates, and institutionalized individuals.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.relationship" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.relationship</code></a> <a href="../event-catalog/index.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.householdSizeDiffersFromMembers" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.householdSizeDiffersFromMembers</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.householdChangedSincePrevious" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.householdChangedSincePrevious</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-income-verification" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-income-verification</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP income verification requirements — agencies must verify earned and unearned income at application and recertification, including acceptable documentary evidence and collateral contact standards.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.relationship" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.relationship</code></a> <a href="../event-catalog/intake.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.householdSizeDiffersFromMembers" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.householdSizeDiffersFromMembers</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.householdChangedSincePrevious" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.householdChangedSincePrevious</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-household-composition" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-income-verification" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-income-verification</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP income verification requirements — agencies must verify earned and unearned income at application and recertification, including acceptable documentary evidence and collateral contact standards.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.incomeSource" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.incomeSource</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.incomeDiffersFromPayStub" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.incomeDiffersFromPayStub</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.wagesDifferFromWageRecords" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.wagesDifferFromWageRecords</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.earnedIncomeVaries" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.earnedIncomeVaries</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-elderly-disabled-deductions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-elderly-disabled-deductions</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP deductions for elderly and disabled households — households with an elderly or disabled member may claim excess medical expense deductions and are exempt from the gross income test.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-income-verification" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-elderly-disabled-deductions" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-elderly-disabled-deductions</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP deductions for elderly and disabled households — households with an elderly or disabled member may claim excess medical expense deductions and are exempt from the gross income test.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.dateOfBirth" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.dateOfBirth</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.elderlyOrDisabledWithoutMedicalCosts" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-earned-income" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-earned-income</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">5 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP earned income — wages, salaries and self-employment income are counted in determining eligibility and benefits.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-elderly-disabled-deductions" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-earned-income" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-earned-income</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">5 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP earned income — wages, salaries and self-employment income are counted in determining eligibility and benefits.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.earnedIncomeWithoutJob" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.earnedIncomeWithoutJob</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.incomeDiffersFromPayStub" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.incomeDiffersFromPayStub</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.jobWithoutEarnedIncome" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.jobWithoutEarnedIncome</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.cashOrSelfEmploymentIncome" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.cashOrSelfEmploymentIncome</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.earnedIncomeVaries" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.earnedIncomeVaries</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-dependent-care-deduction" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-dependent-care-deduction</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP dependent care deduction — care for a child or other dependent, needed so a household member can work, look for work, or attend training or school.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-earned-income" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-dependent-care-deduction" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-dependent-care-deduction</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP dependent care deduction — care for a child or other dependent, needed so a household member can work, look for work, or attend training or school.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/intake-interviewFlags.html#fact-risks.childrenAndEarnersWithoutDependentCare" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.childrenAndEarnersWithoutDependentCare</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-shelter-utility-deductions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-shelter-utility-deductions</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP shelter and utility deductions — the excess shelter deduction, and the standard utility allowances for households that pay utility costs separately from rent.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-dependent-care-deduction" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-shelter-utility-deductions" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-shelter-utility-deductions</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP shelter and utility deductions — the excess shelter deduction, and the standard utility allowances for households that pay utility costs separately from rent.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.utilitiesIncludedButBilled" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.utilitiesIncludedButBilled</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.shelterCostsCarriedOver" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.shelterCostsCarriedOver</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-reporting-changes" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-reporting-changes</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP reporting requirements — the changes a household must report between certifications, and how the agency acts on them.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-shelter-utility-deductions" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-reporting-changes" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-reporting-changes</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP reporting requirements — the changes a household must report between certifications, and how the agency acts on them.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/intake-interviewFlags.html#fact-risks.householdChangedSincePrevious" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.householdChangedSincePrevious</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.incomeChangedSincePrevious" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.incomeChangedSincePrevious</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-recertification" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-recertification</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP recertification — the interview, verification and determination a household goes through before its certification period ends.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-reporting-changes" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-recertification" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-recertification</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP recertification — the interview, verification and determination a household goes through before its certification period ends.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/intake-interviewFlags.html#fact-risks.incomeChangedSincePrevious" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.incomeChangedSincePrevious</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.shelterCostsCarriedOver" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.shelterCostsCarriedOver</code></a></div>
-        </div></div>
-      </div><div id="entry--snap-benefit-calculation" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">snap-benefit-calculation</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP benefit calculation — net monthly income is used to determine benefit allotment; benefit equals 30% of net income subtracted from the maximum allotment for household size.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-recertification" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--snap-benefit-calculation" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">snap-benefit-calculation</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">SNAP benefit calculation — net monthly income is used to determine benefit allotment; benefit equals 30% of net income subtracted from the maximum allotment for household size.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.benefitAmount" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].benefitAmount</code></a></div>
-        </div></div>
-      </div><div id="entry--chip-age-eligibility" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">chip-age-eligibility</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">CHIP age eligibility — states must define an upper age limit for CHIP eligibility (up to age 19), and may extend coverage to unborn children and former foster youth up to age 26 under state plan options.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="snap-benefit-calculation" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--chip-age-eligibility" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">chip-age-eligibility</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">CHIP age eligibility — states must define an upper age limit for CHIP eligibility (up to age 19), and may extend coverage to unborn children and former foster youth up to age 26 under state plan options.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.dateOfBirth" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.dateOfBirth</code></a></div>
-        </div></div>
-      </div><div id="entry--medicaid-caretaker-relative" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">medicaid-caretaker-relative</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid caretaker relative eligibility — states must provide Medicaid to caretaker relatives of dependent children who meet income and resource standards, including parents and other adults who are the primary caregiver.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="chip-age-eligibility" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--medicaid-caretaker-relative" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">medicaid-caretaker-relative</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid caretaker relative eligibility — states must provide Medicaid to caretaker relatives of dependent children who meet income and resource standards, including parents and other adults who are the primary caregiver.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.relationship" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.relationship</code></a></div>
-        </div></div>
-      </div><div id="entry--medicaid-cost-sharing" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">medicaid-cost-sharing</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid cost sharing — limits on premiums, copayments, and other cost sharing for Medicaid enrollees, including aggregate limits by income level and prohibition on cost sharing for certain populations and services.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="medicaid-caretaker-relative" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--medicaid-cost-sharing" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">medicaid-cost-sharing</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid cost sharing — limits on premiums, copayments, and other cost sharing for Medicaid enrollees, including aggregate limits by income level and prohibition on cost sharing for certain populations and services.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.benefitAmount" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].benefitAmount</code></a></div>
-        </div></div>
-      </div><div id="entry--medicaid-determination-documentation" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">medicaid-determination-documentation</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid eligibility verification — agencies must verify eligibility factors through electronic data sources before requesting documentation from applicants; paper documentation may be requested only when electronic verification is unavailable.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="medicaid-cost-sharing" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--medicaid-determination-documentation" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">medicaid-determination-documentation</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Medicaid eligibility verification — agencies must verify eligibility factors through electronic data sources before requesting documentation from applicants; paper documentation may be requested only when electronic verification is unavailable.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].eligible</code></a></div>
-        </div></div>
+        </div></div></div><aside class="ann-side" data-type="policies" data-id="medicaid-determination-documentation" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
       </div>
-    </div>
+    </div><script type="application/json" id="client-annotations">{"eligibility":{"schema":{"determination":{"patterns":["polymorphic-base","paginated-list"]},"determination.id":{"patterns":["read-only-field","string-format"]},"determination.applicationId":{"patterns":["cross-domain-fk"]},"determination.expedited":{"policies":["snap-expedited-processing","snap-expedited-screening"],"patterns":["ruleset-output-fact","read-only-field"]},"determination.status":{"patterns":["allof-inline-required","x-enum-source","read-only-field"]},"determination.createdAt":{"patterns":["read-only-field","string-format"]},"determination.updatedAt":{"patterns":["read-only-field","string-format"]},"determination.decisions[]":{"patterns":["sub-resource","paginated-list"]},"determination.decisions[].eligible":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights","medicaid-determination-documentation"]},"determination.decisions[].benefitAmount":{"policies":["snap-benefit-calculation","medicaid-cost-sharing"],"patterns":["nullable-conditional-field"]}},"facts":{"expeditedSnap.isExpeditedEligible":{"policies":["snap-expedited-processing"],"patterns":["ruleset-output-fact"]},"expeditedSnap.isLowIncome":{"policies":["snap-expedited-screening"],"patterns":["ruleset-intermediate-fact"]}},"operations":{"determination.complete":{"patterns":["state-machine-guard"]}},"events":{"intake.application.submitted":{"patterns":["state-machine-subscription"]},"eligibility.determination.complete":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility"],"patterns":["cross-domain-event"]}}},"intake":{"schema":{"application":{"patterns":["polymorphic-base","paginated-list"]},"application.id":{"patterns":["read-only-field","string-format"]},"application.confirmationNumber":{"patterns":["deprecated-field","read-only-field"]},"application.status":{"patterns":["x-enum-source","read-only-field"]},"application.programsAppliedFor[]":{"patterns":["array-of-enum"]},"application.submittedAt":{"policies":["snap-processing-clock","medicaid-processing-clock"],"patterns":["nullable-state-gated-field","read-only-field","string-format"]},"application.openedAt":{"patterns":["nullable-state-gated-field","read-only-field","string-format"]},"application.createdAt":{"patterns":["read-only-field","string-format"]},"application.updatedAt":{"patterns":["read-only-field","string-format"]},"application.address":{"patterns":["external-ref-shared-defs"]},"application.contactInfo":{"patterns":["external-ref-shared-defs"]},"application.labels":{"patterns":["additional-properties-map"]},"applicationSummary":{"patterns":["singleton-sub-resource","composition"]},"applicationWritable.countyCode":{"patterns":["overlay"]},"application.members[]":{"patterns":["sub-resource","polymorphic-base","paginated-list"]},"applicationMember.id":{"patterns":["read-only-field","string-format"]},"applicationMember.dateOfBirth":{"policies":["chip-age-eligibility","snap-elderly-disabled-deductions"],"patterns":["string-format"]},"applicationMember.relationship":{"policies":["snap-household-composition","medicaid-caretaker-relative"]},"applicationMember.incomeSource":{"policies":["snap-income-verification"],"patterns":["external-ref-defs-oneof"]},"applicationMember.application":{"patterns":["intra-domain-fk"]},"applicationMember.notificationPreference":{"patterns":["oneof-discriminator"]},"applicationMember.verificationEvidence":{"patterns":["anyof"]}},"facts":{"interviewFlags.risks.earnedIncomeVaries":{"reason":"Earned income is the largest source of payment errors, and wages that change month to month are the hardest to get right: a single pay stub doesn't show what a month of irregular hours or tips comes to.\n","policies":["snap-earned-income","snap-income-verification"],"patterns":["ruleset-output-fact"],"probeQuestions":["How many hours have you worked each week over the last month?","Do you get tips? About how much in a typical week?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.risks.cashOrSelfEmploymentIncome":{"reason":"Cash, gig and self-employment income often isn't on the application at all, and isn't asked about unless someone asks specifically.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does anyone in the household do any work for cash, side jobs, or gig work?","About how much did that bring in over the last 30 days?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"}]},"interviewFlags.risks.incomeChangedSincePrevious":{"reason":"Income that's changed since the household on record — a job gained or lost, a raise, hours cut — is a leading cause of both overpayments and underpayments when it isn't reported. On a new application, that's since the application was filed.\n","policies":["snap-reporting-changes","snap-recertification"],"patterns":["ruleset-output-fact"],"probeQuestions":["Has anyone started or stopped a job since your last renewal?","Has anyone's pay or hours changed?"],"sources":[{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"},{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"}]},"interviewFlags.risks.householdChangedSincePrevious":{"reason":"Who lives in the household and buys food together decides whose income counts. Changes are often unreported, and often not asked about at recertification.\n","policies":["snap-household-composition","snap-reporting-changes"],"patterns":["ruleset-output-fact"],"probeQuestions":["Has anyone moved in or out since your last renewal?","Does everyone who lives with you buy and prepare food together?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"}]},"interviewFlags.risks.shelterCostsCarriedOver":{"reason":"Shelter costs carried forward from the last certification without being asked about can be out of date in either direction: a move or a rent increase that's missed.\n","policies":["snap-shelter-utility-deductions","snap-recertification"],"patterns":["ruleset-output-fact"],"probeQuestions":["Is your rent or mortgage still the same amount?","Have you moved since your last renewal?"],"sources":[{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts":{"reason":"A member 60 or older, or disabled, may deduct medical costs. Missed deductions are among the most common fixable errors, and lead to underpayments.\n","policies":["snap-elderly-disabled-deductions"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does [member] pay for any doctor visits, prescriptions, or medical supplies?","About how much a month?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"},{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"}]},"interviewFlags.risks.childrenAndEarnersWithoutDependentCare":{"reason":"Care for a child so a household member can work is deductible. When it's new it often isn't asked about, which leads to an underpayment.\n","policies":["snap-dependent-care-deduction"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does anyone look after the children while you work or go to school?","Do you pay for that care?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.risks.multipleProgramsApplied":{"reason":"Households on several programs face reporting rules that differ between them, which makes it harder to keep each program's information right.\n","patterns":["ruleset-output-fact"],"probeQuestions":["Have you reported this change to [other program] as well?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"}]},"interviewFlags.inconsistencies.incomeBelowExpenses":{"reason":"When reported income doesn't cover reported expenses, something the application doesn't show is paying the difference: unreported income, or help from outside the household. FNS-1104 makes it a probe.\n","policies":["snap-interview-toolkit"],"patterns":["ruleset-output-fact"],"probeQuestions":["Your expenses are more than your income. How does the household make up the difference?","Does anyone help with bills — family, friends, or community organizations?"],"sources":[{"title":"FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)","url":"https://www.fna.usda.gov/snap/state/interview-toolkit"}]},"interviewFlags.inconsistencies.wagesDifferFromWageRecords":{"reason":"Income an agency's data systems show but nobody confirms is an error the agency could have caught. A difference from the wage records needs explaining before it's resolved either way.\n","policies":["snap-income-verification"],"patterns":["ruleset-output-fact"],"probeQuestions":["The state's records show [amount] in wages for [member]. Does that sound right?","Did [member] have another job, or more hours, during that time?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.inconsistencies.incomeDiffersFromPayStub":{"reason":"A recorded amount that doesn't match its pay stubs usually means a pay frequency was converted wrongly — weekly, every two weeks, and twice a month are easy to confuse.\n","policies":["snap-income-verification","snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["How often is [member] paid — every week, every two weeks, or twice a month?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.inconsistencies.householdSizeDiffersFromMembers":{"reason":"The household's size decides its benefit. A size that doesn't match the members listed means someone is missing or counted who shouldn't be.\n","policies":["snap-household-composition"],"patterns":["ruleset-output-fact"],"probeQuestions":["Who lives with you and buys and prepares food with you?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"}]},"interviewFlags.inconsistencies.jobWithoutEarnedIncome":{"reason":"A job with no income recorded is information that arrived but wasn't applied — the most common kind of agency error.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Is [member] still working at [job]? How much are they paid?"],"sources":[{"title":"APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them","url":"https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"}]},"interviewFlags.inconsistencies.earnedIncomeWithoutJob":{"reason":"Earned income with no job behind it can't be verified or updated when the job changes, and is often a job that ended but wasn't closed out.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Where does [member] work? Are they still working there?"],"sources":[{"title":"APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them","url":"https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"}]},"interviewFlags.inconsistencies.utilitiesIncludedButBilled":{"reason":"A household that pays a utility bill isn't one whose utilities are all included in the rent, and which it is decides whether a utility allowance applies. What counts as a utility deduction is a common misapplication of policy.\n","policies":["snap-shelter-utility-deductions"],"patterns":["ruleset-output-fact"],"probeQuestions":["Do you pay any utility bills yourself, like electric or gas, or are they all included in the rent?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]}},"operations":{"application.submit":{"policies":["snap-application-acceptance","snap-processing-clock","medicaid-processing-clock","snap-right-to-apply"],"patterns":["rpc-state-machine-action"]},"application.withdraw":{"policies":["snap-notice-of-action"]},"application.close":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights"]}},"events":{"intake.application.submitted":{"policies":["snap-processing-clock","medicaid-processing-clock","snap-household-composition"],"patterns":["state-machine-event"]},"intake.application.withdrawn":{"policies":["snap-notice-of-action"]},"intake.application.closed":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights"]},"intake.application.review_overdue":{"patterns":["state-machine-timer"]}}}}</script>
     </main>
   </div>
   <script>
@@ -509,10 +591,32 @@
         .map(a => document.getElementById(a.getAttribute('href').slice(1)))
         .filter(Boolean);
       if (!sections.length) return;
-      const io = new IntersectionObserver(entries => {
-        const hit = entries.find(e => e.isIntersecting);
-        if (hit) setActive(hit.target.id);
-      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
       sections.forEach(s => io.observe(s));
       setActive(sections[0].id);
     })();
@@ -624,6 +728,178 @@
       window.addEventListener('hashchange', scrollToHash);
     })();
     
+(() => {
+  const data = JSON.parse(document.getElementById('client-annotations').textContent);
+  const namespaceOf = (domain) => domain.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const prop = (name) => (/^[A-Za-z_$][\w$]*$/.test(name) ? '.' + name : "['" + name + "']");
+  const has = (entry, type, id) => Array.isArray(entry && entry[type]) && entry[type].includes(id);
+
+  // The fields that carry an entry, and the call that finds them.
+  const findCall = (type, id, domain) => {
+    const all = data[domain] || {};
+    const sections = Object.keys(all).filter((s) => Object.values(all[s]).some((e) => has(e, type, id)));
+    const at = namespaceOf(domain) + '.Annotations';
+    const found = sections.flatMap((s) => Object.entries(all[s]).filter(([, e]) => has(e, type, id)).map(([key]) => [s, key]));
+    const code = sections.length === 1
+      ? ['// The ' + sections[0] + ' entries marked ' + id,
+         'const found = Object.entries(' + at + prop(sections[0]) + ')',
+         '  .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         '  .map(([key]) => key);']
+      : ['// Everything marked ' + id + ', as section.key',
+         'const found = Object.entries(' + at + ').flatMap(([section, entries]) =>',
+         '  Object.entries(entries)',
+         '    .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         "    .map(([key]) => section + '.' + key));"];
+    const value = sections.length === 1 ? found.map(([, key]) => key) : found.map(([s, key]) => s + '.' + key);
+    return { code, value, first: found[0] };
+  };
+
+  // The call that reads everything annotated on one key.
+  const lookupCall = (domain, section, key, field) => {
+    const at = namespaceOf(domain) + '.Annotations' + prop(section) + "['" + key + "']";
+    const entry = ((data[domain] || {})[section] || {})[key];
+    return field
+      ? { code: ['const ' + field + ' = ' + at + prop(field) + ';'], value: entry ? entry[field] : undefined }
+      : { code: ['// Everything annotated on one of them', 'const annotations = ' + at + ';'], value: entry };
+  };
+
+  // An entry opens when the address or the sidebar goes to it, as an
+  // operation does on the API pages.
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target && target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-link[href^="#"]');
+    const target = link && document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    const details = target && target.querySelector(':scope > details');
+    if (!details) return;
+    event.preventDefault();
+    details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+
+  for (const side of document.querySelectorAll('.ann-side')) {
+    const { type, id, section, key, field } = side.dataset;
+    const domains = JSON.parse(side.dataset.domains);
+    const row = document.createElement('div');
+    row.className = 'row';
+    const pick = document.createElement('select');
+    for (const d of domains) pick.append(Object.assign(document.createElement('option'), { value: d, textContent: d }));
+    row.append('Domain', pick);
+    if (domains.length < 2) pick.disabled = true;
+    const block = document.createElement('div');
+    block.className = 'try-code';
+    block.innerHTML = '<div class="tabs"><span class="tab">TypeScript (local)</span><span class="target">runs in your code</span><button type="button" class="copy">Copy</button></div><pre></pre><div class="foot"><button type="button" class="run">Run</button></div>';
+    const result = document.createElement('div');
+    result.className = 'ann-result';
+    side.append(row, block, result);
+    const pre = block.querySelector('pre');
+    let value;
+    const draw = () => {
+      const domain = pick.value;
+      const head = ["import { " + namespaceOf(domain) + " } from './generated'; // where you generated the client", ''];
+      let lines;
+      if (field) {
+        const read = lookupCall(domain, section, key, field);
+        lines = read.code;
+        value = read.value;
+      } else {
+        const find = findCall(type, id, domain);
+        const read = find.first ? lookupCall(domain, find.first[0], find.first[1]) : null;
+        lines = [...find.code, ...(read ? ['', ...read.code] : [])];
+        value = read ? { found: find.value, annotations: read.value } : { found: find.value };
+      }
+      pre.textContent = [...head, ...lines].join('\n');
+      result.replaceChildren();
+    };
+    pick.onchange = draw;
+    block.querySelector('.copy').onclick = async (event) => {
+      try { await navigator.clipboard.writeText(pre.textContent); event.target.textContent = 'Copied'; } catch { event.target.textContent = 'Select and copy'; }
+      setTimeout(() => { event.target.textContent = 'Copy'; }, 1500);
+    };
+    block.querySelector('.run').onclick = () => {
+      result.innerHTML = '<span class="label">local</span><p class="note">Worked out in the page from the annotations the client is built from. Nothing was sent to a server.</p><pre></pre>';
+      result.querySelector('pre').textContent = JSON.stringify(value, null, 2);
+    };
+    draw();
+  }
+})();
+
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<style>
+  #try-it-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 600 12px system-ui, sans-serif;
+    color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 100px; padding: 2px 4px 2px 10px; cursor: pointer; }
+  #try-it-switch .knob { width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.3); position: relative; transition: background .15s; }
+  #try-it-switch .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  #try-it-switch[aria-checked="true"] .knob { background: #22c55e; }
+  #try-it-switch[aria-checked="true"] .knob::after { left: 14px; }
+  #try-it-switch.floating { position: fixed; top: 8px; right: 16px; z-index: 1001; background: #2B1A78; }
+  html[data-try-it="on"] body { padding-right: var(--mock-panel-width, 30rem); }
+  /* Narrow, the panel docks along the bottom instead, as developer tools do. */
+  @media (max-width: 1200px) { html[data-try-it="on"] body { padding-right: 0; padding-bottom: var(--mock-panel-height, 40vh); } }
+</style>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const scope = new URL('mock/', root).href;
+  const key = 'blueprint-try-it:' + scope;
+  const stored = () => { try { return sessionStorage.getItem(key) === 'on'; } catch { return false; } };
+  const remember = (on) => { try { if (on) sessionStorage.setItem(key, 'on'); else sessionStorage.removeItem(key); } catch { /* this page only */ } };
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+
+  const toggle = document.createElement('button');
+  toggle.id = 'try-it-switch';
+  toggle.type = 'button';
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-controls', 'mock-panel');
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  const crumbs = document.querySelector('.page-crumbs');
+  if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
+
+  const show = (on) => {
+    document.documentElement.dataset.tryIt = on ? 'on' : 'off';
+    toggle.setAttribute('aria-checked', String(on));
+    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+  };
+  const turn = (on) => {
+    remember(on);
+    show(on);
+    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+  };
+  toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
+  // The panel's own Close turns it off too.
+  addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
+  show(stored());
+  if (stored()) turn(true);
+})();
+</script>
 </body>
 </html>

@@ -73,11 +73,35 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  .ann-card { border-radius: 6px; margin-bottom: 0.4rem; background: #fff; }
+  .ann-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1rem; cursor: pointer; list-style: none; }
+  .ann-row::-webkit-details-marker { display: none; }
+  .ann-row::before { content: '\25B8'; font-size: 10px; color: #888; }
+  details[open] > .ann-row::before { content: '\25BE'; }
+  details[open] > .ann-row { border-bottom: 1px solid #eee; }
+  .ann-entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0.75rem 1rem 0.9rem; }
+  @media (min-width: 1100px) { .ann-entry { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .ann-side { min-width: 0; font-size: 12px; }
+  .ann-side .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font: 600 12px monospace; color: #333; }
+  .ann-side select { font: 12px monospace; padding: 3px 6px; border: 1px solid #c7c4ea; border-radius: 4px; background: #fff; }
+  .try-code { border: 1px solid #e3e1f5; border-radius: 4px; overflow: hidden; }
+  .try-code .tabs { display: flex; align-items: center; gap: 2px; padding: 4px 6px; background: #f6f5fd; border-bottom: 1px solid #e3e1f5; font-size: 11px; }
+  .try-code .tabs .tab { font: 600 11px sans-serif; padding: 3px 10px; border-radius: 3px; background: #2B1A78; color: #fff; }
+  .try-code .tabs .target { margin-left: auto; color: #777; font: 11px monospace; }
+  .try-code .tabs button.copy { margin-left: 8px; font: 600 11px sans-serif; padding: 3px 10px; border: 1px solid #c7c4ea; border-radius: 3px; background: #fff; color: #555; cursor: pointer; }
+  .try-code pre { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e6e4f5; font: 11.5px/1.5 monospace; overflow: auto; white-space: pre; }
+  .try-code .foot { display: flex; justify-content: flex-end; padding: 6px 8px; background: #1e1b3a; border-top: 1px solid #2f2a5c; }
+  .try-code .run { font: 600 12px sans-serif; padding: 4px 16px; border-radius: 4px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; }
+  .ann-result { margin-top: 8px; }
+  .ann-result .label { font: 600 12px monospace; border-bottom: 2px solid #006152; display: inline-block; padding: 2px 8px; }
+  .ann-result .note { color: #15803d; font-weight: 700; margin: 6px 0 0; }
+  .ann-result pre { margin: 6px 0 0; padding: 8px 10px; background: #fff; border: 1px solid #eee; border-radius: 4px; max-height: 22rem; overflow: auto; white-space: pre-wrap; font-size: 11px; }
+
   </style>
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">modeling</a></div>
+    <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">modeling</a></div>
     
       <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
         <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">modeling</code></div>
@@ -157,170 +181,278 @@
       <div style="padding:2rem 0.5rem;">
       <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>modeling</code></h1>
       <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">27 annotations</p>
-      <div id="entry--application-authorizedrepresentatives---type" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.authorizedRepresentatives[].type</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Polymorphic discriminator; id points to application.contacts[].id when type = individual and application.organizations[].id when type = organization.</div>
-        </div><div id="entry--application-childsupport-parentsoutsidehome---children--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.childSupport.parentsOutsideHome[].children[]</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Array because one non-custodial parent may be the parent of multiple children in the household.</div>
-        </div><div id="entry--application-deductions--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.deductions[]</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Some intake forms do not collect per-member deduction attribution; in those cases the adapter assigns deduction records to the primary applicant or the tax filer. States whose forms collect per-member attribution should map directly to that member.</div>
-        </div><div id="entry--application-deductions---type" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.deductions[].type</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored at the application level with a memberId FK for per-member attribution. When a state's intake form does not associate deductions with specific members, the adapter should assign deduction records to the primary applicant. For prior_period records, only amount is relevant and all other fields are inapplicable.</div>
-        </div><div id="entry--application-healthplans--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[]</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Medicare plans use a single healthPlan record per person (type = medicare) with named sub-objects for each part (partA, partB, partC, partD). Parts A–D are a fixed closed set, so named sub-objects are cleaner than a discriminated array.</div>
-        </div><div id="entry--application-healthplans---medicareid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].medicareId</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Treat as PII. The MBI replaced the SSN-based Health Insurance Claim Number (HICN) in 2018–2020.</div>
-        </div><div id="entry--application-healthplans---organizationid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].organizationId</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Applies only when type = employer_sponsored or cobra.</div>
-        </div><div id="entry--application-healthplans---parta-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partA.premiumPaidBy</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
-        </div><div id="entry--application-healthplans---parta-status" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partA.status</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">entitled = meets eligibility criteria but not yet actively receiving benefits (e.g., deferred Part B enrollment while on employer coverage); enrolled = actively receiving.</div>
-        </div><div id="entry--application-healthplans---partb-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partB.premiumPaidBy</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
-        </div><div id="entry--application-healthplans---partc-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partC.premiumPaidBy</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
-        </div><div id="entry--application-healthplans---partc-status" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partC.status</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Part C replaces traditional Parts A and B — a member enrolled in Part C should not also have Part A and Part B populated.</div>
-        </div><div id="entry--application-healthplans---partd-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partD.premiumPaidBy</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP and Low Income Subsidy determination logic without string matching.</div>
-        </div><div id="entry--application-healthplans---premiumamount" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.healthPlans[].premiumAmount</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">A null value means the premium amount is unknown, not that no premium exists. Adapters should preserve null rather than defaulting to zero when the applicant cannot provide the amount.</div>
-        </div><div id="entry--application-householdinfo-roomers---mealsincludedwithrent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.householdInfo.roomers[].mealsIncludedWithRent</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Boarders are not modeled as a separate type — they are roomers where mealsIncludedWithRent = true. A single roomers[] array with this boolean covers both cases without a discriminated union.</div>
-        </div><div id="entry--application-incomes--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.incomes[]</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">For prior_period records, only amount is relevant; frequency is inapplicable and jobId should be populated where the source is known.</div>
-        </div><div id="entry--application-incomes---amount" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.incomes[].amount</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as reported (per-period amount) rather than normalized to monthly, to preserve the precision of the applicant's reported figure and allow adapters to apply program-specific normalization methods.</div>
-        </div><div id="entry--application-incomes---frequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.incomes[].frequency</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">frequency = variable means amount is the projected annual income, not a per-period figure. Applies to employed and self_employed types only.</div>
-        </div><div id="entry--application-incomes---jobid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.incomes[].jobId</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">uuid type because it is a foreign key reference, not a free-text identifier.</div>
-        </div><div id="entry--application-members---citizenship-sponsored-hasbeenabandonedbysponsor" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.members[].citizenship.sponsored.hasBeenAbandonedBySponsor</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Kept separate from hasBeenMistreatedBySponsor because abandonment (documented through lack of financial support or sponsor departure) and battery/mistreatment (VAWA-based, requiring police reports, court orders, or professional statements) have distinct legal bases and different verification pathways. Forms that combine them into a single yes/no require a state overlay.</div>
-        </div><div id="entry--application-members---citizenship-sponsored-hasbeenmistreatedbysponsor" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.members[].citizenship.sponsored.hasBeenMistreatedBySponsor</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Kept separate from hasBeenAbandonedBySponsor; see that field's design note for the rationale.</div>
-        </div><div id="entry--application-members---personalinformation-races--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.members[].personalInformation.races[]</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Array to comply with OMB standards requiring that individuals be able to select all applicable races simultaneously.</div>
-        </div><div id="entry--application-members---programsappliedfor--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.members[].programsAppliedFor[]</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">A member's selection must be a subset of the household-level programsAppliedFor[] selection.</div>
-        </div><div id="entry--application-personrelationships--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.personRelationships[]</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Convention — from IS THE [relationshipType] OF to. Storing both directions (A→B parent, B→A child) means callers can query from = X to get all of X's relationships with the correct type label without requiring bidirectional joins.</div>
-        </div><div id="entry--application-signatures---purpose" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.signatures[].purpose</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Discriminator enabling each signature event to be stored and audited independently on the same application record.</div>
-        </div><div id="entry--application-taxfilers---dependents---type" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.taxFilers[].dependents[].type</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Polymorphic discriminator enabling FK linkage for both household members (via application.members[].id) and non-household dependents (via application.contacts[].id).</div>
-        </div><div id="entry--application-taxfilers---memberid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
-            <code style="font-size:12px;font-weight:700;">application.taxFilers[].memberId</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">A null memberId encodes a non-household filer (e.g. a non-custodial parent not on this application). This is the mechanism for representing filers whose name and identity are not already in application.members[].</div>
+      <div id="entry--application-authorizedrepresentatives---type" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.authorizedRepresentatives[].type</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Polymorphic discriminator; id points to application.contacts[].id when type = individual and application.organizations[].id when type = organization.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.authorizedRepresentatives[].type" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-childsupport-parentsoutsidehome---children--" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.childSupport.parentsOutsideHome[].children[]</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Array because one non-custodial parent may be the parent of multiple children in the household.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.childSupport.parentsOutsideHome[].children[]" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-deductions--" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.deductions[]</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Some intake forms do not collect per-member deduction attribution; in those cases the adapter assigns deduction records to the primary applicant or the tax filer. States whose forms collect per-member attribution should map directly to that member.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.deductions[]" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-deductions---type" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.deductions[].type</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Stored at the application level with a memberId FK for per-member attribution. When a state's intake form does not associate deductions with specific members, the adapter should assign deduction records to the primary applicant. For prior_period records, only amount is relevant and all other fields are inapplicable.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.deductions[].type" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans--" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[]</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Medicare plans use a single healthPlan record per person (type = medicare) with named sub-objects for each part (partA, partB, partC, partD). Parts A–D are a fixed closed set, so named sub-objects are cleaner than a discriminated array.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[]" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---medicareid" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].medicareId</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Treat as PII. The MBI replaced the SSN-based Health Insurance Claim Number (HICN) in 2018–2020.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].medicareId" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---organizationid" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].organizationId</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Applies only when type = employer_sponsored or cobra.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].organizationId" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---parta-premiumpaidby" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].partA.premiumPaidBy</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].partA.premiumPaidBy" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---parta-status" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].partA.status</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">entitled = meets eligibility criteria but not yet actively receiving benefits (e.g., deferred Part B enrollment while on employer coverage); enrolled = actively receiving.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].partA.status" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---partb-premiumpaidby" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].partB.premiumPaidBy</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].partB.premiumPaidBy" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---partc-premiumpaidby" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].partC.premiumPaidBy</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].partC.premiumPaidBy" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---partc-status" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].partC.status</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Part C replaces traditional Parts A and B — a member enrolled in Part C should not also have Part A and Part B populated.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].partC.status" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---partd-premiumpaidby" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].partD.premiumPaidBy</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP and Low Income Subsidy determination logic without string matching.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].partD.premiumPaidBy" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-healthplans---premiumamount" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.healthPlans[].premiumAmount</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">A null value means the premium amount is unknown, not that no premium exists. Adapters should preserve null rather than defaulting to zero when the applicant cannot provide the amount.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.healthPlans[].premiumAmount" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-householdinfo-roomers---mealsincludedwithrent" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.householdInfo.roomers[].mealsIncludedWithRent</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Boarders are not modeled as a separate type — they are roomers where mealsIncludedWithRent = true. A single roomers[] array with this boolean covers both cases without a discriminated union.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.householdInfo.roomers[].mealsIncludedWithRent" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-incomes--" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.incomes[]</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">For prior_period records, only amount is relevant; frequency is inapplicable and jobId should be populated where the source is known.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.incomes[]" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-incomes---amount" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.incomes[].amount</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Stored as reported (per-period amount) rather than normalized to monthly, to preserve the precision of the applicant's reported figure and allow adapters to apply program-specific normalization methods.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.incomes[].amount" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-incomes---frequency" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.incomes[].frequency</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">frequency = variable means amount is the projected annual income, not a per-period figure. Applies to employed and self_employed types only.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.incomes[].frequency" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-incomes---jobid" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.incomes[].jobId</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">uuid type because it is a foreign key reference, not a free-text identifier.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.incomes[].jobId" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-members---citizenship-sponsored-hasbeenabandonedbysponsor" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.members[].citizenship.sponsored.hasBeenAbandonedBySponsor</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Kept separate from hasBeenMistreatedBySponsor because abandonment (documented through lack of financial support or sponsor departure) and battery/mistreatment (VAWA-based, requiring police reports, court orders, or professional statements) have distinct legal bases and different verification pathways. Forms that combine them into a single yes/no require a state overlay.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.members[].citizenship.sponsored.hasBeenAbandonedBySponsor" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-members---citizenship-sponsored-hasbeenmistreatedbysponsor" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.members[].citizenship.sponsored.hasBeenMistreatedBySponsor</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Kept separate from hasBeenAbandonedBySponsor; see that field's design note for the rationale.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.members[].citizenship.sponsored.hasBeenMistreatedBySponsor" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-members---personalinformation-races--" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.members[].personalInformation.races[]</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Array to comply with OMB standards requiring that individuals be able to select all applicable races simultaneously.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.members[].personalInformation.races[]" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-members---programsappliedfor--" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.members[].programsAppliedFor[]</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">A member's selection must be a subset of the household-level programsAppliedFor[] selection.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.members[].programsAppliedFor[]" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-personrelationships--" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.personRelationships[]</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Convention — from IS THE [relationshipType] OF to. Storing both directions (A→B parent, B→A child) means callers can query from = X to get all of X's relationships with the correct type label without requiring bidirectional joins.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.personRelationships[]" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-signatures---purpose" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.signatures[].purpose</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Discriminator enabling each signature event to be stored and audited independently on the same application record.</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.signatures[].purpose" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-taxfilers---dependents---type" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.taxFilers[].dependents[].type</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">Polymorphic discriminator enabling FK linkage for both household members (via application.members[].id) and non-household dependents (via application.contacts[].id).</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.taxFilers[].dependents[].type" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
+        </div><div id="entry--application-taxfilers---memberid" class="content-item">
+          <details class="ann-card" style="border:1px solid #E9CCBE;">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+              <code style="font-size:12px;font-weight:700;">application.taxFilers[].memberId</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:#1a1a1a;line-height:1.5;">A null memberId encodes a non-household filer (e.g. a non-custodial parent not on this application). This is the mechanism for representing filers whose name and identity are not already in application.members[].</div>
+            </div><aside class="ann-side" data-section="schema" data-key="application.taxFilers[].memberId" data-field="modeling" data-domains='[&quot;intake&quot;]'></aside></div>
+          </details>
         </div>
-    </div>
+    </div><script type="application/json" id="client-annotations">{"client-management":{},"intake":{"schema":{"application.programsAppliedFor[]":{"programs":["snap","medicaid","tanf","chip"]},"application.ebt.needsCard":{"reason":"Collected at intake to trigger EBT card issuance at approval without a separate request."},"application.ebt.deliveryPreference":{"reason":"Determines whether the EBT card is mailed or held for in-person pickup."},"application.registerToVote":{"policies":["nvra-voter-registration-offer"],"programs":["snap","medicaid","tanf","chip"]},"application.deniesIevsConsent":{"policies":["snap-ssa-identity-check","snap-income-verification"],"programs":["snap"]},"application.householdInfo.roomers[]":{"policies":["snap-roomers-boarders"],"programs":["snap"]},"application.householdInfo.roomers[].type":{"reason":"Discriminator identifying whether the roomer is a household member or a contact-only person record in application.contacts[]."},"application.householdInfo.roomers[].id":{"reason":"Identifier of the referenced person record; points to application.members[].id when type = member, or application.contacts[].id when type = contact."},"application.householdInfo.roomers[].amountPaidForRent":{"reason":"Rent paid by a roomer is income to the household; distinguishes market-rate roomers from boarders."},"application.householdInfo.roomers[].mealsIncludedWithRent":{"reason":"When meals are included, the person is a boarder; meal revenue is income. When meals are not included, rent revenue is income.","modeling":"Boarders are not modeled as a separate type — they are roomers where mealsIncludedWithRent = true. A single roomers[] array with this boolean covers both cases without a discriminated union."},"application.householdInfo.utilitiesIncludedInRent":{"policies":["snap-utility-allowance-standards"],"programs":["snap"]},"application.householdInfo.isSubsidizedHousing":{"policies":["snap-utility-allowance-standards"],"programs":["snap"]},"application.householdInfo.receivedTanfInAnotherState":{"policies":["tanf-time-limits","tanf-work-activities"],"programs":["tanf"]},"application.expeditedSnap.totalMoneyExpectedThisMonth":{"reason":"Gross monthly income is compared against the expedited SNAP threshold to determine whether same-day issuance is required."},"application.expeditedSnap.totalCashOnHand":{"reason":"Cash and liquid assets are combined with income for the expedited SNAP screening test."},"application.expeditedSnap.monthlyMortgage":{"reason":"Monthly shelter costs are compared against income and cash for the expedited SNAP destitution test."},"application.expeditedSnap.monthlyRent":{"reason":"Monthly shelter costs are compared against income and cash for the expedited SNAP destitution test."},"application.expeditedSnap.monthlyUtilities":{"reason":"Monthly utility costs combined with shelter costs are compared against income for the expedited SNAP destitution test."},"application.expeditedSnap.receivedSnapInLast30Days":{"reason":"Recent SNAP receipt in another state may indicate duplicate participation or ongoing eligibility that affects expedited processing."},"application.utilities.heatCoolMethod":{"reason":"Determines which utility allowance standard applies. Households that heat or cool with certain methods qualify for the full heating and cooling standard."},"application.utilities.heatCoolMethodOther":{"reason":"Captures non-enumerated heating or cooling methods for adapter mapping to the appropriate utility standard."},"application.utilities.receivesLiheap":{"reason":"Receipt of even one dollar of LIHEAP automatically qualifies the household for the full heating and cooling standard utility allowance."},"application.taxFilers[]":{"policies":["medicaid-magi-methodology"],"programs":["medicaid","chip"]},"application.taxFilers[].memberId":{"reason":"Links the tax filer record to the household member. Null when the filer is a non-household member claiming a household dependent.","modeling":"A null memberId encodes a non-household filer (e.g. a non-custodial parent not on this application). This is the mechanism for representing filers whose name and identity are not already in application.members[]."},"application.taxFilers[].filingJointlyWithSpouse":{"reason":"Joint filing status affects MAGI household composition and income attribution for Medicaid and marketplace eligibility."},"application.taxFilers[].spouse.type":{"reason":"Discriminator identifying whether the filing spouse is a household member or a contact-only person record in application.contacts[]."},"application.taxFilers[].spouse.id":{"reason":"Identifier of the referenced person record for the spouse; used to link a non-household spouse to their contacts[] entry."},"application.taxFilers[].claimingDependents":{"reason":"Claiming dependents affects MAGI household size and the income of dependents attributed to the tax household."},"application.taxFilers[].dependents[].type":{"reason":"Distinguishes household members (who have a member record) from non-household dependents (who are contact-only person records in application.contacts[]).","modeling":"Polymorphic discriminator enabling FK linkage for both household members (via application.members[].id) and non-household dependents (via application.contacts[].id)."},"application.taxFilers[].dependents[].id":{"reason":"Identifier of the referenced person record for the dependent; points to application.members[].id when type = member, or application.contacts[].id when type = contact."},"application.taxFilers[].expectedToBeClaimedByNonHouseholdMember":{"reason":"A household member expected to be claimed as a dependent by someone outside the household uses that person's tax household for MAGI purposes."},"application.taxFilers[].personClaiming.type":{"reason":"Discriminator identifying whether the person claiming this applicant as a dependent is a household member or a contact-only person record in application.contacts[]."},"application.taxFilers[].personClaiming.id":{"reason":"Identifier of the person claiming this applicant as a dependent; used to determine the applicable tax household for MAGI purposes."},"application.taxFilers[].isNonCustodialParent":{"reason":"Non-custodial parents who claim a child as a dependent use a different MAGI household composition rule."},"application.taxFilers[].hasDomesticViolenceTaxFilingException":{"policies":["irs-domestic-violence-filing-exception","medicaid-magi-methodology"],"programs":["medicaid","chip"]},"application.healthPlans[]":{"policies":["aca-minimum-essential-coverage","medicaid-medicare-savings-program"],"programs":["medicaid","chip","aca"]},"application.healthPlans[].id":{"reason":"Unique identifier for the health plan record; FK target for application.healthEnrollments[].healthPlanId."},"application.healthPlans[].type":{"reason":"Coverage type determines minimum essential coverage (MEC) status, marketplace eligibility, and Medicare Savings Program (MSP) screening."},"application.healthPlans[].typeOther":{"reason":"Captures non-enumerated coverage types for adapter review and manual classification."},"application.healthPlans[].premiumAmount":{"policies":["aca-employer-coverage-affordability"],"programs":["aca"]},"application.healthPlans[].premiumFrequency":{"reason":"Premium frequency is needed to normalize the premium to a monthly figure for the affordability calculation."},"application.healthPlans[].organizationId":{"reason":"FK to application.organizations[] for employer-sponsored and COBRA plans, linking the plan to the employer organization record without duplicating employer contact data.","modeling":"Applies only when type = employer_sponsored or cobra."},"application.healthPlans[].coverageContact":{"reason":"HR or benefits contact at the employer for plan verification and enrollment period confirmation."},"application.healthPlans[].hasMinimumValuePlan":{"policies":["aca-employer-coverage-affordability"],"programs":["aca"]},"application.healthPlans[].lowestCostPlanName":{"reason":"Identifies the lowest-cost minimum value plan offered by the employer, used in the affordability test."},"application.healthPlans[].lowestCostPlanPremium":{"policies":["aca-employer-coverage-affordability","aca-premium-tax-credit"],"programs":["aca"]},"application.healthPlans[].programType":{"reason":"Identifies the specific federal health program (TRICARE, VA, Peace Corps, etc.) for verification and MEC determination."},"application.healthPlans[].sponsor.type":{"reason":"Discriminator identifying whether the TRICARE military sponsor is a household member or a contact-only person record in application.contacts[]."},"application.healthPlans[].sponsor.id":{"reason":"Identifier of the referenced person record for the TRICARE military sponsor."},"application.healthPlans[].insuranceCompanyName":{"reason":"Insurance carrier for TRICARE supplemental or managed care plans, required for coordination of benefits."},"application.healthPlans[].policyNumber":{"reason":"Policy number required for benefits verification and coordination of benefits."},"application.healthPlans[].medicareId":{"reason":"Medicare Beneficiary Identifier (MBI) is required for all Medicare processing. One MBI covers all parts for a beneficiary.","modeling":"Treat as PII. The MBI replaced the SSN-based Health Insurance Claim Number (HICN) in 2018–2020."},"application.healthPlans[].partA.status":{"reason":"Entitled vs. enrolled distinction affects Medicare Savings Program eligibility; entitled-but-not-enrolled may qualify for MSP to cover Part A premiums. Parts C and D have no entitled-without-enrolled state — status will always be enrolled for those parts.","modeling":"entitled = meets eligibility criteria but not yet actively receiving benefits (e.g., deferred Part B enrollment while on employer coverage); enrolled = actively receiving."},"application.healthPlans[].partA.startDate":{"reason":"Part A effective date used for coordination with Medicaid and the Medicare Savings Program."},"application.healthPlans[].partA.isPremiumFree":{"reason":"Beneficiaries who did not earn 40 quarters of work pay a Part A premium; premium amount affects MSP and QMB eligibility."},"application.healthPlans[].partA.premiumPaidBy":{"reason":"Identifies whether a Medicare Savings Program is already covering the Part A premium, which affects MSP screening.","modeling":"Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching."},"application.healthPlans[].partB.status":{"reason":"Part B enrollment status affects MSP eligibility and late enrollment penalty determination."},"application.healthPlans[].partB.startDate":{"reason":"Part B effective date used for late enrollment penalty calculation and MSP coordination."},"application.healthPlans[].partB.premiumAmount":{"reason":"Part B premium amount is used for QMB and SLMB determination under the Medicare Savings Program."},"application.healthPlans[].partB.premiumPaidBy":{"reason":"Identifies whether an MSP is already covering the Part B premium.","modeling":"Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching."},"application.healthPlans[].partC.status":{"reason":"Part C (Medicare Advantage) enrollment status; a Part C enrollee receives Parts A and B benefits through the plan.","modeling":"Part C replaces traditional Parts A and B — a member enrolled in Part C should not also have Part A and Part B populated."},"application.healthPlans[].partC.startDate":{"reason":"Part C effective date for coordination with Medicaid dual-eligible programs."},"application.healthPlans[].partC.contractId":{"reason":"CMS contract ID uniquely identifies the Medicare Advantage organization. Required for plan identification in CMS enrollment data."},"application.healthPlans[].partC.planId":{"reason":"CMS plan ID combined with contract ID uniquely identifies the specific Medicare Advantage plan."},"application.healthPlans[].partC.planName":{"reason":"Human-readable Medicare Advantage plan name for applicant correspondence and worker review."},"application.healthPlans[].partC.premiumAmount":{"reason":"Part C plan premium may be covered by certain Medicare Savings Programs."},"application.healthPlans[].partC.premiumPaidBy":{"reason":"Identifies whether an MSP is covering the Part C premium.","modeling":"Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching."},"application.healthPlans[].partD.status":{"reason":"Part D prescription drug coverage status for coordination of benefits."},"application.healthPlans[].partD.startDate":{"reason":"Part D effective date for coordination with Medicaid drug coverage."},"application.healthPlans[].partD.planName":{"reason":"Prescription drug plan name for coordination of benefits identification."},"application.healthPlans[].partD.premiumAmount":{"policies":["medicare-part-d-low-income-subsidy"],"programs":["medicaid"]},"application.healthPlans[].partD.premiumPaidBy":{"reason":"Identifies whether a subsidy program is already covering the Part D premium.","modeling":"Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP and Low Income Subsidy determination logic without string matching."},"application.healthEnrollments[]":{"reason":"Join records linking household members to health plans, capturing each member's role and enrollment status. A plan record in healthPlans[] may have multiple enrollment records — one per covered member."},"application.healthEnrollments[].id":{"reason":"Unique identifier for the enrollment record."},"application.healthEnrollments[].memberId":{"reason":"FK to members[] identifying the household member enrolled in this plan."},"application.healthEnrollments[].healthPlanId":{"reason":"FK to application.healthPlans[] identifying the plan this member is enrolled in."},"application.healthEnrollments[].jobId":{"reason":"FK to application.jobs[] linking an employer-sponsored enrollment to the specific job, enabling employer contact lookup without duplicating employer data."},"application.healthEnrollments[].role":{"reason":"Subscriber vs. dependent role affects premium attribution for the ACA employer coverage affordability test."},"application.healthEnrollments[].startDate":{"reason":"Coverage start date; used to determine coverage gap periods relevant to MEC analysis and special enrollment eligibility."},"application.healthEnrollments[].endDate":{"policies":["aca-special-enrollment-periods"],"programs":["aca"]},"application.healthEnrollments[].eligibleDate":{"reason":"Date the member becomes eligible for coverage; used to determine whether a special enrollment period applies."},"application.healthEnrollments[].enrollmentStatus":{"policies":["aca-special-enrollment-periods","medicaid-medicare-savings-program"],"programs":["medicaid","aca"]},"application.healthEnrollments[].prefersSeparateMailing":{"policies":["hipaa-confidential-communications","aca-section-1557-nondiscrimination"],"programs":["medicaid","chip","aca"]},"application.childSupport.goodCauseChildSupportWaiver":{"policies":["snap-child-support-cooperation","tanf-child-support-cooperation","medicaid-medical-support-cooperation"],"programs":["snap","medicaid","tanf"]},"application.childSupport.parentsOutsideHome[]":{"policies":["tanf-child-support-cooperation","snap-child-support-cooperation"],"programs":["snap","tanf"]},"application.childSupport.parentsOutsideHome[].type":{"reason":"Discriminator identifying whether the non-custodial parent is a household member or a contact-only person record in application.contacts[]."},"application.childSupport.parentsOutsideHome[].id":{"reason":"Identifier of the referenced person record for the non-custodial parent; the person record holds their name, address, and phone for enforcement contact."},"application.childSupport.parentsOutsideHome[].children[]":{"reason":"Identifies which children in the household are associated with this non-custodial parent for child support enforcement purposes.","modeling":"Array because one non-custodial parent may be the parent of multiple children in the household."},"application.childSupport.parentsOutsideHome[].attemptedMedicalSupportCooperation":{"policies":["medicaid-medical-support-cooperation"],"programs":["medicaid"]},"application.contacts[]":{"reason":"Registry of all individuals referenced in the application — household members and non-members alike (authorized representatives, helpers, sponsors, tax dependents, non-custodial parents, etc.). Members link to their contacts[] record via application.members[].personId. Non-member individuals are \"contacts\" with a contacts[] record but no application.members[] entry."},"application.contacts[].id":{"reason":"Unique identifier for the person record; referenced throughout the model via member|contact discriminator pairs (type + id)."},"application.contacts[].name":{"reason":"Legal name of the person for identity verification, correspondence, and data matching across programs."},"application.contacts[].primaryAddress":{"reason":"Mailing address for correspondence directed to this person, used when the person is a non-member contact such as an authorized representative or sponsor."},"application.contacts[].primaryPhone":{"reason":"Contact phone number for this person, used for non-member contacts such as authorized representatives and helpers."},"application.contacts[].email":{"reason":"Email address for electronic correspondence, used for non-member contacts who opt in to electronic notices."},"application.organizations[]":{"reason":"Registry of legal entities referenced in the application — employers, organizational authorized representatives, and other entities. Members reference organizations via healthPlans[].organizationId, jobs[].employerId, and authorized representative records."},"application.organizations[].id":{"reason":"Unique identifier for the organization record; referenced by FK fields throughout the model."},"application.organizations[].name":{"reason":"Legal name of the organization for correspondence, verification, and reporting."},"application.organizations[].ein":{"reason":"Employer Identification Number used for income verification and employer contact."},"application.organizations[].address":{"reason":"Organization's address for verification and contact when phone is unavailable."},"application.organizations[].phone":{"reason":"Organization's phone number for income verification and plan enrollment contact."},"application.personRelationships[]":{"policies":["medicaid-caretaker-relative","snap-deeming-rules"],"programs":["snap","medicaid"]},"application.personRelationships[].from":{"reason":"Source person in a directed relationship; from IS THE [relationshipType] OF to."},"application.personRelationships[].to":{"reason":"Target person in a directed relationship."},"application.personRelationships[].relationshipTypes[]":{"reason":"Relationship type(s) from the source person's perspective. An array to support compound relationships (e.g., both sibling and caregiver). Both directions are always stored so queries on either party return the correct type label."},"application.authorizedRepresentatives[]":{"policies":["snap-authorized-representative","medicaid-authorized-representative"],"programs":["snap","medicaid"]},"application.authorizedRepresentatives[].type":{"reason":"Determines whether the representative is a natural person or an organization, which affects which record the id field points to and how authority is verified.","modeling":"Polymorphic discriminator; id points to application.contacts[].id when type = individual and application.organizations[].id when type = organization."},"application.authorizedRepresentatives[].id":{"reason":"Identifier of the referenced person or organization record; points to application.members[].id, application.contacts[].id, or application.organizations[].id depending on type."},"application.authorizedRepresentatives[].inCareOf.type":{"reason":"Discriminator identifying whether the in-care-of contact is a household member or a contact-only person record in application.contacts[]; used when mail to an organizational representative should be directed to a specific individual."},"application.authorizedRepresentatives[].inCareOf.id":{"reason":"Identifier of the person within the organization to whom correspondence should be directed."},"application.authorizedRepresentatives[].receivesNotices":{"reason":"Determines whether program notices are sent to the representative instead of, or in addition to, the applicant."},"application.authorizedRepresentatives[].appointedByMemberId":{"reason":"FK to application.members[] identifying which household member appointed this representative; required when members on the same application may designate different representatives for different programs."},"application.authorizedRepresentatives[].programs[]":{"reason":"Scopes the representative's authority to specific programs. A representative may be authorized for some programs but not others on a multi-program application."},"application.signatures[]":{"policies":["medicaid-application-signature","esign-act"],"programs":["snap","medicaid"]},"application.signatures[].signer.type":{"reason":"Discriminator identifying whether the signer is a household member, a contact-only person, or an organization."},"application.signatures[].signer.id":{"reason":"Identifier of the referenced person or organization record who is the signer."},"application.signatures[].signer.role":{"reason":"Identifies the capacity in which the signer is signing — as the applicant member, their authorized representative, or a third-party helper who assisted with the form."},"application.signatures[].purpose":{"reason":"A single application may require multiple legally distinct signature events with different legal bases, signers, and timing.","modeling":"Discriminator enabling each signature event to be stored and audited independently on the same application record."},"application.signatures[].signedAt":{"reason":"Date and time of signature required for audit trail, benefit period determination, and legal validity."},"application.signatures[].signatureMethod":{"reason":"Distinguishes electronic, wet ink, and verbal signatures; states must track method for legal validity and audit purposes."},"application.sponsors[]":{"policies":["prwora-sponsor-deeming","prwora-affidavit-of-support"],"programs":["snap","medicaid","tanf"]},"application.sponsors[].id":{"reason":"Unique identifier for the sponsor record."},"application.sponsors[].sponsoredMemberId":{"reason":"FK to application.members[] identifying the household member whose benefits may be subject to sponsor income deeming."},"application.sponsors[].type":{"reason":"Discriminator identifying whether the sponsor is a household member or a contact-only person record in application.contacts[]."},"application.sponsors[].ssn":{"dataClassification":["pii"],"policies":["snap-ssa-identity-check"],"programs":["snap","medicaid","tanf"]},"application.sponsors[].spouse.type":{"reason":"Discriminator identifying whether the sponsor's spouse is a household member or a contact-only person record in application.contacts[]."},"application.sponsors[].spouse.id":{"reason":"Identifier of the referenced person record for the sponsor's spouse."},"application.sponsors[].spouse.ssn":{"reason":"Sponsor spouse's SSN required for verification of the spouse's income, which may also be deemed to the sponsored non-citizen."},"application.sponsors[].spouse.signedAffidavit":{"reason":"Indicates whether the sponsor's spouse co-signed the I-864 affidavit of support, which affects the scope of income deeming."},"application.sponsors[].householdSize":{"reason":"Sponsor household size is used in the deeming formula to calculate the sponsor's available income attributable to the sponsored non-citizen."},"application.sponsors[].income":{"reason":"Sponsor's gross income is the starting point for the deeming calculation; a portion is attributed to the sponsored non-citizen as deemed income."},"application.sponsors[].livesWithSponsored":{"reason":"When the sponsor lives with the sponsored non-citizen, a different deeming formula applies."},"application.jobs[]":{"dataClassification":["pii","fti"],"policies":["snap-income-verification"],"programs":["snap","medicaid"]},"application.jobs[].id":{"reason":"Unique identifier for the job record; FK target for application.incomes[].jobId and application.healthEnrollments[].jobId."},"application.jobs[].memberId":{"reason":"FK to members[] linking this job to the household member who holds it."},"application.jobs[].type":{"reason":"Employed vs. self-employed status determines the income calculation method, allowable expense deductions, and applicable verification documents."},"application.jobs[].status":{"policies":["snap-strike-disqualification"],"programs":["snap"]},"application.jobs[].employerId":{"reason":"FK to application.organizations[] linking the job to the employer organization record; avoids duplicating employer name, address, and EIN across multiple jobs at the same employer."},"application.jobs[].hoursPerWeek":{"policies":["tanf-work-participation","snap-abawd-work-requirement"],"programs":["snap","tanf"]},"application.jobs[].isTemporary":{"reason":"Temporary employment affects SNAP income averaging rules and TANF work activity categorization."},"application.jobs[].startDate":{"reason":"Employment start date used to verify duration and determine which income is countable in the current benefit period."},"application.jobs[].endDate":{"reason":"Employment end date used to identify recent job loss for expedited processing screening and income change evaluation."},"application.jobs[].endReason":{"policies":["tanf-voluntary-quit","snap-strike-disqualification"],"programs":["snap","tanf"]},"application.jobs[].strikeStartDate":{"reason":"Date the labor strike began; used to determine whether the SNAP strike disqualification period applies and to establish the duration of the disqualification."},"application.jobs[].lastPaycheckDate":{"reason":"Date of last paycheck required to determine the income counting period when employment recently ended."},"application.jobs[].lastPaycheckGrossAmount":{"reason":"Gross amount of last paycheck used for income verification when pay stubs from the current period are unavailable."},"application.jobs[].businessName":{"reason":"Trade name or DBA name of the self-employment business for verification and worker review."},"application.jobs[].businessType":{"reason":"Type of self-employment business may affect which expense categories are allowable deductions."},"application.jobs[].reportingMonth":{"reason":"The month for which self-employment income is being reported; used when income varies month to month and a single reporting period must be designated for calculation."},"application.jobs[].expenses.utilities":{"reason":"Utility costs paid for business use are an allowable deduction from self-employment gross income."},"application.jobs[].expenses.taxes":{"reason":"Business taxes paid are an allowable deduction from self-employment gross income."},"application.jobs[].expenses.interest":{"reason":"Business interest payments are an allowable deduction from self-employment gross income."},"application.jobs[].expenses.laborCosts":{"reason":"Gross labor costs paid to employees are an allowable deduction from self-employment gross income."},"application.jobs[].expenses.costOfMerchandise":{"reason":"Cost of goods or merchandise sold is an allowable deduction from self-employment gross income."},"application.jobs[].expenses.other":{"reason":"Other allowable business expenses not captured in the enumerated categories, subject to worker review."},"application.incomes[]":{"dataClassification":["pii","fti"],"policies":["snap-income-verification"],"programs":["snap","medicaid"]},"application.incomes[].id":{"reason":"Unique identifier for the income record."},"application.incomes[].memberId":{"reason":"FK to application.members[] linking this income record to the household member who receives it."},"application.incomes[].type":{"reason":"Income type determines the calculation method, applicable exclusions, verification requirements, and program-specific treatment."},"application.incomes[].typeOther":{"reason":"Captures non-enumerated income types for adapter mapping and worker review."},"application.incomes[].jobId":{"reason":"FK to application.jobs[] linking employed income to the specific job that generated it. Enables per-job income calculation when a member holds multiple jobs.","modeling":"uuid type because it is a foreign key reference, not a free-text identifier."},"application.incomes[].unearnedType":{"policies":["snap-unearned-income"],"programs":["snap"]},"application.incomes[].inKindSupportType":{"policies":["ssi-in-kind-support"],"programs":["medicaid"]},"application.incomes[].payerName":{"reason":"Name of the person or organization providing in-kind support, for verification and determination of whether support is from a sponsor subject to deeming rules."},"application.incomes[].lumpSumType":{"policies":["snap-lump-sum-income","medicaid-magi-methodology"],"programs":["snap","medicaid"]},"application.incomes[].amount":{"reason":"The income amount for the given frequency period, used as the basis for all income calculations.","modeling":"Stored as reported (per-period amount) rather than normalized to monthly, to preserve the precision of the applicant's reported figure and allow adapters to apply program-specific normalization methods."},"application.incomes[].frequency":{"reason":"Frequency is required to normalize income to a monthly or annual figure for eligibility calculation and comparison against program thresholds. When frequency = variable, programs using projected annual income (MAGI Medicaid, marketplace) use the amount directly; programs using current periodic income (SNAP, TANF) should treat it as an estimate requiring worker review.","modeling":"frequency = variable means amount is the projected annual income, not a per-period figure. Applies to employed and self_employed types only."},"application.incomes[].dateReceived":{"reason":"Date of receipt required for lump sum income to determine which benefit month is affected by the payment."},"application.incomes[].changeReason":{"reason":"Categorical reason for a recent income change, used for case worker review and to validate projected annual income under MAGI rules."},"application.incomes[].changeExplanation":{"policies":["medicaid-magi-income-projection"],"programs":["medicaid","chip"]},"application.assets[]":{"dataClassification":["pii"],"policies":["snap-resource-limit","medicaid-asset-rules"],"programs":["snap","medicaid"]},"application.assets[].id":{"reason":"Unique identifier for the asset record."},"application.assets[].memberId":{"reason":"FK to application.members[] linking this asset to the household member who owns it."},"application.assets[].type":{"reason":"Asset type determines which countability rules apply and what verification is required."},"application.assets[].typeOther":{"reason":"Captures non-enumerated asset types for worker review and manual classification."},"application.assets[].value":{"reason":"Current market value of the asset, used in the SNAP asset test and Medicaid resource determination."},"application.assets[].financialInstitutionName":{"reason":"Financial institution name for liquid asset verification through bank statements or electronic verification."},"application.assets[].accountNumber":{"reason":"Account number for liquid asset verification and cross-matching."},"application.assets[].year":{"reason":"Vehicle year is used with make and model to determine fair market value for the SNAP vehicle asset test."},"application.assets[].make":{"reason":"Vehicle make used with year and model for fair market value determination."},"application.assets[].model":{"reason":"Vehicle model used with year and make for fair market value determination."},"application.assets[].policyType":{"reason":"Policy type determines whether the cash surrender value is countable as a liquid asset."},"application.assets[].companyName":{"reason":"Insurance company name for policy verification and cash value lookup."},"application.assets[].policyNumber":{"reason":"Policy number required for insurance verification and cash value determination."},"application.assets[].faceValue":{"reason":"Face value is the starting point for determining cash surrender value; policies with face value above the exemption threshold have their cash value counted."},"application.assets[].isRevocable":{"reason":"Only revocable life insurance policies have a countable cash surrender value; irrevocable policies are generally exempt."},"application.assets[].address":{"reason":"Property address used for valuation and to determine whether the property is the primary residence (which may be exempt)."},"application.assets[].primaryUse":{"reason":"Primary use determines exemption status — primary residences are exempt; rental and investment properties are countable."},"application.assets[].primaryUseOther":{"reason":"Captures non-enumerated primary uses for worker review."},"application.assetDisposals[]":{"policies":["snap-asset-disposal-lookback"],"programs":["snap"]},"application.assetDisposals[].id":{"reason":"Unique identifier for the asset disposal record."},"application.assetDisposals[].memberId":{"reason":"FK to application.members[] linking this disposal to the household member who made the transfer."},"application.assetDisposals[].type":{"reason":"Type of transferred asset determines which countability rules apply to the transfer."},"application.assetDisposals[].typeOther":{"reason":"Captures non-enumerated transferred asset types for worker review."},"application.assetDisposals[].dateOfDisposal":{"reason":"Date of transfer determines whether the transfer falls within the applicable lookback period for the asset test."},"application.assetDisposals[].amountReceived":{"reason":"Amount received for the transfer; compared against fair market value to determine whether the transfer was for less than fair market value."},"application.assetDisposals[].fairMarketValue":{"reason":"Fair market value at time of transfer; if the amount received is below fair market value, the difference may be counted as a resource."},"application.expenses[]":{"policies":["snap-alimony-deduction","snap-elderly-disabled-deductions"],"programs":["snap","medicaid"]},"application.expenses[].id":{"reason":"Unique identifier for the expense record."},"application.expenses[].memberId":{"reason":"FK to application.members[] linking this expense to the household member who incurs it."},"application.expenses[].type":{"reason":"Expense type determines which deduction rules apply for SNAP net income calculation and which expenses are counted for Medicaid spend-down."},"application.expenses[].amount":{"reason":"Actual amount paid for the expense, used in the deduction calculation."},"application.expenses[].legallyObligatedAmount":{"reason":"Only the legally obligated portion of child support and alimony payments is deductible from SNAP income; voluntary payments above the obligation are not deductible."},"application.expenses[].typeOther":{"reason":"Captures non-enumerated expense types for worker review."},"application.disabilityBenefits[]":{"policies":["medicaid-ssi-categorical-eligibility","medicare-part-a-entitlement"],"programs":["medicaid"]},"application.disabilityBenefits[].id":{"reason":"Unique identifier for the disability benefit record."},"application.disabilityBenefits[].memberId":{"reason":"FK to application.members[] linking this benefit record to the household member."},"application.disabilityBenefits[].programType":{"reason":"SSI or SSDI — determines the eligibility pathway and income counting rules. SSI receipt confers categorical Medicaid eligibility in most states; SSDI affects income counting and Medicare entitlement."},"application.disabilityBenefits[].status":{"reason":"Current benefit status; pending applications affect categorical eligibility screening, active and ended statuses affect income counting."},"application.disabilityBenefits[].applicationDate":{"reason":"Date of SSI/SSDI application used for determining the benefit start date if approved and for tracking pending applications."},"application.disabilityBenefits[].startDate":{"reason":"Benefit start date used for income counting and Medicare Part A entitlement determination."},"application.disabilityBenefits[].endDate":{"reason":"Benefit end date used to identify members with a history of SSI or SSDI and to assess whether continued eligibility applies."},"application.deductions[]":{"policies":["medicaid-magi-deductions","magi-above-line-deductions"],"programs":["medicaid","chip"]},"application.deductions[].id":{"reason":"Unique identifier for the deduction record."},"application.deductions[].memberId":{"reason":"FK to application.members[] attributing this deduction to a specific household member for MAGI income calculation."},"application.deductions[].type":{"reason":"Above-the-line deduction type determines eligibility and the deductible amount under MAGI income calculation rules. The prior_period type captures the summarized total of above-the-line deductions paid earlier in the current tax year.","modeling":"Stored at the application level with a memberId FK for per-member attribution. When a state's intake form does not associate deductions with specific members, the adapter should assign deduction records to the primary applicant. For prior_period records, only amount is relevant and all other fields are inapplicable."},"application.deductions[].typeOther":{"reason":"Captures non-enumerated deduction types for adapter mapping and worker review."},"application.deductions[].frequency":{"reason":"Frequency is needed to normalize the deduction amount for annualized MAGI income calculation."},"application.deductions[].amount":{"reason":"Per-period deduction amount; combined with frequency to calculate the annual deduction figure."},"application.deductions[].annualAmount":{"reason":"Projected annual deduction used directly in the MAGI calculation. Populated when frequency is variable and the per-period amount cannot be reliably annualized."},"application.members[]":{"reason":"Household members on the application, including both applying and non-applying members whose data affects eligibility. Each member is linked to a contacts[] record via personId; shared identity and contact data lives there."},"application.members[].id":{"reason":"Unique identifier for the member record; FK target for memberId fields throughout the application model."},"application.members[].personId":{"reason":"FK to application.contacts[] linking the member to their person record, which holds name, address, phone, and email shared with non-member contacts."},"application.members[].roles[]":{"policies":["snap-authorized-representative","medicaid-authorized-representative"],"programs":["snap","medicaid"]},"application.members[].programsAppliedFor[]":{"programs":["snap","medicaid","tanf"]},"application.members[].purchasesAndPreparesFood":{"policies":["snap-household-composition"],"programs":["snap"]},"application.members[].isMigrantFarmWorker":{"policies":["snap-expedited-screening"],"programs":["snap"]},"application.members[].hasThirdPartyLiabilityClaim":{"policies":["medicaid-third-party-liability"],"programs":["medicaid"]},"application.members[].personalInformation.ssn":{"dataClassification":["pii"],"policies":["snap-ssn-requirement","snap-ssa-identity-check"],"programs":["snap","medicaid"]},"application.members[].personalInformation.dateOfBirth":{"dataClassification":["pii"],"policies":["chip-age-eligibility","medicaid-foster-care-extended-eligibility","snap-elderly-disabled-deductions"],"programs":["snap","medicaid","chip"]},"application.members[].personalInformation.sexAssignedAtBirth":{"policies":["aca-section-1557-nondiscrimination"],"programs":["medicaid","chip"]},"application.members[].personalInformation.genderIdentity":{"policies":["aca-section-1557-nondiscrimination"],"programs":["medicaid","chip"]},"application.members[].personalInformation.maritalStatus":{"policies":["snap-deeming-rules","medicaid-magi-methodology"],"programs":["snap","medicaid"]},"application.members[].personalInformation.races[]":{"policies":["omb-race-ethnicity-standards","title-vi-civil-rights"],"programs":["snap","medicaid","tanf","chip"]},"application.members[].personalInformation.isHispanicOrLatino":{"policies":["omb-race-ethnicity-standards","title-vi-civil-rights"],"programs":["snap","medicaid","tanf","chip"]},"application.members[].personalInformation.preferredSpokenLanguage":{"policies":["medicaid-language-access","eo-13166-language-access","title-vi-civil-rights"],"programs":["snap","medicaid"]},"application.members[].personalInformation.preferredWrittenLanguage":{"policies":["medicaid-language-access","eo-13166-language-access","title-vi-civil-rights"],"programs":["snap","medicaid"]},"application.members[].contact.primaryAddress":{"reason":"Used for residency determination, county routing for benefits administration, and physical location for home visits when required."},"application.members[].contact.mailingAddress":{"reason":"Used for correspondence when the mailing address differs from the home address."},"application.members[].contact.primaryPhone":{"reason":"Primary contact number for program notifications, interview scheduling, and verification follow-up."},"application.members[].contact.alternatePhone":{"reason":"Secondary contact number used when the primary number is unavailable."},"application.members[].contact.isExperiencingHomelessness":{"policies":["snap-residency-requirement"],"programs":["snap"]},"application.members[].contact.noticePreference":{"policies":["medicaid-electronic-notices"],"programs":["medicaid"]},"application.members[].contact.email":{"reason":"Email address for electronic delivery of program notices when noticePreference includes email."},"application.members[].contact.alternateNoticeAddress":{"policies":["hipaa-confidential-communications","aca-section-1557-nondiscrimination"],"programs":["medicaid","chip"]},"application.members[].residency.isStateResident":{"policies":["snap-residency-requirement","medicaid-residency-requirement","tanf-residency-requirement"],"programs":["snap","medicaid","tanf"]},"application.members[].residency.stateResidencyDate":{"reason":"Required for states that verify residency duration and for determining benefit start dates when a household transfers from another state."},"application.members[].citizenship.citizenshipStatus":{"dataClassification":["pii"],"policies":["snap-citizenship-eligibility","qualified-alien-eligibility","prwora-1996-grandfather-exemption","prwora-military-alien-exemption"],"programs":["snap","medicaid"]},"application.members[].citizenship.certificateNumber":{"reason":"US naturalization or citizenship certificate number used for SAVE verification of citizenship claims."},"application.members[].citizenship.immigrantStatus":{"dataClassification":["pii"],"policies":["qualified-alien-eligibility","medicaid-immigration-electronic-check","snap-citizenship-eligibility","prwora-sponsor-deeming"],"programs":["snap","medicaid"]},"application.members[].citizenship.uscisNumberOrI94":{"reason":"Alien registration number or I-94 admission number required to initiate FDSH VLP verification."},"application.members[].citizenship.document.type":{"reason":"Immigration document type determines which fields FDSH VLP requires to initiate a verification check."},"application.members[].citizenship.document.number":{"reason":"Document number required for FDSH VLP immigration status verification."},"application.members[].citizenship.document.expirationDate":{"reason":"Expired immigration documents may indicate a change in immigration status that affects eligibility."},"application.members[].citizenship.document.countryOfIssuance":{"reason":"Country of issuance is required for foreign passport VLP verification lookups."},"application.members[].citizenship.residedInUsSince1996":{"policies":["prwora-1996-grandfather-exemption"],"programs":["snap","medicaid","tanf"]},"application.members[].citizenship.hasQualifyingMilitaryConnection":{"policies":["prwora-military-alien-exemption"],"programs":["snap","medicaid","tanf"]},"application.members[].citizenship.sponsored.hasBeenAbandonedBySponsor":{"reason":"Sponsor abandonment is a basis for exempting a sponsored non-citizen from deeming of the sponsor's income.","modeling":"Kept separate from hasBeenMistreatedBySponsor because abandonment (documented through lack of financial support or sponsor departure) and battery/mistreatment (VAWA-based, requiring police reports, court orders, or professional statements) have distinct legal bases and different verification pathways. Forms that combine them into a single yes/no require a state overlay."},"application.members[].citizenship.sponsored.hasBeenMistreatedBySponsor":{"reason":"Battery or extreme cruelty by a sponsor is a basis for exempting a sponsored non-citizen from deeming under VAWA protections.","modeling":"Kept separate from hasBeenAbandonedBySponsor; see that field's design note for the rationale."},"application.members[].citizenship.sponsored.qualifiesForSponsorDeemingException":{"reason":"Certain sponsored non-citizens — pregnant women, children under 21 — are exempt from sponsor income deeming."},"application.members[].citizenship.sponsored.receivesInKindSupport":{"reason":"In-kind support and maintenance (non-cash housing and food) from a sponsor is counted as income for SSI and may affect other program determinations."},"application.members[].retroactiveMedicalCoverage.isRequested":{"reason":"Medicaid may cover medical expenses incurred up to 3 months before the application month for eligible individuals who would have qualified during that period."},"application.members[].retroactiveMedicalCoverage.periods[]":{"reason":"Monthly retroactive coverage periods for which Medicaid coverage is requested, each capturing the household income for that month to determine whether the applicant would have qualified."},"application.members[].retroactiveMedicalCoverage.periods[].month":{"reason":"Identifies the specific months for which retroactive coverage is requested, up to the 3-month retroactive period."},"application.members[].retroactiveMedicalCoverage.periods[].householdIncome":{"reason":"Income during the retroactive month must be evaluated against the eligibility threshold for that month to determine whether the applicant would have qualified."},"application.members[].disability.isDisabled":{"reason":"A disabling condition lasting 12 or more months affects SNAP elderly and disabled household rules and categorical Medicaid eligibility determination."},"application.members[].disability.hasLongTermCondition":{"reason":"Identifies members with a condition expected to last 12 or more months, used as a screening criterion alongside isDisabled for SNAP elderly and disabled household rules and Medicaid disability determination pathways."},"application.members[].disability.hasPhysicalDisability":{"reason":"Identifies whether the member has a physical disability; collected to support SNAP elderly and disabled household deductions and Medicaid disability pathways."},"application.members[].disability.hasMentalDisability":{"reason":"Identifies whether the member has a mental disability; collected alongside hasPhysicalDisability to support SNAP and Medicaid disability determinations."},"application.members[].disability.needsHelpWithSelfCare":{"reason":"Identifies members who require assistance with self-care activities; used to assess functional limitations relevant to Aid and Attendance eligibility for veterans and LTSS Medicaid pathways."},"application.members[].studentStatus.enrollmentStatus":{"reason":"Full-time students ages 18-49 are generally ineligible for SNAP unless they meet a specific exemption."},"application.members[].studentStatus.institutionType":{"reason":"The SNAP student eligibility restriction applies specifically to higher education; vocational training institutions may not trigger the restriction."},"application.members[].studentStatus.schoolName":{"reason":"School name used to verify enrollment status and institution type for the SNAP student restriction."},"application.members[].studentStatus.isParticipatingInWorkStudy":{"reason":"Participation in a federally funded work-study program is one of the exemptions from the SNAP student eligibility restriction."},"application.members[].pregnancy.isPregnant":{"reason":"Pregnancy confers categorical Medicaid eligibility and affects CHIP unborn child coverage; the expected baby counts as a household member for SNAP."},"application.members[].pregnancy.dueDate":{"reason":"Due date determines the benefit period for pregnancy Medicaid and the anticipated household size change for SNAP."},"application.members[].pregnancy.numberOfBabiesExpected":{"reason":"Each expected baby counts as a separate household member for SNAP and Medicaid household size calculation."},"application.members[].fosterCare.startDate":{"reason":"Start date of the most recent foster care episode; used with end date and member age to determine whether extended Medicaid eligibility applies."},"application.members[].fosterCare.endDate":{"reason":"End date of the most recent foster care episode; used to determine age at exit and whether the member aged out and qualifies for extended Medicaid coverage to age 26."},"application.members[].fosterCare.exitReason":{"reason":"Exit reason determines eligibility pathway — aged-out youth qualify for extended Medicaid; reunification and adoption have different eligibility implications."},"application.members[].fosterCare.exitState":{"reason":"State in which the member was in foster care; required for cross-state Medicaid eligibility for youth who aged out in another state."},"application.members[].fosterCare.receivedMedicaidAtAge18":{"reason":"Youth who were enrolled in Medicaid at age 18 qualify for extended Medicaid coverage to age 26 regardless of current income."},"application.members[].fosterCare.returnedAfterAdoption":{"reason":"Youth who re-enter foster care after an adoption dissolution may regain extended Medicaid eligibility; this flag triggers review of the re-entry date."},"application.members[].fosterCare.returnDate":{"reason":"Date of re-entry into foster care after adoption dissolution; used to determine whether extended Medicaid eligibility resumes."},"application.members[].military.isVeteran":{"reason":"Veteran status may affect categorical SNAP eligibility in states with broad-based categorical eligibility and may affect Medicaid when TRICARE is present."},"application.members[].military.isActiveDuty":{"policies":["snap-military-household-rules"],"programs":["snap"]},"application.members[].military.dischargeStatus":{"policies":["snap-ipv-disqualifications"],"programs":["snap"]},"application.members[].institutionalStatus.livesInInstitution":{"reason":"Institutionalized individuals are generally ineligible for SNAP and have restricted Medicaid eligibility under IMD exclusion and LTSS rules."},"application.members[].institutionalStatus.facilityName":{"reason":"Facility name used for verification and for determining the institution type when not explicitly collected."},"application.members[].institutionalStatus.facilityType":{"reason":"Facility type determines which program restrictions apply — incarcerated individuals are ineligible for SNAP and Medicaid during incarceration."},"application.members[].institutionalStatus.dateEntered":{"reason":"Entry date used to determine the period of ineligibility and whether a partial-month benefit applies."},"application.members[].institutionalStatus.pendingDispositionOfCharges":{"reason":"Individuals detained pending disposition of charges retain Medicaid eligibility; convicted and incarcerated individuals do not."},"application.members[].institutionalStatus.mealsProvided":{"reason":"Institutions that provide meals may constitute a separate food purchasing unit, affecting SNAP household composition."},"application.members[].priorConvictions.isFleeingFelon":{"reason":"Individuals fleeing to avoid prosecution or confinement for a felony are ineligible for SNAP and TANF."},"application.members[].priorConvictions.convictedOfDrugRelatedFelony":{"reason":"Drug-related felony convictions may disqualify a member from SNAP and TANF depending on state implementation of the federal option."},"application.members[].priorConvictions.convictedDuplicateSnapBenefits":{"reason":"Conviction for receiving duplicate SNAP benefits results in a disqualification period proportional to the offense."},"application.members[].priorConvictions.convictedOfSnapTrafficking":{"reason":"Conviction for trafficking SNAP benefits over $500 results in permanent disqualification."},"application.members[].priorConvictions.convictedTradingSnapForFirearmsOrExplosives":{"reason":"Conviction for trading SNAP benefits for firearms, ammunition, or explosives results in permanent disqualification."},"application.members[].priorConvictions.convictedOfDisqualifyingViolentCrime":{"reason":"Conviction for murder or certain sexual offenses results in permanent SNAP disqualification under the Agriculture Improvement Act."},"application.members[].priorConvictions.disqualifiedForIPV":{"reason":"A prior intentional program violation (IPV) disqualification carries over and may trigger an extended or permanent disqualification period."},"application.members[].priorConvictions.isViolatingProbationOrParole":{"reason":"Individuals violating probation or parole conditions are ineligible for SNAP and TANF."},"application.members[].tribalStatus.isAmericanIndianOrAlaskaNative":{"reason":"American Indian and Alaska Native members have special Medicaid and CHIP eligibility protections and are eligible for Indian Health Service coordination."},"application.members[].tribalStatus.tribeName":{"reason":"Tribe name used to verify tribal membership and coordinate with IHS and tribal health programs."},"application.members[].tribalStatus.tribeState":{"reason":"State where the tribe is located, used to identify the relevant IHS service area and tribal health program."},"application.members[].personMatch":{"reason":"Person matching state for an application member. Populated when the client management domain resolves a match; null until matching begins."},"application.members[].personMatch.matchStatus":{"reason":"Outcome of the person matching process — confirmed (single high-confidence match), review_required (multiple candidates need caseworker review), or no_match."},"application.members[].personMatch.candidates[]":{"reason":"Match candidates returned by the person matching process. Populated for review_required; empty otherwise."},"application.members[].personMatch.candidates[].confidenceScore":{"reason":"Match confidence score from 0 (no confidence) to 1 (certain); used by caseworkers to prioritize candidate review."},"application.members[].personMatch.candidates[].personId":{"reason":"ID of the candidate person record in the client management domain."},"application.members[].programDeterminations[]":{"reason":"Per-program eligibility determination results for this member, populated by the rules engine at determination. One record per program evaluated."},"application.members[].programDeterminations[].program":{"reason":"Program identifier the determination applies to (e.g., snap, medicaid, tanf)."},"application.members[].programDeterminations[].outcome":{"reason":"Determination outcome — approved or denied — for this member/program combination."},"application.members[].programDeterminations[].determinedAt":{"reason":"When the determination was recorded by the rules engine."},"application.channel":{"programs":["snap","medicaid","tanf"]},"application.personRelationships[].from.type":{"reason":"Discriminator identifying whether the source person is a household member or a contact-only person record."},"application.personRelationships[].from.id":{"reason":"Identifier of the source person record; points to application.members[].id when type = member, or application.contacts[].id when type = contact."},"application.personRelationships[].to.type":{"reason":"Discriminator identifying whether the target person is a household member or a contact-only person record."},"application.personRelationships[].to.id":{"reason":"Identifier of the target person record; points to application.members[].id when type = member, or application.contacts[].id when type = contact."},"application.childSupport.parentsOutsideHome[].children[].type":{"reason":"Discriminator identifying whether the child is a household member or a contact-only person record."},"application.childSupport.parentsOutsideHome[].children[].id":{"reason":"Identifier of the referenced child person record."},"application.healthPlans[].partA.premiumAmount":{"reason":"Part A premium amount for beneficiaries who did not earn 40 quarters of work and must pay a premium; used in Medicare Savings Program determination."},"application.healthPlans[].partB.isPremiumFree":{"reason":"Identifies whether the beneficiary qualifies for a premium-free Part B; affects Medicare Savings Program cost calculation."},"application.interview.waiverStatus":{"reason":"Status of the interview waiver for this applicant. Caseworker-set field."},"application.interview.waiverReason":{"reason":"Reason the interview was waived. Required when waiverStatus is granted; used for audit and supervisory review."},"application.interview.completedAt":{"policies":["snap-interview-requirement"],"programs":["snap"]},"application.interview.appointments[]":{"reason":"Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when a scheduling event fires; one interview obligation may span multiple appointments due to rescheduling or no-shows."},"application.verifications[]":{"policies":["medicaid-electronic-verification-first","snap-verification-requirements"],"programs":["snap","medicaid"]},"application.verifications[].sourceId":{"reason":"ID of the specific record that triggered this verification obligation (e.g., a specific income or member record). Null for household-level obligations."},"application.verifications[].sourceType":{"reason":"Identifies what sourceId refers to — member or income. Required when sourceId is set; null for household-level obligations."},"application.verifications[].category":{"reason":"Verification obligation category — citizenship, identity, immigration, income, or residency — determines which document types and electronic checks are applicable."},"application.verifications[].verificationType":{"reason":"How this obligation is to be fulfilled — document (paper evidence from applicant) or electronic (automated service check)."},"application.verifications[].status":{"reason":"Current lifecycle status of the verification obligation — pending, inconclusive, satisfied, waived, or cannot_verify. Read-only; set by the rules engine."},"application.verifications[].evidence[]":{"reason":"Electronic and document evidence items accumulated against this obligation. Populated as checks run and documents are received."},"application.verifications[].documentRequests[]":{"reason":"Outbound notices requesting documents from the applicant for this obligation. Populated when an electronic check is inconclusive and a document request is sent."},"application.verifications[].documentRequests[].noticeId":{"reason":"ID of the notice in the communication domain, used to track delivery and link back to the outbound notice record."},"application.verifications[].documentRequests[].type":{"reason":"Template identifier for the notice, matching the type field on the communication.notice.sent event (e.g., document_request_income_verification)."},"application.verifications[].documentRequests[].sentAt":{"reason":"When the document request notice was sent; used to calculate response deadlines and track aging obligations."},"application.verifications[].documentRequests[].dueAt":{"reason":"Deadline by which the applicant must respond with documents. Null if no deadline was set."},"application.verifications[].documentRequests[].channel":{"reason":"Channel through which the document request notice was sent — email, in_person, or mail."},"application.submittedAt":{"policies":["snap-processing-clock","medicaid-processing-clock"],"programs":["snap","medicaid"]},"application.isExpedited":{"policies":["snap-expedited-processing","snap-expedited-screening"],"programs":["snap"]},"application.expeditedSnap":{"policies":["snap-expedited-screening","snap-expedited-processing"],"programs":["snap"]},"application.utilities":{"policies":["snap-utility-allowance-standards"],"programs":["snap"]},"application.healthPlans[].partA":{"policies":["medicaid-medicare-savings-program","medicare-part-a-entitlement"],"programs":["medicaid"]},"application.jobs[].expenses":{"policies":["snap-self-employment-expenses"],"programs":["snap"]},"verification.category":{"policies":["snap-verification-requirements","medicaid-electronic-verification-first"],"programs":["snap","medicaid"]},"application.interview":{"policies":["snap-interview-requirement"],"programs":["snap"]},"application.members[].citizenship":{"dataClassification":["pii"],"policies":["medicaid-immigration-electronic-check"],"programs":["medicaid"]},"application.members[].citizenship.sponsored":{"policies":["prwora-sponsor-deeming","prwora-affidavit-of-support"],"programs":["snap","medicaid","tanf"]},"application.members[].retroactiveMedicalCoverage":{"policies":["medicaid-retroactive-coverage"],"programs":["medicaid"]},"application.members[].disability":{"policies":["snap-elderly-disabled-deductions","medicaid-disability-determination"],"programs":["snap","medicaid"]},"application.members[].studentStatus":{"policies":["snap-student-eligibility-restriction"],"programs":["snap"]},"application.members[].pregnancy":{"policies":["medicaid-pregnancy-eligibility","chip-unborn-child-coverage","snap-pregnancy-household-rules"],"programs":["snap","medicaid","chip"]},"application.members[].fosterCare":{"policies":["medicaid-foster-care-extended-eligibility"],"programs":["medicaid"]},"application.members[].institutionalStatus":{"policies":["snap-institutionalized-household","medicaid-imd-exclusion","medicaid-incarceration-exclusion"],"programs":["snap","medicaid"]},"application.members[].priorConvictions":{"policies":["snap-fleeing-felon-disqualification","snap-ipv-disqualifications","snap-drug-felony-disqualification","tanf-felony-disqualifications"],"programs":["snap","tanf"]},"application.members[].tribalStatus":{"policies":["chip-ai-an-eligibility","indian-health-care-improvement-act"],"programs":["medicaid","chip"]}},"operations":{"application.submit":{"policies":["snap-application-acceptance","snap-application-date-stamp","snap-processing-clock","snap-expedited-processing","medicaid-processing-clock","snap-right-to-apply","snap-household-composition"],"programs":["snap","medicaid"]},"application.approve-determination":{"policies":["snap-supervisor-review","snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights","medicaid-determination-documentation"],"programs":["snap","medicaid"]},"application.reject-determination":{"policies":["snap-supervisor-review","medicaid-determination-documentation"],"programs":["snap","medicaid"]},"application.close":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights","medicaid-determination-documentation"],"programs":["snap","medicaid"]},"application.withdraw":{"policies":["snap-notice-of-action"],"programs":["snap"]},"verification.satisfy":{"policies":["snap-verification-requirements","medicaid-ex-parte-determination"],"programs":["snap","medicaid"]},"verification.mark-inconclusive":{"policies":["medicaid-ex-parte-determination","medicaid-electronic-verification-first"],"programs":["medicaid"]}},"events":{"intake.application.submitted":{"policies":["snap-application-acceptance","snap-application-date-stamp","snap-processing-clock","medicaid-processing-clock","snap-household-composition"],"programs":["snap","medicaid"]},"intake.application.closed":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights","snap-notice-of-action"],"programs":["snap","medicaid"]},"intake.application.withdrawn":{"policies":["snap-notice-of-action"],"programs":["snap"]},"intake.application.approval_needed":{"policies":["snap-supervisor-review"],"programs":["snap"]},"intake.application.determination_rejected":{"policies":["snap-supervisor-review"],"programs":["snap"]},"intake.verification.created":{"policies":["snap-verification-requirements","medicaid-electronic-verification-first","snap-ssa-identity-check","snap-income-verification","medicaid-citizenship-electronic-check","medicaid-immigration-electronic-check","medicaid-data-sharing"],"programs":["snap","medicaid"]},"intake.verification.inconclusive":{"policies":["medicaid-ex-parte-determination","medicaid-electronic-verification-first"],"programs":["medicaid"]},"intake.verification.satisfied":{"policies":["snap-verification-requirements","snap-ssa-identity-check"],"programs":["snap","medicaid"]}}}}</script>
     </main>
   </div>
   <script>
@@ -358,10 +490,32 @@
         .map(a => document.getElementById(a.getAttribute('href').slice(1)))
         .filter(Boolean);
       if (!sections.length) return;
-      const io = new IntersectionObserver(entries => {
-        const hit = entries.find(e => e.isIntersecting);
-        if (hit) setActive(hit.target.id);
-      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
       sections.forEach(s => io.observe(s));
       setActive(sections[0].id);
     })();
@@ -473,6 +627,178 @@
       window.addEventListener('hashchange', scrollToHash);
     })();
     
+(() => {
+  const data = JSON.parse(document.getElementById('client-annotations').textContent);
+  const namespaceOf = (domain) => domain.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const prop = (name) => (/^[A-Za-z_$][\w$]*$/.test(name) ? '.' + name : "['" + name + "']");
+  const has = (entry, type, id) => Array.isArray(entry && entry[type]) && entry[type].includes(id);
+
+  // The fields that carry an entry, and the call that finds them.
+  const findCall = (type, id, domain) => {
+    const all = data[domain] || {};
+    const sections = Object.keys(all).filter((s) => Object.values(all[s]).some((e) => has(e, type, id)));
+    const at = namespaceOf(domain) + '.Annotations';
+    const found = sections.flatMap((s) => Object.entries(all[s]).filter(([, e]) => has(e, type, id)).map(([key]) => [s, key]));
+    const code = sections.length === 1
+      ? ['// The ' + sections[0] + ' entries marked ' + id,
+         'const found = Object.entries(' + at + prop(sections[0]) + ')',
+         '  .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         '  .map(([key]) => key);']
+      : ['// Everything marked ' + id + ', as section.key',
+         'const found = Object.entries(' + at + ').flatMap(([section, entries]) =>',
+         '  Object.entries(entries)',
+         '    .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         "    .map(([key]) => section + '.' + key));"];
+    const value = sections.length === 1 ? found.map(([, key]) => key) : found.map(([s, key]) => s + '.' + key);
+    return { code, value, first: found[0] };
+  };
+
+  // The call that reads everything annotated on one key.
+  const lookupCall = (domain, section, key, field) => {
+    const at = namespaceOf(domain) + '.Annotations' + prop(section) + "['" + key + "']";
+    const entry = ((data[domain] || {})[section] || {})[key];
+    return field
+      ? { code: ['const ' + field + ' = ' + at + prop(field) + ';'], value: entry ? entry[field] : undefined }
+      : { code: ['// Everything annotated on one of them', 'const annotations = ' + at + ';'], value: entry };
+  };
+
+  // An entry opens when the address or the sidebar goes to it, as an
+  // operation does on the API pages.
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target && target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-link[href^="#"]');
+    const target = link && document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    const details = target && target.querySelector(':scope > details');
+    if (!details) return;
+    event.preventDefault();
+    details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+
+  for (const side of document.querySelectorAll('.ann-side')) {
+    const { type, id, section, key, field } = side.dataset;
+    const domains = JSON.parse(side.dataset.domains);
+    const row = document.createElement('div');
+    row.className = 'row';
+    const pick = document.createElement('select');
+    for (const d of domains) pick.append(Object.assign(document.createElement('option'), { value: d, textContent: d }));
+    row.append('Domain', pick);
+    if (domains.length < 2) pick.disabled = true;
+    const block = document.createElement('div');
+    block.className = 'try-code';
+    block.innerHTML = '<div class="tabs"><span class="tab">TypeScript (local)</span><span class="target">runs in your code</span><button type="button" class="copy">Copy</button></div><pre></pre><div class="foot"><button type="button" class="run">Run</button></div>';
+    const result = document.createElement('div');
+    result.className = 'ann-result';
+    side.append(row, block, result);
+    const pre = block.querySelector('pre');
+    let value;
+    const draw = () => {
+      const domain = pick.value;
+      const head = ["import { " + namespaceOf(domain) + " } from './generated'; // where you generated the client", ''];
+      let lines;
+      if (field) {
+        const read = lookupCall(domain, section, key, field);
+        lines = read.code;
+        value = read.value;
+      } else {
+        const find = findCall(type, id, domain);
+        const read = find.first ? lookupCall(domain, find.first[0], find.first[1]) : null;
+        lines = [...find.code, ...(read ? ['', ...read.code] : [])];
+        value = read ? { found: find.value, annotations: read.value } : { found: find.value };
+      }
+      pre.textContent = [...head, ...lines].join('\n');
+      result.replaceChildren();
+    };
+    pick.onchange = draw;
+    block.querySelector('.copy').onclick = async (event) => {
+      try { await navigator.clipboard.writeText(pre.textContent); event.target.textContent = 'Copied'; } catch { event.target.textContent = 'Select and copy'; }
+      setTimeout(() => { event.target.textContent = 'Copy'; }, 1500);
+    };
+    block.querySelector('.run').onclick = () => {
+      result.innerHTML = '<span class="label">local</span><p class="note">Worked out in the page from the annotations the client is built from. Nothing was sent to a server.</p><pre></pre>';
+      result.querySelector('pre').textContent = JSON.stringify(value, null, 2);
+    };
+    draw();
+  }
+})();
+
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<style>
+  #try-it-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 600 12px system-ui, sans-serif;
+    color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 100px; padding: 2px 4px 2px 10px; cursor: pointer; }
+  #try-it-switch .knob { width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.3); position: relative; transition: background .15s; }
+  #try-it-switch .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  #try-it-switch[aria-checked="true"] .knob { background: #22c55e; }
+  #try-it-switch[aria-checked="true"] .knob::after { left: 14px; }
+  #try-it-switch.floating { position: fixed; top: 8px; right: 16px; z-index: 1001; background: #2B1A78; }
+  html[data-try-it="on"] body { padding-right: var(--mock-panel-width, 30rem); }
+  /* Narrow, the panel docks along the bottom instead, as developer tools do. */
+  @media (max-width: 1200px) { html[data-try-it="on"] body { padding-right: 0; padding-bottom: var(--mock-panel-height, 40vh); } }
+</style>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const scope = new URL('mock/', root).href;
+  const key = 'blueprint-try-it:' + scope;
+  const stored = () => { try { return sessionStorage.getItem(key) === 'on'; } catch { return false; } };
+  const remember = (on) => { try { if (on) sessionStorage.setItem(key, 'on'); else sessionStorage.removeItem(key); } catch { /* this page only */ } };
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+
+  const toggle = document.createElement('button');
+  toggle.id = 'try-it-switch';
+  toggle.type = 'button';
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-controls', 'mock-panel');
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  const crumbs = document.querySelector('.page-crumbs');
+  if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
+
+  const show = (on) => {
+    document.documentElement.dataset.tryIt = on ? 'on' : 'off';
+    toggle.setAttribute('aria-checked', String(on));
+    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+  };
+  const turn = (on) => {
+    remember(on);
+    show(on);
+    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+  };
+  toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
+  // The panel's own Close turns it off too.
+  addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
+  show(stored());
+  if (stored()) turn(true);
+})();
+</script>
 </body>
 </html>

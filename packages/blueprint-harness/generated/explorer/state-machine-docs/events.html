@@ -39,9 +39,9 @@
   </style>
 </head>
 <body>
-  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Events</a></div>
+  <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Events</a></div>
   <div style="background:#2B1A78;padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid #5650BE;">
-  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="communication.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Communication</a><a href="communication.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Communication</a><a href="decision-support.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Decision Support</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Intake</a></nav>
+  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="communication.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Communication</a><a href="decision-support.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Decision Support</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Intake</a></nav>
 </div><div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
     <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Published Events</h1>
     <p style="color:#666;margin-bottom:2rem;font-size:13px;">Auto-generated from state machine <code>emit</code> and subscription declarations.</p>
@@ -51,15 +51,15 @@
           <th>Event</th><th>Published by</th><th>Subscribers</th>
         </tr></thead>
         <tbody><tr>
-      <td><code>communication.idle_check</code></td>
-      <td><span style="color:#999;font-size:11px;">unknown</span></td>
-      <td><a href="communication.html">Communication/Transcript</a></td>
-    </tr><tr>
       <td><code>communication.transcript.closed</code></td>
       <td><a href="communication.html">Communication/Transcript</a></td>
       <td><a href="communication.html">Communication/TranscriptionSession</a></td>
     </tr><tr>
       <td><code>communication.transcript.created</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="communication.html">Communication/Transcript</a></td>
+    </tr><tr>
+      <td><code>communication.transcript.idle_check</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="communication.html">Communication/Transcript</a></td>
     </tr><tr>
@@ -131,7 +131,7 @@
       <td><a href="decision-support.html">Decision Support/Suggestion</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
     </tr><tr>
-      <td><code>decision-support.suggestion_expiry</code></td>
+      <td><code>decision-support.suggestion.suggestion_expiry</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="decision-support.html">Decision Support/Suggestion</a></td>
     </tr><tr>
@@ -142,6 +142,10 @@
       <td><code>intake.application.closed</code></td>
       <td><a href="intake.html">Intake/Application</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
+    </tr><tr>
+      <td><code>intake.application.review_reminder</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
       <td><code>intake.application.submitted</code></td>
       <td><a href="intake.html">Intake/Application</a></td>
@@ -166,10 +170,6 @@
       <td><code>intake.interview.started</code></td>
       <td><a href="intake.html">Intake/Interview</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
-    </tr><tr>
-      <td><code>intake.review_reminder</code></td>
-      <td><span style="color:#999;font-size:11px;">unknown</span></td>
-      <td><a href="intake.html">Intake/Application</a></td>
     </tr></tbody>
       </table>
     </div>
@@ -177,7 +177,7 @@
     <h3 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2rem 0 0.75rem;">Subscribed but not emitted</h3>
     <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
     <ul style="font-size:13px;color:#666;">
-      <li><code>communication.idle_check</code></li><li><code>communication.transcript.created</code></li><li><code>communication.transcript_entry.created</code></li><li><code>decision-support.suggestion.created</code></li><li><code>decision-support.suggestion_expiry</code></li><li><code>intake.application_income.created</code></li><li><code>intake.application_income.updated</code></li><li><code>intake.review_reminder</code></li>
+      <li><code>communication.transcript.created</code></li><li><code>communication.transcript.idle_check</code></li><li><code>communication.transcript_entry.created</code></li><li><code>decision-support.suggestion.created</code></li><li><code>decision-support.suggestion.suggestion_expiry</code></li><li><code>intake.application.review_reminder</code></li><li><code>intake.application_income.created</code></li><li><code>intake.application_income.updated</code></li>
     </ul></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {
@@ -192,5 +192,76 @@
     });
     
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<style>
+  #try-it-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 600 12px system-ui, sans-serif;
+    color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 100px; padding: 2px 4px 2px 10px; cursor: pointer; }
+  #try-it-switch .knob { width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.3); position: relative; transition: background .15s; }
+  #try-it-switch .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  #try-it-switch[aria-checked="true"] .knob { background: #22c55e; }
+  #try-it-switch[aria-checked="true"] .knob::after { left: 14px; }
+  #try-it-switch.floating { position: fixed; top: 8px; right: 16px; z-index: 1001; background: #2B1A78; }
+  html[data-try-it="on"] body { padding-right: var(--mock-panel-width, 30rem); }
+  /* Narrow, the panel docks along the bottom instead, as developer tools do. */
+  @media (max-width: 1200px) { html[data-try-it="on"] body { padding-right: 0; padding-bottom: var(--mock-panel-height, 40vh); } }
+</style>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const scope = new URL('mock/', root).href;
+  const key = 'blueprint-try-it:' + scope;
+  const stored = () => { try { return sessionStorage.getItem(key) === 'on'; } catch { return false; } };
+  const remember = (on) => { try { if (on) sessionStorage.setItem(key, 'on'); else sessionStorage.removeItem(key); } catch { /* this page only */ } };
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+
+  const toggle = document.createElement('button');
+  toggle.id = 'try-it-switch';
+  toggle.type = 'button';
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-controls', 'mock-panel');
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  const crumbs = document.querySelector('.page-crumbs');
+  if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
+
+  const show = (on) => {
+    document.documentElement.dataset.tryIt = on ? 'on' : 'off';
+    toggle.setAttribute('aria-checked', String(on));
+    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+  };
+  const turn = (on) => {
+    remember(on);
+    show(on);
+    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+  };
+  toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
+  // The panel's own Close turns it off too.
+  addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
+  show(stored());
+  if (stored()) turn(true);
+})();
+</script>
 </body>
 </html>

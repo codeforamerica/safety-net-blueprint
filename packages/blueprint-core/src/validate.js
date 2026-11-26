@@ -22,7 +22,7 @@ import {
   validateEditableKeys,
   validateSortableConfig,
 } from './compositions.js';
-import { validateEvents } from './validator/event-validator.js';
+import { validateEvents, channelNameErrors } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields, validateCompositionFilters, validateDerivedFields } from './validator/field-reference-validator.js';
 import { jsonLogicExpressions } from './validator/json-logic-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
@@ -115,6 +115,8 @@ export function validate(docs) {
     schemaConformance: schemaConformanceByPath(yamlFiles),
     channels: events.channels,
     generatedEvents: events.generated,
+    // For checking event names, which start with one of them.
+    domains: new Set(docs.map((doc) => doc.domain).filter(Boolean)),
     annotations: {
       specsByDomain: buildSpecsByDomain(docs),
       byRelativePath,
@@ -907,6 +909,7 @@ function validateDoc(doc, context) {
 
     case 'asyncapi':
       errors.push(...channelsGenerated(doc, context.generatedEvents));
+      errors.push(...channelNameErrors(doc, context.domains));
       break;
 
     case 'state-machine':
@@ -943,7 +946,7 @@ function validateDoc(doc, context) {
       errors.push(
         ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex, {}, context.operations)
       );
-      errors.push(...validateEvents(doc, context.channels));
+      errors.push(...validateEvents(doc, context.channels, context.domains));
       errors.push(...resourcesNotNested(doc, context.docs));
       break;
 

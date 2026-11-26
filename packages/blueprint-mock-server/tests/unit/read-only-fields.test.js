@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { createMockServer } from '../../src/server.js';
 import { asSystem } from '../../src/auth-context.js';
 
-const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
+const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 const machine = contracts.docs
   .flatMap((doc) => doc.content?.machines ?? [])
   .find((m) => m.object === 'Application');

@@ -73,11 +73,35 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  .ann-card { border-radius: 6px; margin-bottom: 0.4rem; background: #fff; }
+  .ann-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1rem; cursor: pointer; list-style: none; }
+  .ann-row::-webkit-details-marker { display: none; }
+  .ann-row::before { content: '\25B8'; font-size: 10px; color: #888; }
+  details[open] > .ann-row::before { content: '\25BE'; }
+  details[open] > .ann-row { border-bottom: 1px solid #eee; }
+  .ann-entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0.75rem 1rem 0.9rem; }
+  @media (min-width: 1100px) { .ann-entry { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .ann-side { min-width: 0; font-size: 12px; }
+  .ann-side .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font: 600 12px monospace; color: #333; }
+  .ann-side select { font: 12px monospace; padding: 3px 6px; border: 1px solid #c7c4ea; border-radius: 4px; background: #fff; }
+  .try-code { border: 1px solid #e3e1f5; border-radius: 4px; overflow: hidden; }
+  .try-code .tabs { display: flex; align-items: center; gap: 2px; padding: 4px 6px; background: #f6f5fd; border-bottom: 1px solid #e3e1f5; font-size: 11px; }
+  .try-code .tabs .tab { font: 600 11px sans-serif; padding: 3px 10px; border-radius: 3px; background: #2B1A78; color: #fff; }
+  .try-code .tabs .target { margin-left: auto; color: #777; font: 11px monospace; }
+  .try-code .tabs button.copy { margin-left: 8px; font: 600 11px sans-serif; padding: 3px 10px; border: 1px solid #c7c4ea; border-radius: 3px; background: #fff; color: #555; cursor: pointer; }
+  .try-code pre { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e6e4f5; font: 11.5px/1.5 monospace; overflow: auto; white-space: pre; }
+  .try-code .foot { display: flex; justify-content: flex-end; padding: 6px 8px; background: #1e1b3a; border-top: 1px solid #2f2a5c; }
+  .try-code .run { font: 600 12px sans-serif; padding: 4px 16px; border-radius: 4px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; }
+  .ann-result { margin-top: 8px; }
+  .ann-result .label { font: 600 12px monospace; border-bottom: 2px solid #006152; display: inline-block; padding: 2px 8px; }
+  .ann-result .note { color: #15803d; font-weight: 700; margin: 6px 0 0; }
+  .ann-result pre { margin: 6px 0 0; padding: 8px 10px; background: #fff; border: 1px solid #eee; border-radius: 4px; max-height: 22rem; overflow: auto; white-space: pre-wrap; font-size: 11px; }
+
   </style>
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Blueprint Harness</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">patterns</a></div>
+    <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Blueprint Harness</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">patterns</a></div>
     
       <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
         <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">patterns</code></div>
@@ -219,296 +243,356 @@
       <div style="padding:2rem 0.5rem;">
       <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>patterns</code></h1>
       <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">30 entries · <span style="color:#c0392b;">1 unused</span></p>
-      <div id="entry--oneof-discriminator" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">oneof-discriminator</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Inline oneOf with a discriminator property, where all variants are defined within the same file (not via external $ref). Exercises discriminated union rendering, discriminator label resolution, and variant expansion in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+      <div id="entry--oneof-discriminator" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">oneof-discriminator</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Inline oneOf with a discriminator property, where all variants are defined within the same file (not via external $ref). Exercises discriminated union rendering, discriminator label resolution, and variant expansion in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.notificationPreference" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.notificationPreference</code></a></div>
-        </div></div>
-      </div><div id="entry--anyof" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">anyof</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">anyOf composition — a field that may satisfy more than one schema simultaneously (e.g., a record with both electronic and manual verification on file). Exercises anyOf rendering and the semantic distinction from oneOf.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="oneof-discriminator" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--anyof" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">anyof</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">anyOf composition — a field that may satisfy more than one schema simultaneously (e.g., a record with both electronic and manual verification on file). Exercises anyOf rendering and the semantic distinction from oneOf.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.verificationEvidence" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.verificationEvidence</code></a></div>
-        </div></div>
-      </div><div id="entry--additional-properties-map" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">additional-properties-map</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Map type using additionalProperties to allow arbitrary key-value pairs (e.g., labels or metadata). Exercises additionalProperties rendering in the explorer and map validation in the schema validator.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="anyof" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--additional-properties-map" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">additional-properties-map</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Map type using additionalProperties to allow arbitrary key-value pairs (e.g., labels or metadata). Exercises additionalProperties rendering in the explorer and map validation in the schema validator.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.labels" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.labels</code></a></div>
-        </div></div>
-      </div><div id="entry--read-only-field" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">read-only-field</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">13 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Field marked readOnly: true — server-generated and never accepted in write operations. Common for IDs, computed values, and lifecycle timestamps. Exercises readOnly rendering in the explorer and write-operation filtering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="additional-properties-map" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--read-only-field" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">read-only-field</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">13 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Field marked readOnly: true — server-generated and never accepted in write operations. Common for IDs, computed values, and lifecycle timestamps. Exercises readOnly rendering in the explorer and write-operation filtering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.createdAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.createdAt</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.expedited" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.expedited</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.id" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.id</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.status</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.updatedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.updatedAt</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.confirmationNumber" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.confirmationNumber</code></a> <a href="../data-dictionaries/intake.html#field-application.createdAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.createdAt</code></a> <a href="../data-dictionaries/intake.html#field-application.id" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.id</code></a> <a href="../data-dictionaries/intake.html#field-application.openedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.openedAt</code></a> <a href="../data-dictionaries/intake.html#field-application.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.status</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submittedAt</code></a> <a href="../data-dictionaries/intake.html#field-application.updatedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.updatedAt</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.id" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.id</code></a></div>
-        </div></div>
-      </div><div id="entry--deprecated-field" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">deprecated-field</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Field marked deprecated: true with a migration note pointing to its replacement. Exercises deprecated field rendering in the explorer and tooling warnings.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="read-only-field" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--deprecated-field" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">deprecated-field</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Field marked deprecated: true with a migration note pointing to its replacement. Exercises deprecated field rendering in the explorer and tooling warnings.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.confirmationNumber" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.confirmationNumber</code></a></div>
-        </div></div>
-      </div><div id="entry--string-format" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">string-format</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">10 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">String field with a format constraint (uuid, date-time, date, email, etc.). Exercises format rendering in the explorer and format validation.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="deprecated-field" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--string-format" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">string-format</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">10 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">String field with a format constraint (uuid, date-time, date, email, etc.). Exercises format rendering in the explorer and format validation.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.createdAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.createdAt</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.id" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.id</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.updatedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.updatedAt</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.createdAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.createdAt</code></a> <a href="../data-dictionaries/intake.html#field-application.id" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.id</code></a> <a href="../data-dictionaries/intake.html#field-application.openedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.openedAt</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submittedAt</code></a> <a href="../data-dictionaries/intake.html#field-application.updatedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.updatedAt</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.dateOfBirth" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.dateOfBirth</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.id" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.id</code></a></div>
-        </div></div>
-      </div><div id="entry--polymorphic-base" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">polymorphic-base</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Base schema extended via allOf in Create and Update variants. The Create variant adds required fields; the Update variant applies minProperties: 1 for partial updates. Exercises allOf merging and the Create/Update schema pattern.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="string-format" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--polymorphic-base" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">polymorphic-base</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">3 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Base schema extended via allOf in Create and Update variants. The Create variant adds required fields; the Update variant applies minProperties: 1 for partial updates. Exercises allOf merging and the Create/Update schema pattern.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application</code></a> <a href="../data-dictionaries/intake.html#field-application.members%5B%5D" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.members[]</code></a></div>
-        </div></div>
-      </div><div id="entry--array-of-enum" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">array-of-enum</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Array of enum values. Exercises array-of-enum rendering in the explorer and array item validation in the schema validator.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="polymorphic-base" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--array-of-enum" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">array-of-enum</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Array of enum values. Exercises array-of-enum rendering in the explorer and array item validation in the schema validator.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.programsAppliedFor%5B%5D" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.programsAppliedFor[]</code></a></div>
-        </div></div>
-      </div><div id="entry--x-enum-source" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">x-enum-source</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Enum values resolved at build time from an external source (e.g., a state machine's state IDs) via the x-enum-source extension, rather than hardcoded in the OpenAPI spec. Exercises the resolver's x-enum-source injection.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="array-of-enum" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--x-enum-source" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">x-enum-source</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Enum values resolved at build time from an external source (e.g., a state machine's state IDs) via the x-enum-source extension, rather than hardcoded in the OpenAPI spec. Exercises the resolver's x-enum-source injection.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.status</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.status</code></a></div>
-        </div></div>
-      </div><div id="entry--nullable-state-gated-field" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">nullable-state-gated-field</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Nullable field that is only present after a lifecycle transition (e.g., a timestamp set when an application is submitted). Exercises nullable field rendering and the pattern of state-gated fields.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="x-enum-source" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--nullable-state-gated-field" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">nullable-state-gated-field</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Nullable field that is only present after a lifecycle transition (e.g., a timestamp set when an application is submitted). Exercises nullable field rendering and the pattern of state-gated fields.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.openedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.openedAt</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submittedAt</code></a></div>
-        </div></div>
-      </div><div id="entry--nullable-conditional-field" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">nullable-conditional-field</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Nullable field whose presence depends on another field's value (e.g., a benefit amount present only when eligible is true). Exercises nullable field handling and conditional presence patterns.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="nullable-state-gated-field" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--nullable-conditional-field" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">nullable-conditional-field</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Nullable field whose presence depends on another field's value (e.g., a benefit amount present only when eligible is true). Exercises nullable field handling and conditional presence patterns.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D.benefitAmount" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[].benefitAmount</code></a></div>
-        </div></div>
-      </div><div id="entry--external-ref-shared-defs" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">external-ref-shared-defs</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">External $ref to a shared $defs schema in a separate file. Exercises the resolver's cross-file $ref resolution and the explorer's external schema name rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="nullable-conditional-field" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--external-ref-shared-defs" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">external-ref-shared-defs</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">External $ref to a shared $defs schema in a separate file. Exercises the resolver's cross-file $ref resolution and the explorer's external schema name rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.address" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.address</code></a> <a href="../data-dictionaries/intake.html#field-application.contactInfo" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.contactInfo</code></a></div>
-        </div></div>
-      </div><div id="entry--external-ref-defs-oneof" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">external-ref-defs-oneof</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">External $ref to a $defs schema that is itself a oneOf with a discriminator. Exercises: (1) cross-file $ref resolution, (2) discriminated union rendering with labeled variants, (3) field inventory handling of oneOf inside an external $defs ref.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="external-ref-shared-defs" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--external-ref-defs-oneof" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">external-ref-defs-oneof</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">External $ref to a $defs schema that is itself a oneOf with a discriminator. Exercises: (1) cross-file $ref resolution, (2) discriminated union rendering with labeled variants, (3) field inventory handling of oneOf inside an external $defs ref.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.incomeSource" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.incomeSource</code></a></div>
-        </div></div>
-      </div><div id="entry--allof-inline-required" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">allof-inline-required</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">allOf composition that adds inline required fields without duplicating properties (e.g., a Create variant that adds a required field to a base schema). Exercises the resolver's allOf merging and the explorer's allOf rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="external-ref-defs-oneof" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--allof-inline-required" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">allof-inline-required</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">allOf composition that adds inline required fields without duplicating properties (e.g., a Create variant that adds a required field to a base schema). Exercises the resolver's allOf merging and the explorer's allOf rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.status</code></a></div>
-        </div></div>
-      </div><div id="entry--paginated-list" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">paginated-list</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Collection endpoint returning items/total/limit/offset/hasNext. The standard blueprint pagination envelope. Exercises paginated list rendering and parameter validation (limit, offset, sort, search).</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="allof-inline-required" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--paginated-list" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">paginated-list</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">4 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Collection endpoint returning items/total/limit/offset/hasNext. The standard blueprint pagination envelope. Exercises paginated list rendering and parameter validation (limit, offset, sort, search).</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[]</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application</code></a> <a href="../data-dictionaries/intake.html#field-application.members%5B%5D" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.members[]</code></a></div>
-        </div></div>
-      </div><div id="entry--sub-resource" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">sub-resource</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Resource nested under a parent at a path like /parents/{id}/children. Full CRUD scoped to the parent. Exercises nested routing, parent FK validation, and sub-resource list/detail rendering in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="paginated-list" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--sub-resource" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">sub-resource</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">2 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Resource nested under a parent at a path like /parents/{id}/children. Full CRUD scoped to the parent. Exercises nested routing, parent FK validation, and sub-resource list/detail rendering in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.decisions%5B%5D" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.decisions[]</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.members%5B%5D" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.members[]</code></a></div>
-        </div></div>
-      </div><div id="entry--singleton-sub-resource" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">singleton-sub-resource</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Single resource nested under a parent at a path like /parents/{id}/summary, with no item-level ID. Accessed only through the parent. Exercises singleton sub-resource routing and composition rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="sub-resource" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--singleton-sub-resource" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">singleton-sub-resource</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Single resource nested under a parent at a path like /parents/{id}/summary, with no item-level ID. Accessed only through the parent. Exercises singleton sub-resource routing and composition rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationSummary" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationSummary</code></a></div>
-        </div></div>
-      </div><div id="entry--intra-domain-fk" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">intra-domain-fk</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Intra-domain x-relationship foreign key linking a sub-resource back to its parent resource within the same domain. Exercises cross-reference rendering in the explorer and FK validation.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="singleton-sub-resource" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--intra-domain-fk" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">intra-domain-fk</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Intra-domain x-relationship foreign key linking a sub-resource back to its parent resource within the same domain. Exercises cross-reference rendering in the explorer and FK validation.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationMember.application" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationMember.application</code></a></div>
-        </div></div>
-      </div><div id="entry--cross-domain-fk" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">cross-domain-fk</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Cross-domain x-relationship foreign key linking a resource in one domain to a resource in another. Exercises cross-domain reference rendering and FK validation across domain boundaries.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="intra-domain-fk" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--cross-domain-fk" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">cross-domain-fk</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Cross-domain x-relationship foreign key linking a resource in one domain to a resource in another. Exercises cross-domain reference rendering and FK validation across domain boundaries.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.applicationId" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.applicationId</code></a></div>
-        </div></div>
-      </div><div id="entry--rpc-state-machine-action" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">rpc-state-machine-action</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">RPC-style state machine action with a generated POST endpoint. Exercises the RPC overlay generator, x-relationship tagging, and state machine → API cross-linking in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="cross-domain-fk" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--rpc-state-machine-action" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">rpc-state-machine-action</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">RPC-style state machine action with a generated POST endpoint. Exercises the RPC overlay generator, x-relationship tagging, and state machine → API cross-linking in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a></div>
-        </div></div>
-      </div><div id="entry--state-machine-guard" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">state-machine-guard</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Named boolean condition (CEL expression) attached to a state machine action. The action can only be triggered when all guard conditions pass. Exercises guard evaluation, actor role checking, and guard composition (any/all).</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/intake.html#action-application-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">application.submit</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="rpc-state-machine-action" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--state-machine-guard" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">state-machine-guard</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Named boolean condition (CEL expression) attached to a state machine action. The action can only be triggered when all guard conditions pass. Exercises guard evaluation, actor role checking, and guard composition (any/all).</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/eligibility.html#action-complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.complete</code></a></div>
-        </div></div>
-      </div><div id="entry--state-machine-timer" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">state-machine-timer</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Timer declaration on a state machine. The scheduling service emits a callback event ({domain}.{id}) when the timer fires; the machine subscribes to react. Exercises timer declaration rendering and the timer → event subscription link.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../state-machine-docs/eligibility.html#action-determination-complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.complete</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="state-machine-guard" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--state-machine-timer" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">state-machine-timer</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Timer declaration on a state machine. The scheduling service emits a callback event ({domain}.{resource}.{id}) when the timer fires; the machine subscribes to react. Exercises timer declaration rendering and the timer → event subscription link.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-intake.application.review-reminder" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.review-reminder</code></a></div>
-        </div></div>
-      </div><div id="entry--state-machine-subscription" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">state-machine-subscription</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">State machine subscribing to a domain event emitted by a different domain. The handler runs steps (create, emit, call) automatically when the event arrives. Exercises cross-domain event subscription and handler rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/intake.html#event-intake.application.review_overdue" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.review_overdue</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="state-machine-timer" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--state-machine-subscription" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">state-machine-subscription</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">State machine subscribing to a domain event emitted by a different domain. The handler runs steps (create, emit, call) automatically when the event arrives. Exercises cross-domain event subscription and handler rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
-        </div></div>
-      </div><div id="entry--state-machine-event" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">state-machine-event</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Domain event emitted on a state machine transition. Exercises AsyncAPI event catalog generation and event → state machine cross-linking.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/intake.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="state-machine-subscription" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--state-machine-event" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">state-machine-event</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Domain event emitted on a state machine transition. Exercises AsyncAPI event catalog generation and event → state machine cross-linking.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
-        </div></div>
-      </div><div id="entry--cross-domain-event" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">cross-domain-event</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Domain event consumed by downstream domains outside the emitting domain. Exercises event catalog cross-domain consumer rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/intake.html#event-intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">intake.application.submitted</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="state-machine-event" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--cross-domain-event" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">cross-domain-event</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Domain event consumed by downstream domains outside the emitting domain. Exercises event catalog cross-domain consumer rendering.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">eligibility.determination.complete</code></a></div>
-        </div></div>
-      </div><div id="entry--composition" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">composition</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Read-only singleton resource assembled from fields across multiple resources, generated from a compositions contract. Produces a GET endpoint nested under the parent resource (e.g. /applications/{id}/summary). Exercises the composition generator, x-relationship injection, and singleton rendering in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/eligibility.html#event-eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">eligibility.determination.complete</code></a></div>
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="cross-domain-event" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--composition" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">composition</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Read-only singleton resource assembled from fields across multiple resources, generated from a compositions contract. Produces a GET endpoint nested under the parent resource (e.g. /applications/{id}/summary). Exercises the composition generator, x-relationship injection, and singleton rendering in the explorer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationSummary" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationSummary</code></a></div>
-        </div></div>
-      </div><div id="entry--overlay" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">overlay</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Field or element added or modified by an adopter overlay. Overlays add state-required fields, tighten enums, and set global configuration (x-casing, x-pagination, x-search, x-relationship, x-event-type-prefix). Exercises the overlay resolver and adopter-level customization patterns.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="composition" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--overlay" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">overlay</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Field or element added or modified by an adopter overlay. Overlays add state-required fields, tighten enums, and set global configuration (x-casing, x-pagination, x-search, x-relationship, x-event-type-prefix). Exercises the overlay resolver and adopter-level customization patterns.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-applicationWritable.countyCode" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">applicationWritable.countyCode</code></a></div>
-        </div></div>
-      </div><div id="entry--ruleset-output-fact" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">ruleset-output-fact</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">17 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Output fact from a ruleset — a fact declared in the outputs list and returned by the REST endpoint. Exercises the rules engine → API endpoint link in the explorer (Rules badge).</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="overlay" data-domains='[&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--ruleset-output-fact" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">ruleset-output-fact</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">17 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Output fact from a ruleset — a fact declared in the outputs list and returned by the REST endpoint. Exercises the rules engine → API endpoint link in the explorer (Rules badge).</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/eligibility.html#field-determination.expedited" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">determination.expedited</code></a> <a href="../rules-docs/eligibility-expeditedSnap.html#fact-isExpeditedEligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">expeditedSnap.isExpeditedEligible</code></a></div>
         </div><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.earnedIncomeWithoutJob" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.earnedIncomeWithoutJob</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.householdSizeDiffersFromMembers" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.householdSizeDiffersFromMembers</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.incomeBelowExpenses" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.incomeBelowExpenses</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.incomeDiffersFromPayStub" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.incomeDiffersFromPayStub</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.jobWithoutEarnedIncome" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.jobWithoutEarnedIncome</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.utilitiesIncludedButBilled" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.utilitiesIncludedButBilled</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-inconsistencies.wagesDifferFromWageRecords" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.inconsistencies.wagesDifferFromWageRecords</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.cashOrSelfEmploymentIncome" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.cashOrSelfEmploymentIncome</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.childrenAndEarnersWithoutDependentCare" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.childrenAndEarnersWithoutDependentCare</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.earnedIncomeVaries" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.earnedIncomeVaries</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.elderlyOrDisabledWithoutMedicalCosts" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.householdChangedSincePrevious" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.householdChangedSincePrevious</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.incomeChangedSincePrevious" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.incomeChangedSincePrevious</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.multipleProgramsApplied" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.multipleProgramsApplied</code></a> <a href="../rules-docs/intake-interviewFlags.html#fact-risks.shelterCostsCarriedOver" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">interviewFlags.risks.shelterCostsCarriedOver</code></a></div>
-        </div></div>
-      </div><div id="entry--ruleset-intermediate-fact" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">ruleset-intermediate-fact</code>
-          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Intermediate fact used internally by other facts but not returned by the REST endpoint. Exercises fact graph dependency rendering in the rules-docs visualizer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="ruleset-output-fact" data-domains='[&quot;eligibility&quot;,&quot;intake&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--ruleset-intermediate-fact" class="content-item">
+        <details class="ann-card" style="border:1px solid #E9CCBE;">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">ruleset-intermediate-fact</code>
+            <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">1 usage</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Intermediate fact used internally by other facts but not returned by the REST endpoint. Exercises fact graph dependency rendering in the rules-docs visualizer.</div><div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
           <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../rules-docs/eligibility-expeditedSnap.html#fact-isLowIncome" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">expeditedSnap.isLowIncome</code></a></div>
-        </div></div>
-      </div><div id="entry--array-of-oneof" class="content-item" style="border:1px solid rgba(220,80,80,0.4);border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;background:rgba(220,80,80,0.04);">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">array-of-oneof</code>
-          <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
-        </div>
-        <div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Array whose items are a oneOf discriminated union. Exercises array-of-oneOf rendering, discriminator label resolution, and schema variant expansion.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div>
+        </div></div></div><aside class="ann-side" data-type="patterns" data-id="ruleset-intermediate-fact" data-domains='[&quot;eligibility&quot;]'></aside></div>
+        </details>
+      </div><div id="entry--array-of-oneof" class="content-item">
+        <details class="ann-card" style="border:1px solid rgba(220,80,80,0.4);background:rgba(220,80,80,0.04);">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">array-of-oneof</code>
+            <span style="margin-left:auto;font-size:11px;color:#c0392b;font-weight:600;">0 usages</span>
+          </summary>
+          <div class="ann-entry"><div><div style="font-size:13px;color:#1a1a1a;margin:0.4rem 0 0.75rem;line-height:1.5;">Array whose items are a oneOf discriminated union. Exercises array-of-oneOf rendering, discriminator label resolution, and schema variant expansion.</div><div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div></div></div>
+        </details>
       </div>
-    </div>
+    </div><script type="application/json" id="client-annotations">{"eligibility":{"schema":{"determination":{"patterns":["polymorphic-base","paginated-list"]},"determination.id":{"patterns":["read-only-field","string-format"]},"determination.applicationId":{"patterns":["cross-domain-fk"]},"determination.expedited":{"policies":["snap-expedited-processing","snap-expedited-screening"],"patterns":["ruleset-output-fact","read-only-field"]},"determination.status":{"patterns":["allof-inline-required","x-enum-source","read-only-field"]},"determination.createdAt":{"patterns":["read-only-field","string-format"]},"determination.updatedAt":{"patterns":["read-only-field","string-format"]},"determination.decisions[]":{"patterns":["sub-resource","paginated-list"]},"determination.decisions[].eligible":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights","medicaid-determination-documentation"]},"determination.decisions[].benefitAmount":{"policies":["snap-benefit-calculation","medicaid-cost-sharing"],"patterns":["nullable-conditional-field"]}},"facts":{"expeditedSnap.isExpeditedEligible":{"policies":["snap-expedited-processing"],"patterns":["ruleset-output-fact"]},"expeditedSnap.isLowIncome":{"policies":["snap-expedited-screening"],"patterns":["ruleset-intermediate-fact"]}},"operations":{"determination.complete":{"patterns":["state-machine-guard"]}},"events":{"intake.application.submitted":{"patterns":["state-machine-subscription"]},"eligibility.determination.complete":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility"],"patterns":["cross-domain-event"]}}},"intake":{"schema":{"application":{"patterns":["polymorphic-base","paginated-list"]},"application.id":{"patterns":["read-only-field","string-format"]},"application.confirmationNumber":{"patterns":["deprecated-field","read-only-field"]},"application.status":{"patterns":["x-enum-source","read-only-field"]},"application.programsAppliedFor[]":{"patterns":["array-of-enum"]},"application.submittedAt":{"policies":["snap-processing-clock","medicaid-processing-clock"],"patterns":["nullable-state-gated-field","read-only-field","string-format"]},"application.openedAt":{"patterns":["nullable-state-gated-field","read-only-field","string-format"]},"application.createdAt":{"patterns":["read-only-field","string-format"]},"application.updatedAt":{"patterns":["read-only-field","string-format"]},"application.address":{"patterns":["external-ref-shared-defs"]},"application.contactInfo":{"patterns":["external-ref-shared-defs"]},"application.labels":{"patterns":["additional-properties-map"]},"applicationSummary":{"patterns":["singleton-sub-resource","composition"]},"applicationWritable.countyCode":{"patterns":["overlay"]},"application.members[]":{"patterns":["sub-resource","polymorphic-base","paginated-list"]},"applicationMember.id":{"patterns":["read-only-field","string-format"]},"applicationMember.dateOfBirth":{"policies":["chip-age-eligibility","snap-elderly-disabled-deductions"],"patterns":["string-format"]},"applicationMember.relationship":{"policies":["snap-household-composition","medicaid-caretaker-relative"]},"applicationMember.incomeSource":{"policies":["snap-income-verification"],"patterns":["external-ref-defs-oneof"]},"applicationMember.application":{"patterns":["intra-domain-fk"]},"applicationMember.notificationPreference":{"patterns":["oneof-discriminator"]},"applicationMember.verificationEvidence":{"patterns":["anyof"]}},"facts":{"interviewFlags.risks.earnedIncomeVaries":{"reason":"Earned income is the largest source of payment errors, and wages that change month to month are the hardest to get right: a single pay stub doesn't show what a month of irregular hours or tips comes to.\n","policies":["snap-earned-income","snap-income-verification"],"patterns":["ruleset-output-fact"],"probeQuestions":["How many hours have you worked each week over the last month?","Do you get tips? About how much in a typical week?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.risks.cashOrSelfEmploymentIncome":{"reason":"Cash, gig and self-employment income often isn't on the application at all, and isn't asked about unless someone asks specifically.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does anyone in the household do any work for cash, side jobs, or gig work?","About how much did that bring in over the last 30 days?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"}]},"interviewFlags.risks.incomeChangedSincePrevious":{"reason":"Income that's changed since the household on record — a job gained or lost, a raise, hours cut — is a leading cause of both overpayments and underpayments when it isn't reported. On a new application, that's since the application was filed.\n","policies":["snap-reporting-changes","snap-recertification"],"patterns":["ruleset-output-fact"],"probeQuestions":["Has anyone started or stopped a job since your last renewal?","Has anyone's pay or hours changed?"],"sources":[{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"},{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"}]},"interviewFlags.risks.householdChangedSincePrevious":{"reason":"Who lives in the household and buys food together decides whose income counts. Changes are often unreported, and often not asked about at recertification.\n","policies":["snap-household-composition","snap-reporting-changes"],"patterns":["ruleset-output-fact"],"probeQuestions":["Has anyone moved in or out since your last renewal?","Does everyone who lives with you buy and prepare food together?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"}]},"interviewFlags.risks.shelterCostsCarriedOver":{"reason":"Shelter costs carried forward from the last certification without being asked about can be out of date in either direction: a move or a rent increase that's missed.\n","policies":["snap-shelter-utility-deductions","snap-recertification"],"patterns":["ruleset-output-fact"],"probeQuestions":["Is your rent or mortgage still the same amount?","Have you moved since your last renewal?"],"sources":[{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts":{"reason":"A member 60 or older, or disabled, may deduct medical costs. Missed deductions are among the most common fixable errors, and lead to underpayments.\n","policies":["snap-elderly-disabled-deductions"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does [member] pay for any doctor visits, prescriptions, or medical supplies?","About how much a month?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"},{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"}]},"interviewFlags.risks.childrenAndEarnersWithoutDependentCare":{"reason":"Care for a child so a household member can work is deductible. When it's new it often isn't asked about, which leads to an underpayment.\n","policies":["snap-dependent-care-deduction"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does anyone look after the children while you work or go to school?","Do you pay for that care?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.risks.multipleProgramsApplied":{"reason":"Households on several programs face reporting rules that differ between them, which makes it harder to keep each program's information right.\n","patterns":["ruleset-output-fact"],"probeQuestions":["Have you reported this change to [other program] as well?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"}]},"interviewFlags.inconsistencies.incomeBelowExpenses":{"reason":"When reported income doesn't cover reported expenses, something the application doesn't show is paying the difference: unreported income, or help from outside the household. FNS-1104 makes it a probe.\n","policies":["snap-interview-toolkit"],"patterns":["ruleset-output-fact"],"probeQuestions":["Your expenses are more than your income. How does the household make up the difference?","Does anyone help with bills — family, friends, or community organizations?"],"sources":[{"title":"FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)","url":"https://www.fna.usda.gov/snap/state/interview-toolkit"}]},"interviewFlags.inconsistencies.wagesDifferFromWageRecords":{"reason":"Income an agency's data systems show but nobody confirms is an error the agency could have caught. A difference from the wage records needs explaining before it's resolved either way.\n","policies":["snap-income-verification"],"patterns":["ruleset-output-fact"],"probeQuestions":["The state's records show [amount] in wages for [member]. Does that sound right?","Did [member] have another job, or more hours, during that time?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.inconsistencies.incomeDiffersFromPayStub":{"reason":"A recorded amount that doesn't match its pay stubs usually means a pay frequency was converted wrongly — weekly, every two weeks, and twice a month are easy to confuse.\n","policies":["snap-income-verification","snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["How often is [member] paid — every week, every two weeks, or twice a month?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"interviewFlags.inconsistencies.householdSizeDiffersFromMembers":{"reason":"The household's size decides its benefit. A size that doesn't match the members listed means someone is missing or counted who shouldn't be.\n","policies":["snap-household-composition"],"patterns":["ruleset-output-fact"],"probeQuestions":["Who lives with you and buys and prepares food with you?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"}]},"interviewFlags.inconsistencies.jobWithoutEarnedIncome":{"reason":"A job with no income recorded is information that arrived but wasn't applied — the most common kind of agency error.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Is [member] still working at [job]? How much are they paid?"],"sources":[{"title":"APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them","url":"https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"}]},"interviewFlags.inconsistencies.earnedIncomeWithoutJob":{"reason":"Earned income with no job behind it can't be verified or updated when the job changes, and is often a job that ended but wasn't closed out.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Where does [member] work? Are they still working there?"],"sources":[{"title":"APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them","url":"https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"}]},"interviewFlags.inconsistencies.utilitiesIncludedButBilled":{"reason":"A household that pays a utility bill isn't one whose utilities are all included in the rent, and which it is decides whether a utility allowance applies. What counts as a utility deduction is a common misapplication of policy.\n","policies":["snap-shelter-utility-deductions"],"patterns":["ruleset-output-fact"],"probeQuestions":["Do you pay any utility bills yourself, like electric or gas, or are they all included in the rent?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]}},"operations":{"application.submit":{"policies":["snap-application-acceptance","snap-processing-clock","medicaid-processing-clock","snap-right-to-apply"],"patterns":["rpc-state-machine-action"]},"application.withdraw":{"policies":["snap-notice-of-action"]},"application.close":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights"]}},"events":{"intake.application.submitted":{"policies":["snap-processing-clock","medicaid-processing-clock","snap-household-composition"],"patterns":["state-machine-event"]},"intake.application.withdrawn":{"policies":["snap-notice-of-action"]},"intake.application.closed":{"policies":["snap-notice-of-eligibility","medicaid-notice-of-eligibility","snap-fair-hearing-rights"]},"intake.application.review_overdue":{"patterns":["state-machine-timer"]}}}}</script>
     </main>
   </div>
   <script>
@@ -546,10 +630,32 @@
         .map(a => document.getElementById(a.getAttribute('href').slice(1)))
         .filter(Boolean);
       if (!sections.length) return;
-      const io = new IntersectionObserver(entries => {
-        const hit = entries.find(e => e.isIntersecting);
-        if (hit) setActive(hit.target.id);
-      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
       sections.forEach(s => io.observe(s));
       setActive(sections[0].id);
     })();
@@ -661,6 +767,178 @@
       window.addEventListener('hashchange', scrollToHash);
     })();
     
+(() => {
+  const data = JSON.parse(document.getElementById('client-annotations').textContent);
+  const namespaceOf = (domain) => domain.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const prop = (name) => (/^[A-Za-z_$][\w$]*$/.test(name) ? '.' + name : "['" + name + "']");
+  const has = (entry, type, id) => Array.isArray(entry && entry[type]) && entry[type].includes(id);
+
+  // The fields that carry an entry, and the call that finds them.
+  const findCall = (type, id, domain) => {
+    const all = data[domain] || {};
+    const sections = Object.keys(all).filter((s) => Object.values(all[s]).some((e) => has(e, type, id)));
+    const at = namespaceOf(domain) + '.Annotations';
+    const found = sections.flatMap((s) => Object.entries(all[s]).filter(([, e]) => has(e, type, id)).map(([key]) => [s, key]));
+    const code = sections.length === 1
+      ? ['// The ' + sections[0] + ' entries marked ' + id,
+         'const found = Object.entries(' + at + prop(sections[0]) + ')',
+         '  .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         '  .map(([key]) => key);']
+      : ['// Everything marked ' + id + ', as section.key',
+         'const found = Object.entries(' + at + ').flatMap(([section, entries]) =>',
+         '  Object.entries(entries)',
+         '    .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         "    .map(([key]) => section + '.' + key));"];
+    const value = sections.length === 1 ? found.map(([, key]) => key) : found.map(([s, key]) => s + '.' + key);
+    return { code, value, first: found[0] };
+  };
+
+  // The call that reads everything annotated on one key.
+  const lookupCall = (domain, section, key, field) => {
+    const at = namespaceOf(domain) + '.Annotations' + prop(section) + "['" + key + "']";
+    const entry = ((data[domain] || {})[section] || {})[key];
+    return field
+      ? { code: ['const ' + field + ' = ' + at + prop(field) + ';'], value: entry ? entry[field] : undefined }
+      : { code: ['// Everything annotated on one of them', 'const annotations = ' + at + ';'], value: entry };
+  };
+
+  // An entry opens when the address or the sidebar goes to it, as an
+  // operation does on the API pages.
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target && target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-link[href^="#"]');
+    const target = link && document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    const details = target && target.querySelector(':scope > details');
+    if (!details) return;
+    event.preventDefault();
+    details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+
+  for (const side of document.querySelectorAll('.ann-side')) {
+    const { type, id, section, key, field } = side.dataset;
+    const domains = JSON.parse(side.dataset.domains);
+    const row = document.createElement('div');
+    row.className = 'row';
+    const pick = document.createElement('select');
+    for (const d of domains) pick.append(Object.assign(document.createElement('option'), { value: d, textContent: d }));
+    row.append('Domain', pick);
+    if (domains.length < 2) pick.disabled = true;
+    const block = document.createElement('div');
+    block.className = 'try-code';
+    block.innerHTML = '<div class="tabs"><span class="tab">TypeScript (local)</span><span class="target">runs in your code</span><button type="button" class="copy">Copy</button></div><pre></pre><div class="foot"><button type="button" class="run">Run</button></div>';
+    const result = document.createElement('div');
+    result.className = 'ann-result';
+    side.append(row, block, result);
+    const pre = block.querySelector('pre');
+    let value;
+    const draw = () => {
+      const domain = pick.value;
+      const head = ["import { " + namespaceOf(domain) + " } from './generated'; // where you generated the client", ''];
+      let lines;
+      if (field) {
+        const read = lookupCall(domain, section, key, field);
+        lines = read.code;
+        value = read.value;
+      } else {
+        const find = findCall(type, id, domain);
+        const read = find.first ? lookupCall(domain, find.first[0], find.first[1]) : null;
+        lines = [...find.code, ...(read ? ['', ...read.code] : [])];
+        value = read ? { found: find.value, annotations: read.value } : { found: find.value };
+      }
+      pre.textContent = [...head, ...lines].join('\n');
+      result.replaceChildren();
+    };
+    pick.onchange = draw;
+    block.querySelector('.copy').onclick = async (event) => {
+      try { await navigator.clipboard.writeText(pre.textContent); event.target.textContent = 'Copied'; } catch { event.target.textContent = 'Select and copy'; }
+      setTimeout(() => { event.target.textContent = 'Copy'; }, 1500);
+    };
+    block.querySelector('.run').onclick = () => {
+      result.innerHTML = '<span class="label">local</span><p class="note">Worked out in the page from the annotations the client is built from. Nothing was sent to a server.</p><pre></pre>';
+      result.querySelector('pre').textContent = JSON.stringify(value, null, 2);
+    };
+    draw();
+  }
+})();
+
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<style>
+  #try-it-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 600 12px system-ui, sans-serif;
+    color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 100px; padding: 2px 4px 2px 10px; cursor: pointer; }
+  #try-it-switch .knob { width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.3); position: relative; transition: background .15s; }
+  #try-it-switch .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  #try-it-switch[aria-checked="true"] .knob { background: #22c55e; }
+  #try-it-switch[aria-checked="true"] .knob::after { left: 14px; }
+  #try-it-switch.floating { position: fixed; top: 8px; right: 16px; z-index: 1001; background: #2B1A78; }
+  html[data-try-it="on"] body { padding-right: var(--mock-panel-width, 30rem); }
+  /* Narrow, the panel docks along the bottom instead, as developer tools do. */
+  @media (max-width: 1200px) { html[data-try-it="on"] body { padding-right: 0; padding-bottom: var(--mock-panel-height, 40vh); } }
+</style>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const scope = new URL('mock/', root).href;
+  const key = 'blueprint-try-it:' + scope;
+  const stored = () => { try { return sessionStorage.getItem(key) === 'on'; } catch { return false; } };
+  const remember = (on) => { try { if (on) sessionStorage.setItem(key, 'on'); else sessionStorage.removeItem(key); } catch { /* this page only */ } };
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+
+  const toggle = document.createElement('button');
+  toggle.id = 'try-it-switch';
+  toggle.type = 'button';
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-controls', 'mock-panel');
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  const crumbs = document.querySelector('.page-crumbs');
+  if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
+
+  const show = (on) => {
+    document.documentElement.dataset.tryIt = on ? 'on' : 'off';
+    toggle.setAttribute('aria-checked', String(on));
+    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+  };
+  const turn = (on) => {
+    remember(on);
+    show(on);
+    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+  };
+  toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
+  // The panel's own Close turns it off too.
+  addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
+  show(stored());
+  if (stored()) turn(true);
+})();
+</script>
 </body>
 </html>
