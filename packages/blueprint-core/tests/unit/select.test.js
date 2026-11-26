@@ -106,6 +106,29 @@ describe('selectDocs', () => {
     assert.deepEqual(docs.find((doc) => doc.api === 'communication-transcripts').content.components.schemas.Transcript.properties.subjectId['x-relationship'].discriminator.mapping, { call: 'External' });
   });
 
+  test('maps a relationship in an event\'s payload to External too, when its resource was left out', () => {
+    const events = 'domains/communication/communication-transcripts-events-asyncapi.yaml';
+    const withLink = set({
+      ...TREE,
+      [events]: {
+        ...TREE[events],
+        components: { schemas: { TranscriptCreated: { type: 'object', properties: { interviewId: { type: 'string', 'x-relationship': { resource: 'Interview' } } } } } },
+      },
+    });
+    const part = selectDocs(withLink, { capabilities: ['transcripts'] });
+    const kept = part.find((doc) => doc.relativePath === events);
+    assert.equal(kept.content.components.schemas.TranscriptCreated.properties.interviewId['x-relationship'].resource, 'External');
+  });
+
+  test('keeps a schema file of the set a kept document\'s $schema names', () => {
+    const withConfig = set({
+      ...TREE,
+      'domains/intake/intake-config.yaml': { $schema: 'intake-config-schema.yaml', domain: 'intake' },
+      'domains/intake/intake-config-schema.yaml': { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object' },
+    });
+    assert.ok(paths(selectDocs(withConfig, { domains: ['intake'] })).includes('domains/intake/intake-config-schema.yaml'));
+  });
+
   test('keeps the type as it is when its resource was kept', () => {
     const part = selectDocs(docs, { capabilities: ['transcripts'], domains: ['intake'] });
     const transcripts = part.find((doc) => doc.api === 'communication-transcripts');
