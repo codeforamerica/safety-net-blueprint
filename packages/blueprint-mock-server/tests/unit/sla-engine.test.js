@@ -85,7 +85,7 @@ test('updateSlaInfo — completedWhen override takes precedence over slaClock', 
     {
       id: 'test_sla',
       duration: { amount: 9, unit: 'days' },
-      completedWhen: 'status == "in_progress"'
+      completedWhen: 'object.status == "in_progress"'
     }
   ];
   // in_progress has slaClock: running, but completedWhen says done
@@ -174,7 +174,7 @@ test('updateSlaInfo — pauseWhen does not fire when resolved entity field is fa
 // =============================================================================
 
 test('updateSlaInfo — a CEL pauseWhen pauses the clock while it holds, and only then', () => {
-  const slaTypes = [{ id: 'test_sla', duration: { amount: 9, unit: 'days' }, pauseWhen: 'status in ["awaiting_client", "awaiting_verification"]' }];
+  const slaTypes = [{ id: 'test_sla', duration: { amount: 9, unit: 'days' }, pauseWhen: 'object.status in ["awaiting_client", "awaiting_verification"]' }];
   const waiting = makeResource('awaiting_verification');
   updateSlaInfo(waiting, slaTypes, NOW, STATES);
   assert.strictEqual(waiting.slaInfo[0].status, 'paused');
@@ -185,7 +185,7 @@ test('updateSlaInfo — a CEL pauseWhen pauses the clock while it holds, and onl
 });
 
 test('initializeSlaInfo — a CEL autoAssignWhen reads a list field of the resource', () => {
-  const slaTypes = [{ id: 'snap_standard', duration: { amount: 30, unit: 'days' }, autoAssignWhen: '"snap" in programsAppliedFor' }];
+  const slaTypes = [{ id: 'snap_standard', duration: { amount: 30, unit: 'days' }, autoAssignWhen: '"snap" in object.programsAppliedFor' }];
   const snap = { id: 'app-1', programsAppliedFor: ['snap', 'medicaid'], slaInfo: [] };
   const medicaid = { id: 'app-2', programsAppliedFor: ['medicaid'], slaInfo: [] };
   initializeSlaInfo(snap, slaTypes, NOW);
@@ -195,7 +195,7 @@ test('initializeSlaInfo — a CEL autoAssignWhen reads a list field of the resou
 });
 
 test('initializeSlaInfo — a condition reading a field the resource lacks does not hold', () => {
-  const slaTypes = [{ id: 'snap_standard', duration: { amount: 30, unit: 'days' }, autoAssignWhen: '"snap" in programsAppliedFor' }];
+  const slaTypes = [{ id: 'snap_standard', duration: { amount: 30, unit: 'days' }, autoAssignWhen: '"snap" in object.programsAppliedFor' }];
   const resource = { id: 'app-1', slaInfo: [] };
   initializeSlaInfo(resource, slaTypes, NOW);
   assert.deepStrictEqual(resource.slaInfo, []);

@@ -7,7 +7,8 @@
  * Standing on its own takes four things beyond the documents named:
  *
  * - **What they reference.** Every `$ref` out of a kept document, every
- *   state machine's `extends`, and every base contract a kept document's
+ *   state machine's `extends`, a schema file of the set a kept document's
+ *   `$schema` names, and every base contract a kept document's
  *   blueprint schema references, until nothing new is reached. The schema's
  *   count because the set overlays what they point to: the state machine
  *   schema checks actors against the set's roles, and the metrics schema a
@@ -41,7 +42,8 @@
  *   type whose resource was left out is mapped to `External` in its
  *   `discriminator.mapping`. `External` is the reserved resource for a record
  *   outside the contracts (contract-types.js), so the part validates on its
- *   own. A name that's in no part of the set is left for the validator to
+ *   own. Event documents get the same, since an event's payload links to
+ *   records as a resource's fields do. A name that's in no part of the set is left for the validator to
  *   report.
  */
 
@@ -100,8 +102,12 @@ function close(keep, positioned, byRelativePath, machineDocs, schemaRefs) {
           ? positioned.get(`base/${ref.file.slice(BASE_URI.length)}`)
           : isRemoteRef(ref.file) ? null : followRef(ref.file, byRelativePath, relativePath)));
       if (doc.type === 'state-machine') found.push(extendedDocOf(doc.content, relativePath, machineDocs));
+      // A schema the set has beside the document, named by file
+      // (workflow-config.yaml's $schema: workflow-config-schema.yaml).
+      const named = doc.content?.$schema;
+      if (typeof named === 'string' && !isRemoteRef(named)) found.push(followRef(named, byRelativePath, relativePath));
       // What the document's own blueprint schema references, in the set.
-      const schema = typeof doc.content?.$schema === 'string' ? doc.content.$schema.split('/').pop() : null;
+      const schema = typeof named === 'string' ? named.split('/').pop() : null;
       for (const ref of schema ? schemaRefs(schema) : []) {
         if (ref.startsWith(BASE_URI)) found.push(positioned.get(`base/${ref.slice(BASE_URI.length).split('#')[0]}`));
       }
@@ -211,7 +217,7 @@ function* relationships(node) {
  * External, or the document as it was when it has none.
  */
 function withExternalTypes(doc, kept, inSet, keptSchemas, setSchemas) {
-  if (doc.type === 'asyncapi' || !doc.content || typeof doc.content !== 'object') return doc;
+  if (!doc.content || typeof doc.content !== 'object') return doc;
   const content = structuredClone(doc.content);
   let changed = false;
   // A plain relationship, named by its schema as the validator checks it.

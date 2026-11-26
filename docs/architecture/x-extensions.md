@@ -105,14 +105,14 @@ Each value's governing law and safeguarding requirements are in [conventions/ext
 
 **File type:** `*-openapi.yaml` — schema property level, on computed read-only fields.
 
-Declares a CEL expression that the mock server evaluates at read time to populate the field. The expression is evaluated with `this` bound to the current resource record. Fields annotated with `x-derived` are implicitly read-only — no need to also declare `readOnly: true`.
+Declares a CEL expression that the mock server evaluates at read time to populate the field. The expression reads the current resource record as `object`, as a guard does. Fields annotated with `x-derived` are implicitly read-only — no need to also declare `readOnly: true`.
 
 ```yaml
 # users-openapi.yaml
 userId:
   type: string
   format: uuid
-  x-derived: "this.id"
+  x-derived: "object.id"
   description: Alias for id, used in JWT claims context.
 ```
 
@@ -120,11 +120,11 @@ userId:
 
 | Variable | Value |
 |---|---|
-| `this` | The full resource record being returned |
+| `object` | The full resource record being returned |
 
 **Evaluation scope:** item-scope only — the expression is evaluated once per record. Collection-scope expressions (operating across the full result set) are not currently supported.
 
-**Supported expressions:** any CEL, evaluated by a spec-compliant implementation (`@bufbuild/cel`): `this.programsAppliedFor.size()`, `has(this.middleName) ? this.middleName : ""`. An expression that does not evaluate — a field the record does not have, say — leaves the field out of the response, and the mock server logs why.
+**Supported expressions:** any CEL, evaluated by a spec-compliant implementation (`@bufbuild/cel`): `object.programsAppliedFor.size()`, `has(object.middleName) ? object.middleName : ""`. An expression that does not evaluate — a field the record does not have, say — leaves the field out of the response, and the mock server logs why.
 
 The mock server evaluates `x-derived` fields on all response paths: GET single, GET list, POST create, and PATCH update.
 

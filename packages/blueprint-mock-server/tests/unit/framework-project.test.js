@@ -67,12 +67,13 @@ const machines = (domain, list) => ({
   content: { domain, machines: list },
 });
 
-/** Boot a mock over the documents, quietly, and send it requests. */
+/** Boot a mock over the documents, quietly, and send it requests; `send.store` is its store. */
 async function boot(docs) {
   const log = console.log; const warn = console.warn; console.log = () => {}; console.warn = () => {};
+  const store = createMemoryStore();
   let mock;
-  try { mock = await createMockServer({ contracts: { artifactVersion: 1, docs }, store: createMemoryStore(), seed: false }); } finally { console.log = log; console.warn = warn; }
-  return async (method, path, body, roles = 'readwrite') => {
+  try { mock = await createMockServer({ contracts: { artifactVersion: 1, docs }, store, seed: false }); } finally { console.log = log; console.warn = warn; }
+  const send = async (method, path, body, roles = 'readwrite') => {
     const response = await mock.fetch(new Request(`http://localhost${path}`, {
       method,
       headers: { 'content-type': 'application/json', 'x-caller-id': 'dispatcher-1', 'x-caller-roles': roles },
@@ -81,6 +82,8 @@ async function boot(docs) {
     const text = await response.text();
     return { status: response.status, body: text ? JSON.parse(text) : null };
   };
+  send.store = store;
+  return send;
 }
 
 describe('a path is under its server\'s base', () => {
@@ -167,6 +170,12 @@ describe('a call by path to another record\'s action', () => {
           transition: { from: 'open', to: 'claimed' },
           guards: [{ actors: ['readwrite'] }],
           steps: [{ call: { POST: 'fleet/drivers/$object.driverId/take' } }],
+        }, {
+          // Takes the driver twice, and the second is refused: she's busy by then.
+          id: 'claim-twice',
+          transition: { from: 'open', to: 'claimed' },
+          guards: [{ actors: ['readwrite'] }],
+          steps: [{ call: { POST: 'fleet/drivers/$object.driverId/take' } }, { call: { POST: 'fleet/drivers/$object.driverId/take' } }],
         }],
       },
       {
@@ -205,5 +214,21 @@ describe('a call by path to another record\'s action', () => {
     const after = (await send('GET', `/fleet/jobs/${job.id}`)).body;
     assert.strictEqual(after.status, 'open');
     assert.strictEqual(after.updatedAt, job.updatedAt, 'the job is as it was');
+  });
+
+  test('a later call\'s refusal undoes the calls before it in the domain, and sends none of their events', async () => {
+    const send = await fleet();
+    const driver = (await send('POST', '/fleet/drivers', { name: 'Ana' })).body;
+    const job = (await send('POST', '/fleet/jobs', { name: 'job C', driverId: driver.id })).body;
+    const events = () => send.store.findAll('platform/events', {}, { limit: null }).items.length;
+    const eventsBefore = events();
+
+    const claimed = await send('POST', `/fleet/jobs/${job.id}/claim-twice`, {});
+    assert.strictEqual(claimed.status, 409, JSON.stringify(claimed.body));
+    assert.strictEqual((await send('GET', `/fleet/jobs/${job.id}`)).body.status, 'open');
+    const after = (await send('GET', `/fleet/drivers/${driver.id}`)).body;
+    assert.strictEqual(after.status, 'free', 'the first take is undone');
+    assert.strictEqual(after.updatedAt, driver.updatedAt, 'the driver is as she was');
+    assert.strictEqual(events(), eventsBefore, 'no event from the first take');
   });
 });

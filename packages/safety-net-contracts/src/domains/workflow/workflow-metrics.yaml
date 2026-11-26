@@ -8,10 +8,10 @@ metrics:
     aggregate: duration
     from:
       collection: events
-      filter: type == "workflow.task.created"
+      filter: item.type == "workflow.task.created"
     to:
       collection: events
-      filter: type == "workflow.task.claimed"
+      filter: item.type == "workflow.task.claimed"
     pairBy: subject
     targets:
       - stat: p50
@@ -24,7 +24,7 @@ metrics:
     aggregate: count
     source:
       collection: tasks
-      filter: status == "pending"
+      filter: item.status == "pending"
     targets:
       - stat: trend
         direction: down
@@ -34,11 +34,11 @@ metrics:
     aggregate: ratio
     source:
       collection: events
-      filter: type == "workflow.task.released"
+      filter: item.type == "workflow.task.released"
     total:
       collection: events
       # Every task transition: task events other than created and updated.
-      filter: type.contains("workflow.task.") && type != "workflow.task.created" && type != "workflow.task.updated"
+      filter: item.type.contains("workflow.task.") && item.type != "workflow.task.created" && item.type != "workflow.task.updated"
     targets:
       - stat: ratio
         operator: <
@@ -51,7 +51,7 @@ metrics:
     source:
       collection: tasks
       # Any SLA entry breached.
-      filter: slaInfo.exists(entry, entry.status == "breached")
+      filter: item.slaInfo.exists(entry, entry.status == "breached")
     total:
       collection: tasks
     targets:
@@ -67,11 +67,11 @@ metrics:
       collection: events
       # The warning timer escalates the task with this reason; there is no
       # event of its own.
-      filter: type == "workflow.task.escalated" && has(data.reason) && data.reason == "sla_deadline_approaching"
+      filter: item.type == "workflow.task.escalated" && has(item.data.reason) && item.data.reason == "sla_deadline_approaching"
     total:
       collection: events
       # Every task transition: task events other than created and updated.
-      filter: type.contains("workflow.task.") && type != "workflow.task.created" && type != "workflow.task.updated"
+      filter: item.type.contains("workflow.task.") && item.type != "workflow.task.created" && item.type != "workflow.task.updated"
     targets:
       - stat: ratio
         operator: <

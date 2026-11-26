@@ -14,7 +14,7 @@ const metrics = [{
     id: 'applications_submitted',
     name: 'Applications Submitted',
     aggregate: 'count',
-    source: { collection: 'events', filter: 'type == "intake.application.submitted"' },
+    source: { collection: 'events', filter: 'item.type == "intake.application.submitted"' },
   }],
 }];
 
@@ -66,8 +66,8 @@ test('a duration pairs events by the record they are about', async () => {
     id: 'processing_time',
     name: 'Processing time',
     aggregate: 'duration',
-    from: { collection: 'events', filter: 'type == "intake.application.submitted"' },
-    to: { collection: 'events', filter: 'type == "intake.application.closed"' },
+    from: { collection: 'events', filter: 'item.type == "intake.application.submitted"' },
+    to: { collection: 'events', filter: 'item.type == "intake.application.closed"' },
   }, store);
 
   // Two days and four days, paired by subject with no pairBy given: a median of three days, in seconds.
@@ -83,7 +83,7 @@ test('a filter can ask whether any entry of a list matches', async () => {
     id: 'breach_rate',
     name: 'Breach rate',
     aggregate: 'ratio',
-    source: { collection: 'applications', filter: 'slaInfo.exists(entry, entry.status == "breached")' },
+    source: { collection: 'applications', filter: 'item.slaInfo.exists(entry, entry.status == "breached")' },
     total: { collection: 'applications' },
   }, store);
 
@@ -100,7 +100,7 @@ test('a breakdown groups any collection the metric names', async () => {
     id: 'withdrawal_rate',
     name: 'Withdrawal rate',
     aggregate: 'ratio',
-    source: { collection: 'applications', filter: 'status == "withdrawn"' },
+    source: { collection: 'applications', filter: 'item.status == "withdrawn"' },
     total: { collection: 'applications' },
   }] }], { store });
   const response = await handler(new Request('http://localhost/workflow/metrics/withdrawal_rate?groupBy=county'),
@@ -108,6 +108,20 @@ test('a breakdown groups any collection the metric names', async () => {
 
   assert.strictEqual(response.status, 200);
   assert.deepStrictEqual((await response.json()).breakdown, { north: 0.5, south: 0 });
+});
+
+test('a filter counts records without a field by testing for it with has()', async () => {
+  const store = createMemoryStore();
+  // The mock leaves a field off a record until something sets it.
+  store.insertResource('workflow/tasks', { id: 'a', status: 'pending' });
+  store.insertResource('workflow/tasks', { id: 'b', status: 'pending', assignedToId: 'worker-1' });
+
+  const handler = createMetricsGetHandler([{ domain: 'workflow', metrics: [{
+    id: 'unassigned', name: 'Unassigned', aggregate: 'count',
+    source: { collection: 'tasks', filter: '!has(item.assignedToId) || item.assignedToId == null' },
+  }] }], { store });
+  const response = await handler(new Request('http://localhost/workflow/metrics/unassigned'), { params: { metricId: 'unassigned' } });
+  assert.strictEqual((await response.json()).value, 1);
 });
 
 test('a CEL filter can combine conditions and ask whether a nested field is there', async () => {
@@ -122,7 +136,7 @@ test('a CEL filter can combine conditions and ask whether a nested field is ther
     id: 'warnings',
     name: 'Warnings',
     aggregate: 'count',
-    source: { collection: 'events', filter: 'type == "workflow.task.escalated" && has(data.reason) && data.reason == "sla_deadline_approaching"' },
+    source: { collection: 'events', filter: 'item.type == "workflow.task.escalated" && has(item.data.reason) && item.data.reason == "sla_deadline_approaching"' },
   }, store);
 
   assert.strictEqual(result.value, 1);
@@ -137,7 +151,7 @@ test('a record without a field the filter reads does not match', async () => {
     id: 'withdrawn',
     name: 'Withdrawn',
     aggregate: 'count',
-    source: { collection: 'applications', filter: 'status == "withdrawn"' },
+    source: { collection: 'applications', filter: 'item.status == "withdrawn"' },
   }, store);
 
   assert.strictEqual(result.value, 1);

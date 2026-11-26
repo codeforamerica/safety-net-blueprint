@@ -343,7 +343,8 @@ export function extractDerivedFields(schema, follow = (x) => x) {
  * Apply x-derived field computations to a record.
  * Returns a new object — does not mutate the original.
  *
- * Each x-derived expression is CEL, evaluated with `this` bound to the record.
+ * Each x-derived expression is CEL, evaluated with the record as `object`,
+ * as a guard reads it (`object.programsAppliedFor.size()`).
  * One that does not evaluate leaves the field out, and says why.
  *
  * @param {object} record - DB record (after expand/links have been applied)
@@ -356,7 +357,7 @@ export function applyDerivedFields(record, derivedFields) {
   const result = { ...record };
   for (const { fieldName, expr } of derivedFields) {
     try {
-      result[fieldName] = evaluateCEL(expr, { this: record });
+      result[fieldName] = evaluateCEL(expr, { object: record });
     } catch (e) {
       console.warn(`x-derived ${fieldName} "${expr}" did not evaluate: ${e.message}`);
     }

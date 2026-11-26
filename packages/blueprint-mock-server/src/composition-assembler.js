@@ -52,13 +52,15 @@ export function registerParentLink(instance, parentPath, compositionName, compos
 // $present(v) — true if value is non-null, non-undefined, non-empty string.
 // Injected into every filter and derive expression context for compositions.
 /**
- * Whether a record passes a composition `filter:`, a CEL expression over the
- * record's fields and `section`. One that does not evaluate — a field the
- * record does not have — does not pass.
+ * Whether a record passes a composition `filter:`, a CEL expression that
+ * reads the record as `item` and the section it fills as `section`
+ * (`item.category == section.name`). One that does not evaluate — reading a
+ * field the record doesn't have, which a filter tests for with has() — does
+ * not pass.
  */
 function passesFilter(filter, item, context) {
   try {
-    return evaluateCEL(filter, { ...item, section: { name: context.sectionName } }) === true;
+    return evaluateCEL(filter, { item, section: { name: context.sectionName } }) === true;
   } catch {
     return false;
   }
