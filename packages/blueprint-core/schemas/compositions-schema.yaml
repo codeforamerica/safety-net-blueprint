@@ -22,7 +22,7 @@
 #           verifications:
 #             resource: Verification
 #             bind: applicationId
-#             filter: "category == $section.name"
+#             filter: "item.category == section.name"
 #       endpoint:
 #         path: /applications/{applicationId}/review
 #       state:
@@ -145,7 +145,7 @@ $defs:
     #   members:
     #     resource: ApplicationMember
     #     bind: applicationId
-    #     filter: "status == 'active'"
+    #     filter: "item.status == 'active'"
     #     fields: [firstName, lastName]
     #     links: true
     #     endpoint:
@@ -268,8 +268,12 @@ $defs:
   Filter:
     type: string
     description: >
-      CEL expression evaluated per record at read time; only records it's true
-      for are returned. Read-only: it doesn't limit what can be written.
+      CEL expression evaluated per record at read time, reading the record as
+      `item` and, in a sectionView, the section it fills as `section`
+      (`item.category == section.name`); only records it's true for are
+      returned. Reading a field the record doesn't have is an error, and the
+      record isn't returned; test for one with has(). Read-only: it doesn't
+      limit what can be written.
 
   IncludeMap:
     type: object
@@ -349,7 +353,7 @@ $defs:
     #     resource: ApplicationMember
     #     bind: applicationId
     #     index:
-    #       filter: "roles.contains('primary_applicant')"
+    #       filter: "'primary_applicant' in item.roles"
     #       fields: [id, firstName, lastName]
     #
     # Example — link-only section (no index config):

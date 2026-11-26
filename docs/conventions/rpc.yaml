@@ -84,11 +84,13 @@ rpc_endpoints:
 #         <fieldName>: <value expression>   # or {$push: <value>} to append to an array field
 #     A POST to a collection creates a record there; a POST to an action runs
 #     it as the system, its from: and conditions still checked; a PATCH updates
-#     a record. A call that fails fails the action or reaction that made it,
-#     and puts back the action's own record; calls made before it are not
-#     undone. Call an action only on a record in a state it accepts: test the
-#     state with if: first, so a later call can't fail after an earlier one
-#     has changed a record.
+#     a record. A call that fails fails the action or reaction that made it.
+#     The action and its calls to its own domain are one transaction: nothing
+#     they changed in the domain is kept, and none of their events is sent.
+#     A call to another domain is done once it succeeds; when a later failure
+#     has to undo it, handle the failure with catch: and call what undoes it.
+#     Call an action only on a record in a state it accepts: test the state
+#     with if: first.
 #
 #   call:
 #     # By operationId — the validated path; use it for another domain's records:
@@ -118,6 +120,8 @@ rpc_endpoints:
 #     do: [<steps>]
 #     Runs do: once per matching record, or once per record with no where:;
 #     forEach: {in: <value expression>, as: <alias>} runs it once per item of a list.
+#     Use a CEL where: string, as a context binding takes, for more than
+#     equality: where: 'item.applicationId == object.id && item.status != "closed"'
 #
 # Expressions (paths, body values, and set: value: all use the same syntax):
 #   $alias.field    — value from a context binding alias (e.g. $application.id, usable in paths and bodies)
@@ -135,14 +139,29 @@ rpc_endpoints:
 # is evaluated, so there are no operators; a missing value contributes nothing.
 #
 # Conditions are CEL, with no dialect: a guard's condition, if:, match:, a
-# context binding's where: string, a composition's filter:, and x-derived.
-# They are evaluated by a spec-compliant implementation (@bufbuild/cel), so an
-# expression that is not CEL is refused, not run some other way.
+# where: string in a context binding or forEach, a composition's filter:,
+# x-derived, a metric's filter: and an SLA type's conditions (autoAssignWhen,
+# pauseWhen and the rest). They are evaluated by a spec-compliant
+# implementation (@bufbuild/cel), so an expression that is not CEL is refused,
+# not run some other way. JSON Logic is refused by validation, which shows the
+# CEL to write instead.
 #   - Names are unprefixed: caller, object, request, params, this (the event),
 #     now, and each context binding by its alias. `$` is value-expression
 #     syntax, above, and not CEL.
-#   - A field a record does not have is an error, not null: ask with has(),
-#     e.g. !has(object.escalatedAt) || object.escalatedAt == null.
+#   - In a where: string, a metric's filter: and a composition's filter:,
+#     item is each record searched, counted or returned: item.status ==
+#     "pending" && item.taskId == object.id, item.type ==
+#     "workflow.task.created", item.category == section.name (a sectionView
+#     names the section it fills as section).
+#   - In an SLA type's conditions, object is the record its clock runs on:
+#     object.status in ["awaiting_client", "awaiting_verification"].
+#   - In x-derived, object is the record being returned:
+#     object.programsAppliedFor.size().
+#   - A field a record does not have is an error, not null, as CEL makes a
+#     missing key in a record; the condition does not match. Test for it with
+#     has(): !has(item.assignedToId) for an unassigned task, and
+#     !has(object.escalatedAt) || object.escalatedAt == null for a field that
+#     can also hold null.
 #   - A binding that found no record is null; test the binding, not a field
 #     through it: reviewTask != null.
 #   - List membership is `x in list`; contains() is for strings.

@@ -8,10 +8,7 @@ metrics:
     aggregate: count
     source:
       collection: events
-      filter:
-        "==":
-          - var: type
-          - intake.application.submitted
+      filter: item.type == "intake.application.submitted"
 
   - id: application_processing_time
     name: Application Processing Time
@@ -19,16 +16,10 @@ metrics:
     aggregate: duration
     from:
       collection: events
-      filter:
-        "==":
-          - var: type
-          - intake.application.submitted
+      filter: item.type == "intake.application.submitted"
     to:
       collection: events
-      filter:
-        "==":
-          - var: type
-          - intake.application.closed
+      filter: item.type == "intake.application.closed"
     # An event names the record it is about in `subject`.
     pairBy: subject
     targets:
@@ -43,19 +34,10 @@ metrics:
     aggregate: ratio
     source:
       collection: applications
-      filter:
-        "==":
-          - var: status
-          - withdrawn
+      filter: item.status == "withdrawn"
     total:
       collection: applications
-      filter:
-        in:
-          - var: status
-          - - submitted
-            - under_review
-            - withdrawn
-            - closed
+      filter: item.status in ["submitted", "under_review", "withdrawn", "closed"]
     targets:
       - stat: ratio
         operator: <
@@ -68,14 +50,8 @@ metrics:
     aggregate: ratio
     source:
       collection: applications
-      # Any SLA entry breached. JSON Logic has no path wildcard, so
-      # `slaInfo.*.status` read as missing and matched nothing.
-      filter:
-        some:
-          - var: slaInfo
-          - "==":
-              - var: status
-              - breached
+      # Any SLA entry breached.
+      filter: item.slaInfo.exists(entry, entry.status == "breached")
     total:
       collection: applications
     targets:

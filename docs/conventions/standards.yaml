@@ -136,9 +136,6 @@ adopted:
   - name: CEL
     url: https://github.com/google/cel-spec
     use: Use it for every expression.
-    exception: >
-      SLA types, metrics and some where clauses still use JSON Logic, and are
-      being moved to CEL. Don't use JSON Logic in anything new.
     details: docs/architecture/cross-cutting/behavioral-contract-dsl.md
 
   - name: HTTP
@@ -188,6 +185,20 @@ borrowed:
       An editable composition is an aggregate: a root record and the records
       changed with it, as one unit, all or nothing. Use the term when you
       describe what an editable composition holds.
+
+  - name: Transactional outbox
+    url: https://microservices.io/patterns/data/transactional-outbox.html
+    use: >
+      An action or a reaction and the calls it makes to its own domain are one
+      transaction, and their events are sent only when it succeeds. Say so
+      when you describe what a failed call undoes.
+
+  - name: Saga
+    url: https://microservices.io/patterns/data/saga.html
+    use: >
+      A call to another domain can't be rolled back. When a later failure has
+      to undo it, handle the failure with `catch` and call what undoes it: a
+      compensating action.
 
   - name: Amazon States Language
     url: https://states-language.net/spec.html

@@ -3,9 +3,8 @@
  * Used by transition handler, create handler, update handler, and event subscriptions.
  */
 
-import jsonLogic from 'json-logic-js';
 import { collectionNamed, resolveDotPath } from '../collection-utils.js';
-import { applySteps, applyStepsWithCalls, fillValue, whenReady, caughtEntities } from '../state-machine-engine.js';
+import { applyStepsWithCalls, fillValue, whenReady, caughtEntities } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
@@ -35,10 +34,10 @@ function resolveWhereValue(val, resource, context, resolved) {
  * with every match, a step uses forEach:, which takes the same from:/where:.
  *   where: { id: <value> }           → that record (findById)
  *   where: { otherField: <value> }   → the first record matching
- *   JSON Logic or CEL where:         → the first record the condition is true for
+ *   CEL where:                       → the first record the condition is true for
  *   (no where)                       → the first record in the collection
  *
- * WHERE CLAUSE — three supported forms:
+ * WHERE CLAUSE — two supported forms:
  *
  *   (1) Field-value equality pairs. Values may be:
  *         $object.field  → field on the primary resource being evaluated
@@ -46,12 +45,7 @@ function resolveWhereValue(val, resource, context, resolved) {
  *         $alias.field   → field on a previously resolved binding (chaining)
  *         literal string → exact match value
  *
- *   (2) JSON Logic expression — evaluated per candidate record. Variable references:
- *         { var: "fieldName" }        → field on the candidate record
- *         { var: "this.field" }       → field on the triggering event/context
- *         { var: "alias.field" }      → field on a previously resolved binding
- *
- *   (3) CEL expression — a string, evaluated per candidate record:
+ *   (2) CEL expression — a string, evaluated per candidate record:
  *         item      → the candidate record
  *         object    → the primary resource
  *         request   → the request body
@@ -103,29 +97,6 @@ function resolveContextBindings(contextBindings, resource, context, store) {
         }
       };
       resolved[alias] = candidates.find(matches) ?? null;
-      continue;
-    }
-
-    const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
-    const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
-
-    if (isJsonLogic) {
-      const { items: allItems } = store.findAll(collection, {}, { limit: null });
-      const logicData = {
-        this: context?.this ?? {},
-        object: resource,
-        ...Object.fromEntries(Object.entries(resolved))
-      };
-      const entity = allItems.find(item => {
-        try {
-          return jsonLogic.apply(where, { ...logicData, ...item });
-        } catch (e) {
-          console.warn(`Context binding "${alias}": JSON Logic where filter error — ${e.message}`);
-          return false;
-        }
-      }) ?? null;
-
-      resolved[alias] = entity;
       continue;
     }
 
@@ -372,77 +343,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
     });
   }
 
-  const allPendingOperations = [];
-  // conditions array format (JSON Logic) — for procedures defined with conditions:
-  const data = { '$object': { ...resource } };
-  for (const [alias, entity] of Object.entries(entities)) {
-    data[`$${alias}`] = entity;
-  }
-
-  const conditions = [...(proc.conditions || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const allPendingEvents = [];
-
-  for (const cond of conditions) {
-    let matches = false;
-    try {
-      matches = cond.condition === true || jsonLogic.apply(cond.condition, data);
-    } catch (e) {
-      console.warn(`Procedure "${procedureId}" condition "${cond.id}" evaluation error: ${e.message}`);
-      continue;
-    }
-
-    if (matches) {
-      const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-        applySteps(cond.then || [], resource, stepContext, store);
-
-      for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
-        if (stubUrl) {
-          const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
-          const httpStub = stepContext.instance.stubs.matchAndPopHttp('POST', fullPath);
-          if (httpStub) {
-            console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
-            continue;
-          }
-        }
-        try {
-          const created = store.create(entity, createData);
-          if (domain && eventObject) {
-            emitEvent({
-              instance: stepContext.instance,
-              domain,
-              object: eventObject,
-              action: 'created',
-              resourceId: created.id,
-              source: `/${domain}`,
-              data: { ...created },
-              callerId: 'system',
-            });
-          }
-        } catch (e) {
-          console.error(`executeProcedure: create "${entity}" failed: ${e.message}`);
-        }
-      }
-
-      for (const append of pendingAppends) {
-        applyPendingAppend(append, store, stepContext.instance);
-      }
-
-      allPendingOperations.push(...pendingOperations);
-      allPendingEvents.push(...(pendingEvents || []));
-
-      if (pendingProcedures.length > 0) {
-        const { pendingOperations: nestedOps, pendingEvents: nestedEvents } = executeProcedures(
-          pendingProcedures, resource, inlineProcedures, stepContext, store
-        );
-        allPendingOperations.push(...(nestedOps || []));
-        allPendingEvents.push(...(nestedEvents || []));
-      }
-
-      if (proc.evaluation !== 'all-match') break;
-    }
-  }
-
-  return { operations: allPendingOperations, events: allPendingEvents };
+  return { operations: [], events: [] };
 }
 
 /**

@@ -2,20 +2,23 @@
  * Handler for GET /metrics and GET /metrics/{metricId}
  */
 
-import jsonLogic from 'json-logic-js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 import { assertFetchShaped, queryOf } from '../http/request.js';
 import { storageName } from '../collection-utils.js';
 import { EVENTS_COLLECTION } from '../emit-event.js';
 
 /**
- * Apply a JSON Logic filter to a list of records.
+ * Apply a metric's filter, a CEL expression that reads each record as `item`
+ * (`item.status == "pending"`), to a list of records.
  * Returns records where the filter evaluates to true (or all records if no filter).
+ * One that does not evaluate — reading a field the record doesn't have, which
+ * CEL makes an error; a filter tests for one with has() — does not match.
  */
 function applyFilter(records, filter) {
   if (!filter) return records;
   return records.filter(r => {
     try {
-      return Boolean(jsonLogic.apply(filter, r));
+      return evaluateCEL(filter, { item: r }) === true;
     } catch {
       return false;
     }

@@ -84,28 +84,44 @@ $defs:
           Paused time is excluded from the elapsed calculation.
         minimum: 1
         maximum: 99
+      # Conditions are CEL that read the resource as `object`:
+      #   pauseWhen: object.status in ["awaiting_client", "awaiting_verification"]
+      # Reading a field the resource doesn't have is an error, and the
+      # condition does not match; test for one with has(object.field).
       autoAssignWhen:
+        type: string
+        minLength: 1
         description: >
-          Optional JSON Logic condition evaluated at resource creation against the
-          resource's fields. When true, this SLA type is automatically assigned.
+          Optional CEL condition evaluated at resource creation, reading the
+          resource as `object`. When true, this SLA type is automatically assigned.
           Auto-assigned and client-provided SLA types are merged — both apply.
       startWhen:
+        type: string
+        minLength: 1
         description: >
-          Optional JSON Logic condition. When true, the SLA clock starts.
+          Optional CEL condition. When true, the SLA clock starts.
           Defaults to onCreate.
       pauseWhen:
+        type: string
+        minLength: 1
         description: >
-          Optional JSON Logic condition. When true, the SLA clock pauses.
+          Optional CEL condition. When true, the SLA clock pauses.
       resumeWhen:
+        type: string
+        minLength: 1
         description: >
-          Optional JSON Logic condition. When true, the SLA clock resumes.
+          Optional CEL condition. When true, the SLA clock resumes.
           Defaults to: pauseWhen no longer true.
       completedWhen:
+        type: string
+        minLength: 1
         description: >
-          Optional JSON Logic condition. When true, the SLA is marked completed.
+          Optional CEL condition. When true, the SLA is marked completed.
           Defaults to resource status = completed.
       resetWhen:
+        type: string
+        minLength: 1
         description: >
-          Optional JSON Logic condition. When true, completes the current SLA
+          Optional CEL condition. When true, completes the current SLA
           cycle and starts a new one.
     additionalProperties: false

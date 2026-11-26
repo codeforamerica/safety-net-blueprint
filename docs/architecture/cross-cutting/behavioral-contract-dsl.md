@@ -104,7 +104,7 @@ A single expression language — CEL (Common Expression Language) — used throu
 
 ## Expressions
 
-Condition expressions appear in guards, `if:` and `match:` steps, SLA pause/resume conditions, and metric filter predicates. Common patterns:
+Condition expressions appear in guards, `if:` and `match:` steps, SLA pause/resume conditions, and metric filter predicates. Each reads the record through a variable, as CEL's hosts do (Kubernetes reads `object`): a guard, a step and an SLA condition read the record as `object`; a metric filter, a composition filter and a `where:` read each record they count, return or search as `item`. Common patterns:
 
 | Pattern | Example |
 |---|---|
@@ -112,6 +112,7 @@ Condition expressions appear in guards, `if:` and `match:` steps, SLA pause/resu
 | List membership | `"snap" in object.programs` |
 | List size | `object.programs.size() == 1` |
 | Null check | `object.field != null` |
+| Field present | `has(object.field)` — reading a field the record doesn't have is an error, which a condition counts as no match |
 | Logical and / or | `a && b` / `a \|\| b` |
 | Negation | `!condition` |
 | Any in list satisfies | `object.programs.exists(p, p == "snap")` |
@@ -183,10 +184,18 @@ action runs as the system: it skips only role matching, and the action's
 the action or reaction has saved its record, so an action called on that
 record reads it as it was left. A call that fails — an action that refuses,
 a path no API declares, a write the schema refuses — fails the action: it
-answers with the call's status, and its own record is put back. Calls made
-before the one that failed are not undone: what they changed stays changed,
-and their events have gone out. In a reaction to
-an event, the reaction fails the same way, and the mock logs the call and why.
+answers with the call's status. In a reaction to an event, the reaction fails
+the same way, and the mock logs the call and why.
+
+An action or a reaction, and the calls it makes to its own domain, are one
+transaction, as they would be in a service that owns the domain: when it
+fails, every record of the domain it and its calls changed is put back, and
+none of their events is sent. Its events are sent only once it succeeds, as
+a [transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html)
+sends them. A call to another domain is a call to another service, which
+can't be rolled back: it's done once it succeeds, and its events go out. When
+a later failure has to undo it, handle the failure with `catch` and call what
+undoes it, as a [saga](https://microservices.io/patterns/data/saga.html) does.
 A call to an operation, by its `operationId` (below), is the validated path.
 
 Use a call by path only for the machine's own domain's records. It skips the
@@ -241,12 +250,13 @@ choice explicit. Only the mock's own call is the system: a client sending
 `X-Caller-Roles: system` is a caller with a role named `system`.
 
 `catch` says what happens when the call fails: its `do:` steps run instead of
-the action's, which are discarded, the failure readable as `$error` — its HTTP
+the action's, which are discarded, with what their calls changed in the
+domain put back, the failure readable as `$error` — its HTTP
 `status` alongside the shared Error shape's `code`, `message` and `details` —
 and the action ends in `to` rather than its transition's. `as` names the
 failure something else: `as: refusal` makes it `$refusal`. The action answers
 with the call's failure, the record as it now is in `details`. With no `catch`,
-a failed call fails the action, and nothing is saved.
+a failed call fails the action, and nothing it did in its domain is saved.
 
 `catch` borrows from two sources. The [Amazon States
 Language](https://states-language.net/spec.html) puts a `Catch` on the task
@@ -259,7 +269,8 @@ in. It isn't named `onFailure`, which Arazzo — the scenarios' format — uses 
 retrying or leaving a step.
 
 In a reaction to an event, `catch` works the same way: `to` replaces the
-reaction's transition, and with no `catch` nothing the reaction did is saved.
+reaction's transition, and with no `catch` nothing the reaction did in its
+domain is saved.
 In a procedure, it ends the procedure: what its steps did is undone and `do:`
 runs instead; a procedure has no transition, so `to` doesn't apply. A failure
 no `catch` handles fails the action that called the procedure. A

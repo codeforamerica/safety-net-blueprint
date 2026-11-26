@@ -203,7 +203,7 @@ describe('id-without-relationship', () => {
   });
 
   test('an id nobody writes is not checked', () => {
-    for (const field of [{ format: 'uuid', readOnly: true }, { format: 'uuid', 'x-derived': 'this.id' }]) {
+    for (const field of [{ format: 'uuid', readOnly: true }, { format: 'uuid', 'x-derived': 'object.id' }]) {
       assert.deepEqual(findings(withField(field), 'id-without-relationship'), [], JSON.stringify(field));
     }
   });

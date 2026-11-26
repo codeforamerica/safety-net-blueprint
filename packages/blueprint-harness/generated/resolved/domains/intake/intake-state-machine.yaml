@@ -255,15 +255,7 @@ machines:
                   correction: $correction
           - forEach:
               from: decision-support/suggestions
-              where:
-                and:
-                  - "==":
-                      - var: metadata.intake.interviewId
-                      - var: object.id
-                  - in:
-                      - var: status
-                      - - proposed
-                        - refused
+              where: item.metadata.intake.interviewId == object.id && item.status in ["proposed", "refused"]
               as: open
             do:
               - if: |
@@ -326,15 +318,7 @@ machines:
         steps:
           - forEach:
               from: decision-support/suggestions
-              where:
-                and:
-                  - "==":
-                      - var: metadata.intake.interviewId
-                      - var: object.id
-                  - in:
-                      - var: status
-                      - - proposed
-                        - refused
+              where: item.metadata.intake.interviewId == object.id && item.status in ["proposed", "refused"]
               as: open
             do:
               - call: expireSuggestionOf

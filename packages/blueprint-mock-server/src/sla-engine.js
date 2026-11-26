@@ -3,7 +3,7 @@
  * No Express or database dependencies.
  */
 
-import jsonLogic from 'json-logic-js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
  * Add a duration to a base ISO datetime string.
@@ -34,16 +34,18 @@ function durationToMs({ amount, unit }) {
 }
 
 /**
- * Evaluate a JSON Logic condition against a data object.
- * Returns false if condition is absent or evaluation fails.
- * @param {*} condition - JSON Logic condition
+ * Evaluate a CEL condition against a data object, which reads the record as
+ * `object` (`object.status in ["awaiting_client"]`).
+ * Returns false if condition is absent or evaluation fails — reading a field
+ * the record doesn't have, which a condition tests for with has().
+ * @param {string} condition - CEL condition
  * @param {Object} data - Data to evaluate against
  * @returns {boolean}
  */
 function evaluateCondition(condition, data) {
   if (condition === undefined || condition === null) return false;
   try {
-    return Boolean(jsonLogic.apply(condition, data));
+    return evaluateCEL(condition, data) === true;
   } catch {
     return false;
   }
@@ -61,7 +63,7 @@ function evaluateCondition(condition, data) {
  * @param {string} now - Current datetime (ISO 8601)
  */
 export function initializeSlaInfo(resource, slaTypes, now, resolvedEntities = {}) {
-  const conditionData = { ...resource, ...resolvedEntities };
+  const conditionData = { object: resource, ...resolvedEntities };
 
   // Collect client-provided slaTypeCodes
   const clientCodes = new Set(
@@ -122,7 +124,7 @@ export function initializeSlaInfo(resource, slaTypes, now, resolvedEntities = {}
 export function updateSlaInfo(resource, slaTypes, now, states = {}, resolvedEntities = {}) {
   if (!resource.slaInfo || resource.slaInfo.length === 0) return;
 
-  const conditionData = { ...resource, ...resolvedEntities };
+  const conditionData = { object: resource, ...resolvedEntities };
   const nowMs = new Date(now).getTime();
   const currentStateConfig = states[resource.status] ?? {};
   const clockIsStopped = currentStateConfig.slaClock === 'stopped';

@@ -4,7 +4,6 @@
  * based on a state machine contract.
  */
 
-import jsonLogic from 'json-logic-js';
 import { evaluateCEL as evaluateExpression } from '@codeforamerica/blueprint-core/cel';
 import { collectionNamed, resolveDotPath } from './collection-utils.js';
 import { resolveTimeToken } from './time-tokens.js';
@@ -608,27 +607,22 @@ function* walkSteps(steps, resource, context, store, pending) {
       }
 
       const collection = collectionNamed(collectionPath, context.instance?.resources);
-      const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
-      const isJsonLogic = Boolean(where) && typeof where === 'object' && Object.keys(where).some(k => logicOperators.has(k));
 
       let items;
       if (!where) {
         // With no where:, every record in the collection, as a binding with
         // none finds the first (state-machine-schema.yaml, ContextBinding).
         ({ items } = store.findAll(collection, {}, { limit: null }));
-      } else if (isJsonLogic) {
-        const { items: allItems } = store.findAll(collection, {});
-        const logicData = {
-          this: context.this ?? {},
-          object: context.object ?? {},
-          ...Object.fromEntries(Object.entries(context.entities ?? {}))
-        };
+      } else if (typeof where === 'string') {
+        // A CEL where:, as a binding's: `item` is the candidate record, and
+        // every other name is what a condition here reads.
+        const { items: allItems } = store.findAll(collection, {}, { limit: null });
+        const scope = expressionContext(context);
         items = allItems.filter(item => {
           try {
-            return jsonLogic.apply(where, { ...logicData, ...item });
-          } catch (e) {
-            console.warn(`forEach: JSON Logic where filter error — ${e.message}`);
-            return false;
+            return evaluateExpression(where, { ...scope, item }) === true;
+          } catch {
+            return false; // A field the candidate does not have: not this record.
           }
         });
       } else {
@@ -929,84 +923,4 @@ export function applyStepsWithCalls(steps, resource, context, store, perform) {
  */
 export function whenReady(value, next) {
   return value && typeof value.then === 'function' ? value.then(next) : next(value);
-}
-
-/**
- * Apply a single set effect to a resource.
- * @param {Object} effect - Effect definition with field and value
- * @param {Object} resource - The resource to modify (mutated in place)
- * @param {Object} context - Context with caller info
- */
-export function applySetEffect(effect, resource, context) {
-  const value = fillValue(effect.value, context);
-  if (value !== undefined) {
-    resource[effect.field] = value;
-  }
-}
-
-/**
- * Apply a single create effect — resolves all fields and returns the data to create.
- * Engine stays pure: no database dependency.
- * @param {Object} effect - Effect definition with entity and fields
- * @param {Object} context - Context with caller, object, and now info
- * @returns {{ entity: string, data: Object }}
- */
-export function applyCreateEffect(effect, context) {
-  return { entity: effect.entity, data: fillFields(effect.fields, context) };
-}
-
-/**
- * Apply a single event effect — resolves data fields and returns the event to emit.
- * The engine populates envelope fields (domain, resource, resourceId, etc.) automatically
- * from context; the effect only specifies action and optional data.
- * @param {Object} effect - Effect definition with action and optional data
- * @param {Object} context - Context with caller, object, and now info
- * @returns {{ action: string, data: Object }}
- */
-export function applyEventEffect(effect, context) {
-  return { action: effect.action, data: fillFields(effect.data, context) };
-}
-
-/**
- * Apply all effects of supported types. Skips unimplemented types silently.
- * Evaluates any `when` clause (JSON Logic) before executing each effect —
- * effects whose condition is false are skipped.
- * @param {Array} effects - Array of effect definitions
- * @param {Object} resource - The resource to modify (mutated in place)
- * @param {Object} context - Context with caller, object, request, and now info
- * @returns {{ pendingCreates: Array, pendingProcedures: Array, pendingEvents: Array }}
- */
-export function applyEffects(effects, resource, context) {
-  const pendingCreates = [];
-  const pendingProcedures = [];
-  const pendingEvents = [];
-
-  if (!effects) return { pendingCreates, pendingProcedures, pendingEvents };
-
-  for (const effect of effects) {
-    // Evaluate `when` clause before executing the effect
-    if (effect.when !== undefined) {
-      const logicData = { request: context.request || {}, object: context.object || {} };
-      if (!jsonLogic.apply(effect.when, logicData)) {
-        continue;
-      }
-    }
-
-    switch (effect.type) {
-      case 'set':
-        applySetEffect(effect, resource, context);
-        break;
-      case 'create':
-        pendingCreates.push(applyCreateEffect(effect, context));
-        break;
-      case 'event':
-        pendingEvents.push(applyEventEffect(effect, context));
-        break;
-      default:
-        // Silently skip unimplemented effect types (forward-compatible)
-        break;
-    }
-  }
-
-  return { pendingCreates, pendingProcedures, pendingEvents };
 }

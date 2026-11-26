@@ -110,9 +110,15 @@ $defs:
         $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/MetricCollection"
         description: Which collection to query.
       filter:
+        type: string
+        minLength: 1
         description: >
-          Optional JSON Logic condition. When provided, only records where the
-          condition evaluates to true are included.
+          Optional CEL condition that reads each record as `item` (e.g.,
+          `item.type == "workflow.task.created"`). When provided, only records
+          where the condition evaluates to true are included. Reading a field
+          the record doesn't have is an error, and the record does not match;
+          test for one with has() (e.g., `!has(item.assignedToId)` for an
+          unassigned task).
     additionalProperties: false
 
   MetricTarget:

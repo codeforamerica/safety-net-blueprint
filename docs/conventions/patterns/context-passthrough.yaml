@@ -38,7 +38,7 @@ rules:
     echoes metadata back unchanged (patterns/adapter.yaml).
   - >-
     Read it back in the result event's reaction, through the nested path — in
-    JSON Logic, { "var": "event.data.metadata.intake.verificationId" }.
+    CEL, this.data.metadata.intake.verificationId.
 
 example: >
   At submission, intake creates a verification and a data exchange service
