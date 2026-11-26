@@ -8,16 +8,17 @@ import { storageName } from '../collection-utils.js';
 import { EVENTS_COLLECTION } from '../emit-event.js';
 
 /**
- * Apply a metric's filter, a CEL expression over each record's fields, to a
- * list of records.
+ * Apply a metric's filter, a CEL expression that reads each record as `item`
+ * (`item.status == "pending"`), to a list of records.
  * Returns records where the filter evaluates to true (or all records if no filter).
- * One that does not evaluate — a field the record does not have — does not match.
+ * One that does not evaluate — reading a field the record doesn't have, which
+ * CEL makes an error; a filter tests for one with has() — does not match.
  */
 function applyFilter(records, filter) {
   if (!filter) return records;
   return records.filter(r => {
     try {
-      return evaluateCEL(filter, r) === true;
+      return evaluateCEL(filter, { item: r }) === true;
     } catch {
       return false;
     }

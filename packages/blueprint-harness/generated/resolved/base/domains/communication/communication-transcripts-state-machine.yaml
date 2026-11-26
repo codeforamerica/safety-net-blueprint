@@ -156,7 +156,7 @@ machines:
                     payload:
                       lastActivityAt: $this.data.endedAt
       - type: communication.transcription_session.line_finished
-        description: Keep a finished line.
+        description: Keep a finished line in the session's transcript.
         context:
           - session:
               from: communication/transcription-sessions
@@ -165,12 +165,18 @@ machines:
           - conditions:
               - publishedByStarter
         steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail:
+                  status: 409
+                  code: CONFLICT
+                  message: The line names a transcript that isn't its session's.
           - call:
               operationId: addTranscriptEntry
               parameters:
                 - name: transcriptId
                   in: path
-                  value: $this.data.transcriptId
+                  value: $session.transcriptId
                 - name: Idempotency-Key
                   in: header
                   value: "{$this.subject}.line.{$this.data.key}"
@@ -185,7 +191,7 @@ machines:
                   confidence: $this.data.confidence
                   language: $this.data.language
       - type: communication.transcription_session.connected
-        description: Keep the stretch nothing was captured in before the connection opened, as a gap.
+        description: Keep the stretch nothing was captured in before the connection opened, as a gap, in the session's transcript.
         context:
           - session:
               from: communication/transcription-sessions
@@ -194,6 +200,12 @@ machines:
           - conditions:
               - publishedByStarter
         steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail:
+                  status: 409
+                  code: CONFLICT
+                  message: The connection names a transcript that isn't its session's.
           - if: has(this.data.gap)
             then:
               - call:
@@ -201,7 +213,7 @@ machines:
                   parameters:
                     - name: transcriptId
                       in: path
-                      value: $this.data.transcriptId
+                      value: $session.transcriptId
                     - name: Idempotency-Key
                       in: header
                       value: "{$this.subject}.gap.{$this.data.gap.startedAt}"

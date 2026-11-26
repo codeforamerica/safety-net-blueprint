@@ -617,8 +617,8 @@ When renaming a field, check for references in:
 - `*-state-machine.yaml` — CEL `if:` and `condition:` expressions, `set: {field:}` steps, context binding `from:` paths
 - `*-compositions.yaml` — `bind:` field names and `fields:` display arrays
 - `*-annotations.yaml` — dot-notation field paths (e.g. `application.programsAppliedFor[]`)
-- `*-sla-types.yaml` — field names in CEL conditions (`pauseWhen` and the rest)
-- `*-metrics.yaml` — field names in CEL `filter` expressions
+- `*-sla-types.yaml` — field names in CEL conditions (`pauseWhen` and the rest), read as `object.<field>`
+- `*-metrics.yaml` — field names in CEL `filter` expressions, read as `item.<field>`
 
 Cross-artifact validation runs automatically after overlays are applied as part of the resolve pipeline and catches these mismatches before deployment. See [Cross-Artifact Field Reference Validation](../guides/validation.md#cross-artifact-field-reference-validation) for the full rule set.
 

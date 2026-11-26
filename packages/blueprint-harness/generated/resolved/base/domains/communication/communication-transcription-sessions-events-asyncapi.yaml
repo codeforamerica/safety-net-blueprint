@@ -439,7 +439,7 @@ components:
                   transcriptId:
                     type: string
                     format: uuid
-                    description: The session's transcript.
+                    description: The session's transcript. The transcript refuses an event that names another.
                     x-relationship:
                       resource: Transcript
                       style: links-only
@@ -583,7 +583,7 @@ components:
                   transcriptId:
                     type: string
                     format: uuid
-                    description: The session's transcript.
+                    description: The session's transcript. The transcript refuses an event that names another.
                     x-relationship:
                       resource: Transcript
                       style: links-only

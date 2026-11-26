@@ -1949,7 +1949,7 @@ const locate = (token, op) => {
   for (const schema of sources) {
     for (const [name, declared] of Object.entries(collectProperties(schema, doc))) {
       // By name, or by the expression it declares: the notes quote
-      // `$this.programsAppliedFor.size()` on its own, and the thing a reader
+      // `object.programsAppliedFor.size()` on its own, and the thing a reader
       // wants when they read that is the field it was written on.
       if (name === token || deref(declared, doc)?.['x-derived'] === token) {
         return asProperty(name, declared);

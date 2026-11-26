@@ -1193,7 +1193,7 @@ async function testSectionView() {
 
   await test('GET /review/:section — $section.name filter context passes section to filter', async () => {
     // Create a note scoped to "income" section; the verifications panel.include
-    // uses filter: "category == $section.name" which exercises $section.name injection.
+    // uses filter: "item.category == section.name" which exercises section.name injection.
     // We verify the panel assembles without error and the items array is present.
     const data = await (await fetch(`${BASE_REVIEW}/income`)).json();
     assert.ok(Array.isArray(data.items), 'items present (filter did not crash)');

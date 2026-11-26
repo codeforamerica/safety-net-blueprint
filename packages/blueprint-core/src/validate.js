@@ -23,7 +23,7 @@ import {
   validateSortableConfig,
 } from './compositions.js';
 import { validateEvents, channelNameErrors } from './validator/event-validator.js';
-import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
+import { validateSlaTypeFields, validateMetricFields, validateCompositionFilters, validateDerivedFields } from './validator/field-reference-validator.js';
 import { jsonLogicExpressions } from './validator/json-logic-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
@@ -867,6 +867,7 @@ function validateDoc(doc, context) {
 
   switch (doc.type) {
     case 'openapi': {
+      errors.push(...validateDerivedFields(doc));
       // A request goes to one operation: a route another document already
       // declares would be two contracts for it, and the mock refuses to start.
       for (const { key, file } of context.routeOwners?.get(doc.relativePath) ?? []) {
@@ -986,7 +987,8 @@ function validateDoc(doc, context) {
         ...validateEditableKeys(compositionDoc),
         ...validateBindFields(compositionDoc, context.resourceSchemaIndex),
         ...validateFieldsArrays(compositionDoc, context.resourceSchemaIndex),
-        ...validateSortableConfig(compositionDoc)
+        ...validateSortableConfig(compositionDoc),
+        ...validateCompositionFilters(doc)
       );
       break;
     }

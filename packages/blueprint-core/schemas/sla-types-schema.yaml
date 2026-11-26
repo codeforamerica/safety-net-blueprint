@@ -84,15 +84,16 @@ $defs:
           Paused time is excluded from the elapsed calculation.
         minimum: 1
         maximum: 99
-      # Conditions are CEL over the resource's fields, named as they are:
-      #   pauseWhen: status in ["awaiting_client", "awaiting_verification"]
-      # A resource without a field a condition reads does not match.
+      # Conditions are CEL that read the resource as `object`:
+      #   pauseWhen: object.status in ["awaiting_client", "awaiting_verification"]
+      # Reading a field the resource doesn't have is an error, and the
+      # condition does not match; test for one with has(object.field).
       autoAssignWhen:
         type: string
         minLength: 1
         description: >
-          Optional CEL condition evaluated at resource creation against the
-          resource's fields. When true, this SLA type is automatically assigned.
+          Optional CEL condition evaluated at resource creation, reading the
+          resource as `object`. When true, this SLA type is automatically assigned.
           Auto-assigned and client-provided SLA types are merged — both apply.
       startWhen:
         type: string

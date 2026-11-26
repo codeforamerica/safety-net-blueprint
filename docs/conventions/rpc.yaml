@@ -84,9 +84,13 @@ rpc_endpoints:
 #         <fieldName>: <value expression>   # or {$push: <value>} to append to an array field
 #     A POST to a collection creates a record there; a POST to an action runs
 #     it as the system, its from: and conditions still checked; a PATCH updates
-#     a record. A call that fails fails the action or reaction that made it,
-#     and nothing it did is saved. Call an action only on a record in a state
-#     it accepts: test the state with if: first.
+#     a record. A call that fails fails the action or reaction that made it.
+#     The action and its calls to its own domain are one transaction: nothing
+#     they changed in the domain is kept, and none of their events is sent.
+#     A call to another domain is done once it succeeds; when a later failure
+#     has to undo it, handle the failure with catch: and call what undoes it.
+#     Call an action only on a record in a state it accepts: test the state
+#     with if: first.
 #
 #   call:
 #     # By operationId — the validated path; use it for another domain's records:
@@ -144,13 +148,20 @@ rpc_endpoints:
 #   - Names are unprefixed: caller, object, request, params, this (the event),
 #     now, and each context binding by its alias. `$` is value-expression
 #     syntax, above, and not CEL.
-#   - In a where: string, item is the candidate record:
-#     item.status == "pending" && item.taskId == object.id
-#   - A metric's filter:, an SLA type's conditions and a composition's filter:
-#     read the record's own fields by name: type == "workflow.task.created",
-#     status in ["awaiting_client", "awaiting_verification"].
-#   - A field a record does not have is an error, not null: ask with has(),
-#     e.g. !has(object.escalatedAt) || object.escalatedAt == null.
+#   - In a where: string, a metric's filter: and a composition's filter:,
+#     item is each record searched, counted or returned: item.status ==
+#     "pending" && item.taskId == object.id, item.type ==
+#     "workflow.task.created", item.category == section.name (a sectionView
+#     names the section it fills as section).
+#   - In an SLA type's conditions, object is the record its clock runs on:
+#     object.status in ["awaiting_client", "awaiting_verification"].
+#   - In x-derived, object is the record being returned:
+#     object.programsAppliedFor.size().
+#   - A field a record does not have is an error, not null, as CEL makes a
+#     missing key in a record; the condition does not match. Test for it with
+#     has(): !has(item.assignedToId) for an unassigned task, and
+#     !has(object.escalatedAt) || object.escalatedAt == null for a field that
+#     can also hold null.
 #   - A binding that found no record is null; test the binding, not a field
 #     through it: reviewTask != null.
 #   - List membership is `x in list`; contains() is for strings.
@@ -161,6 +172,7 @@ behavioral_contract_steps:
     - set
     - emit
     - call
+    - fail            # fail: {status, code, message} — stop the action or reaction with an error
     - evaluate
     - if
     - match

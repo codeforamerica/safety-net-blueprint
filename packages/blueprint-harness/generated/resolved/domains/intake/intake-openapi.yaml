@@ -1235,7 +1235,7 @@ components:
             programCount:
               type: integer
               readOnly: true
-              x-derived: this.programsAppliedFor.size()
+              x-derived: object.programsAppliedFor.size()
               description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string
@@ -1841,7 +1841,7 @@ components:
                 programCount:
                   type: integer
                   readOnly: true
-                  x-derived: this.programsAppliedFor.size()
+                  x-derived: object.programsAppliedFor.size()
                   description: How many programs this application covers, from programsAppliedFor.
               x-relationship:
                 type: fk

@@ -4,11 +4,17 @@
  * A metric's filter, an SLA type's conditions, and the `where:` of a context
  * binding or a `forEach` step used to be JSON Logic. They are CEL now, as
  * every other condition is (cel.js), so a JSON Logic expression in one is
- * refused, with the CEL to write instead. A `where:` of field-value equality
+ * refused, with the CEL to write instead: a filter reads each record as
+ * `item`, an SLA condition its record as `object`.
+ *
+ * JSON Logic reads a field the record doesn't have as null; CEL makes it an
+ * error, which a condition counts as no match. So where the answer would
+ * differ — a comparison to null, `!=`, `!` — the CEL tests for the field with
+ * `has()` first, and means what the JSON Logic did. A `where:` of field-value equality
  * pairs — `{ applicationId: $object.id }` — is not JSON Logic, and stays.
  */
 
-/** The SLA type conditions, each a CEL expression over the resource's fields. */
+/** The SLA type conditions, each a CEL expression over the record as `object`. */
 const SLA_CONDITIONS = ['autoAssignWhen', 'startWhen', 'pauseWhen', 'resumeWhen', 'completedWhen', 'resetWhen'];
 
 /** The parts of a metric that name a collection, each with its own filter. */
@@ -42,7 +48,7 @@ export function jsonLogicExpressions(doc) {
     (content.metrics ?? []).forEach((metric, i) => {
       for (const key of METRIC_SOURCES) {
         const filter = metric?.[key]?.filter;
-        if (isJsonLogic(filter)) found.push({ at: `/metrics/${i}/${key}/filter`, expression: filter, name: (path) => path });
+        if (isJsonLogic(filter)) found.push({ at: `/metrics/${i}/${key}/filter`, expression: filter, name: (path) => `item.${path}` });
       }
     });
   }
@@ -50,7 +56,7 @@ export function jsonLogicExpressions(doc) {
   if (doc.type === 'sla-types') {
     (content.slaTypes ?? []).forEach((slaType, i) => {
       for (const key of SLA_CONDITIONS) {
-        if (isJsonLogic(slaType?.[key])) found.push({ at: `/slaTypes/${i}/${key}`, expression: slaType[key], name: (path) => path });
+        if (isJsonLogic(slaType?.[key])) found.push({ at: `/slaTypes/${i}/${key}`, expression: slaType[key], name: (path) => `object.${path}` });
       }
     });
   }
@@ -72,7 +78,9 @@ export function jsonLogicExpressions(doc) {
   const errors = found.map(({ at, expression, name }) => {
     const translation = { substring: false };
     const cel = toCel(expression, name, translation);
-    const where = at.endsWith('/where') ? ' In a where:, `item` is the candidate record.' : '';
+    const where = at.endsWith('/where') ? ' In a where:, `item` is the candidate record.'
+      : at.endsWith('/filter') ? ' In a filter, `item` is each record counted.'
+        : ' In an SLA condition, `object` is the record.';
     const contains = translation.substring ? ' Where `in` tests a string for a substring, write `text.contains(part)`.' : '';
     return {
       rule: 'json-logic-expression',
@@ -147,12 +155,14 @@ function aliasesIn(content) {
 
 /**
  * A JSON Logic expression as CEL, or null when it uses an operator with no
- * plain counterpart.
+ * plain counterpart. A field JSON Logic would read as null when it's missing
+ * is tested with `has()` where that changes the answer.
  *
- *   { "==": [{ var: "type" }, "workflow.task.created"] }  → type == "workflow.task.created"
- *   { in: [{ var: "status" }, ["a", "b"]] }                → status in ["a", "b"]
+ *   { "==": [{ var: "type" }, "workflow.task.created"] }  → item.type == "workflow.task.created"
+ *   { in: [{ var: "status" }, ["a", "b"]] }                → item.status in ["a", "b"]
+ *   { "==": [{ var: "assignedToId" }, null] }              → !has(item.assignedToId) || item.assignedToId == null
  *   { some: [{ var: "slaInfo" }, { "==": [{ var: "status" }, "breached"] }] }
- *                                                          → slaInfo.exists(x, x.status == "breached")
+ *                                                          → item.slaInfo.exists(x, x.status == "breached")
  *
  * @param {*} node
  * @param {(path: string) => string} name - The CEL for a `var` path
@@ -176,8 +186,11 @@ function toCel(node, name, translation, depth = 0) {
   const args = Array.isArray(node[op]) ? node[op] : [node[op]];
   const operand = (arg) => {
     const cel = toCel(arg, name, translation, depth);
-    // Grouped where CEL would bind it differently.
-    return cel !== null && arg && typeof arg === 'object' && !Array.isArray(arg) && ['and', 'or', 'if'].includes(Object.keys(arg)[0]) ? `(${cel})` : cel;
+    // Grouped where CEL would bind it differently: an and, an or, an if, or
+    // a comparison that tests for its field first.
+    const grouped = arg && typeof arg === 'object' && !Array.isArray(arg)
+      && (['and', 'or', 'if'].includes(Object.keys(arg)[0]) || /\|\||&&/.test(cel ?? ''));
+    return cel !== null && grouped ? `(${cel})` : cel;
   };
   const all = (list) => {
     const out = list.map(operand);
@@ -185,15 +198,30 @@ function toCel(node, name, translation, depth = 0) {
   };
 
   if (op === 'var') return typeof args[0] === 'string' ? name(args[0]) : null;
+  // A field, which has() can test: a variable's field, item.assignedToId.
+  const field = (arg) => {
+    const cel = arg && typeof arg === 'object' && 'var' in arg ? operand(arg) : null;
+    return cel && /^\w+(\.\w+)+$/.test(cel) ? cel : null;
+  };
   if (Object.hasOwn(COMPARISONS, op) && args.length === 2) {
     const [a, b] = all(args) ?? [];
-    return a === undefined ? null : `${a} ${COMPARISONS[op]} ${b}`;
+    if (a === undefined) return null;
+    const compared = `${a} ${COMPARISONS[op]} ${b}`;
+    // Missing reads as null in JSON Logic: equal to null, and unequal to anything else.
+    const missing = field(args[0]) ?? field(args[1]);
+    const toNull = args[0] === null || args[1] === null;
+    if (missing && COMPARISONS[op] === '==' && toNull) return `!has(${missing}) || ${compared}`;
+    if (missing && COMPARISONS[op] === '!=' && toNull) return `has(${missing}) && ${compared}`;
+    if (missing && COMPARISONS[op] === '!=') return `!has(${missing}) || ${compared}`;
+    return compared;
   }
   if (op === 'and' || op === 'or') {
     const parts = all(args);
     return parts && parts.join(op === 'and' ? ' && ' : ' || ');
   }
   if ((op === '!' || op === 'not') && args.length === 1) {
+    const missing = field(args[0]);
+    if (missing) return `!has(${missing}) || !${missing}`;
     const inner = operand(args[0]);
     return inner === null ? null : (/^[\w.]+$/.test(inner) ? `!${inner}` : `!(${inner})`);
   }

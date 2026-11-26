@@ -122,6 +122,10 @@ Run as a server (`blueprint-mock`), when the scheme is OpenID Connect, the mock 
 - `409` — the resource is in the wrong state for this transition, or a guard condition failed
 - `422` — the request body failed schema validation
 
+## When an action's call fails
+
+An action, or a reaction to an event, and the calls it makes to its own domain's records are one transaction. When any call fails, the mock puts back every record of the domain they changed and sends none of their events; the action answers with the call's error, and a failed reaction is logged. A call to another domain is done once it succeeds, as it would be in another service. The [behavioral contract DSL](../architecture/cross-cutting/behavioral-contract-dsl.md) says how a contract handles a failure with `catch`.
+
 ## Domain events
 
 ### Watching the event stream

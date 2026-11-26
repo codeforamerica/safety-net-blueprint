@@ -15,8 +15,9 @@ import { deliverEvent } from './routing.js';
 import { arrivedThrough } from './routed-events.js';
 import { theSystem } from './auth-context.js';
 import { busyWith, takeTurn } from './record-turns.js';
-import { executeTransition, performerFor, makePathCalls, putBack, checkGuardClauses } from './state-machine-runner.js';
-import { applyStepsWithCalls, whenReady, caughtEntities } from './state-machine-engine.js';
+import { executeTransition, performerFor, makePathCalls, checkGuardClauses } from './state-machine-runner.js';
+import { openTransaction } from './transaction.js';
+import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
 import { storageName, collectionNamed, buildInlineRules } from './collection-utils.js';
@@ -274,7 +275,14 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
 
   // One subscription handling one event. What it returns settles when the
   // reaction, and every call it makes, is done.
+  //
+  // The reaction and the calls it makes to its own domain are one
+  // transaction (transaction.js): when it fails, every record of the domain
+  // they changed is put back, and none of their events is sent.
   function react(smEntry, entry, event, relatedRecord = null) {
+    let transaction = null;
+    let stepsDid = null;
+    let failed = false;
     try {
       const now = new Date().toISOString();
       const caller = theSystem();
@@ -359,10 +367,11 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         if (refused) return;
       }
 
+      transaction = openTransaction({ store, instance, domain: smEntry.domain, cause: event.id });
       // A call to an operation is made where it stands, as the system, its
       // events caused by this one. One that fails ends the reaction as an
-      // action's does: its catch: runs instead of the steps, and with
-      // none, nothing it did is saved.
+      // action's does: what the steps did is undone, its catch: runs
+      // instead, and with none, nothing it did is saved.
       const perform = performerFor({
         callerId: caller.id, callerRoles: caller.roles, timestamp: now,
         traceparent: event.traceparent ?? null, causationid: event.id ?? null, store, instance, stepCalls,
@@ -373,7 +382,12 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         Object.assign(resource, before);
       };
       const unhandled = ({ step, outcome }) => {
+        failed = true;
         restore();
+        if (step.fail !== undefined) {
+          console.error(`Machine onEvent "${entry.type}": failed with ${outcome.status}: ${outcome.body?.message ?? ''} — nothing saved`);
+          return;
+        }
         const named = typeof step.call === 'string' ? step.call : step.call.operationId;
         // The fields at fault, when the API named them: "invalid data" alone
         // leaves whoever reads the log to reproduce the call to find out.
@@ -381,7 +395,10 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         console.error(`Machine onEvent "${entry.type}": call ${named} failed with ${outcome.status}: ${outcome.body?.message ?? ''}${why ? ` (${why})` : ''} — nothing saved`);
       };
 
+      stepsDid = openTransaction({ store, instance, domain: smEntry.domain, cause: event.id });
       const reaction = whenReady(applyStepsWithCalls(entry.steps ?? [], resource, context, store, perform), (applied) => {
+        if (applied.failed?.step.catch) stepsDid.rollback();
+        else stepsDid.commit();
         if (!applied.failed) return finish(applied, context, entry.transition?.to);
         const { step, outcome } = applied.failed;
         if (!step.catch) return unhandled(applied.failed);
@@ -402,9 +419,15 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       // Its calls by path run once the record is saved and let go, so an
       // action they call on it reads it as the reaction left it.
       const done = whenReady(reaction, (saved) => (typeof saved === 'function' ? saved() : undefined));
+      const settle = () => (failed ? transaction.rollback() : transaction.commit());
       if (done && typeof done.then === 'function') {
-        done.catch((e) => console.error(`Machine onEvent "${entry.type}" failed:`, e.message));
+        return done.then(settle, (e) => {
+          stepsDid.rollback();
+          transaction.rollback();
+          console.error(`Machine onEvent "${entry.type}" failed:`, e.message);
+        });
       }
+      settle();
       return done;
       // What a reaction's steps left to do, once they have run. Saves the
       // record, and returns what's left after: its calls by path, then its
@@ -461,7 +484,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               ? await makePathCalls(calls, { stepCalls, store, instance, now, traceparent: event.traceparent ?? null, causationid: event.id ?? null })
               : await withoutStepCalls(calls);
             if (failure) {
-              if (saved) putBack(store, targetCollection, originalSnapshot, saved);
+              failed = true;
               const why = (failure.details ?? []).map((d) => `${d.field}: ${d.message}`).join('; ');
               console.error(`Machine onEvent "${entry.type}": call ${failure.call.method} ${failure.call.path} failed with ${failure.status}: ${failure.message ?? ''}${why ? ` (${why})` : ''} — nothing saved`);
               return;
@@ -530,6 +553,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         return null;
       }
     } catch (e) {
+      stepsDid?.rollback();
+      transaction?.rollback();
       console.error(`Machine onEvent "${entry.type}" failed:`, e.message);
     }
   }

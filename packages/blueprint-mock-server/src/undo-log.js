@@ -7,33 +7,44 @@
  * are restored; nothing else is read or copied.
  *
  * An editable composition's patch opens one, so that if any of its changes
- * is refused, the ones already made are undone and nothing is saved.
+ * is refused, the ones already made are undone and nothing is saved. An
+ * action or a reaction opens one for its domain's records (transaction.js).
  *
- * It wraps the store's write methods in place, since every route holds the
- * same store. Writes that other requests make while it's open would be logged
- * too, so a patch runs its changes back to back, without waiting on anything
- * outside the mock in between.
+ * The store's write methods are wrapped in place once, since every route
+ * holds the same store, and each write is recorded in every log open at the
+ * time. So logs can be open together and close in any order, and a log
+ * opened inside another — an action called from an action — has its
+ * rollback recorded in the outer one too. Writes that other requests make
+ * while a log is open are recorded as well, so whatever opens one runs its
+ * changes back to back, without waiting on anything outside the mock in
+ * between.
  */
 
 const WRITES = ['create', 'update', 'deleteResource', 'insertResource', 'append'];
 
-/**
- * Open an undo log on a store.
- *
- * @param {object} store
- * @returns {{ commit: () => void, rollback: () => void }}
- */
-export function openUndoLog(store) {
+/** The logs open on each store. */
+const openLogs = new WeakMap();
+
+/** Wrap a store's write methods, once, so each write is recorded in every open log. */
+function watch(store) {
+  if (openLogs.has(store)) return openLogs.get(store);
+  const logs = new Set();
+  openLogs.set(store, logs);
   const original = Object.fromEntries(WRITES.map((name) => [name, store[name]]));
-  const log = [];
-  const remember = (collection, id) => {
-    if (id !== undefined && id !== null) log.push({ collection, id, record: store.findById(collection, id) });
+  const remember = (collection, id, record) => {
+    if (id === undefined || id === null) return;
+    for (const log of logs) {
+      if (log.only(collection, record)) log.entries.push({ collection, id, record: original.findById.call(store, collection, id) });
+    }
   };
+  original.findById = store.findById;
 
   store.create = (collection, data) => {
     // A create names a record that didn't exist; the id may be the store's.
     const created = original.create.call(store, collection, data);
-    log.push({ collection, id: created.id, record: null });
+    for (const log of logs) {
+      if (log.only(collection, created)) log.entries.push({ collection, id: created.id, record: null });
+    }
     return created;
   };
   store.update = (collection, id, updates) => {
@@ -45,30 +56,39 @@ export function openUndoLog(store) {
     return original.deleteResource.call(store, collection, id);
   };
   store.insertResource = (collection, resource) => {
-    remember(collection, resource?.id);
+    remember(collection, resource?.id, resource);
     return original.insertResource.call(store, collection, resource);
   };
   if (typeof original.append === 'function') {
     store.append = (collection, record) => {
-      remember(collection, record?.id);
+      remember(collection, record?.id, record);
       return original.append.call(store, collection, record);
     };
   }
+  return logs;
+}
 
-  const close = () => {
-    for (const name of WRITES) {
-      if (original[name] === undefined) delete store[name];
-      else store[name] = original[name];
-    }
-  };
+/**
+ * Open an undo log on a store.
+ *
+ * @param {object} store
+ * @param {{ only?: (collection: string, record?: object) => boolean }} [options] -
+ *   The writes to record, by collection, and by the record written when the
+ *   write carries one; every write when omitted
+ * @returns {{ commit: () => void, rollback: () => void }}
+ */
+export function openUndoLog(store, { only = () => true } = {}) {
+  const logs = watch(store);
+  const log = { only, entries: [] };
+  logs.add(log);
 
   return {
     commit() {
-      close();
+      logs.delete(log);
     },
     rollback() {
-      close();
-      for (const { collection, id, record } of log.reverse()) {
+      logs.delete(log);
+      for (const { collection, id, record } of log.entries.reverse()) {
         store.deleteResource(collection, id);
         if (record) store.insertResource(collection, structuredClone(record));
       }

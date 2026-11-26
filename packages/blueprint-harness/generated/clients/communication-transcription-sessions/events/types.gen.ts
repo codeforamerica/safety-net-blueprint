@@ -340,7 +340,7 @@ export type CommunicationTranscriptionSessionConnectedEvent = {
     type: 'communication.transcription_session.connected';
     data: {
         /**
-         * The session's transcript.
+         * The session's transcript. The transcript refuses an event that names another.
          */
         transcriptId: string;
         /**
@@ -740,7 +740,7 @@ export type CommunicationTranscriptionSessionLineFinishedEvent = {
     type: 'communication.transcription_session.line_finished';
     data: {
         /**
-         * The session's transcript.
+         * The session's transcript. The transcript refuses an event that names another.
          */
         transcriptId: string;
         /**

@@ -13,6 +13,7 @@ import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { playsAnyOf, theSystem } from './auth-context.js';
 import { whenFree } from './record-turns.js';
 import { whatsWrong } from './validator.js';
+import { openTransaction } from './transaction.js';
 
 /**
  * Check guard clauses, as an action's or a governed resource's create.
@@ -116,12 +117,17 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {{ schema: Object, follow: Function }|null} [options.responseSchema] - The 200 response schema
  *   the action's endpoint declares, which an action's `response.payload` is fitted to
  * Steps run in order; a call to an operation is made as it is reached. When
- * one fails, its `catch:` runs instead of the action's steps and names the
- * state the action ends in, and the action answers with the call's failure
- * and the record in `details`. With no `catch:`, the action fails and
- * nothing is saved. A call by method and path is made once the record is
- * saved, as the system; one that fails puts the record back and fails the
- * action, with the call's status (makePathCalls).
+ * one fails, what the steps did to the domain's records is undone, its
+ * `catch:` runs instead and names the state the action ends in, and the
+ * action answers with the call's failure and the record in `details`. With
+ * no `catch:`, the action fails. A call by method and path is made once the
+ * record is saved, as the system; one that fails fails the action, with the
+ * call's status (makePathCalls).
+ *
+ * The action and the calls it makes to its own domain are one transaction
+ * (transaction.js): when the action fails, every record of the domain they
+ * changed is put back, and none of their events is sent. A call to another
+ * domain is done once it succeeds.
  *
  * It waits for any action or reaction already changing the record, and holds
  * the record until it's saved (record-turns.js); what it does after — its
@@ -134,11 +140,24 @@ export async function executeTransition(options) {
   const { instance, resourceName, resourceId } = options;
   let letGo = whenFree(instance, resourceName, resourceId);
   if (typeof letGo.then === 'function') letGo = await letGo;
+  // The id of the first event this action sends, chosen now so a call it
+  // makes can name it as the cause of the call's own events.
+  const actionEventId = crypto.randomUUID();
+  const transaction = openTransaction({ store: options.store, instance, domain: options.stateMachine.domain, cause: actionEventId });
+  let outcome;
   try {
-    return await transitionRecord(options, letGo);
+    outcome = await transitionRecord({ ...options, actionEventId }, letGo);
+  } catch (e) {
+    transaction.rollback();
+    throw e;
   } finally {
     letGo();
   }
+  // A failure catch: handled ends where it said, and is kept.
+  const { caught, ...result } = outcome;
+  if (result.success === false && !caught) transaction.rollback();
+  else transaction.commit();
+  return result;
 }
 
 async function transitionRecord({
@@ -158,7 +177,8 @@ async function transitionRecord({
   store,
   instance,
   stepCalls = null,
-  responseSchema = null
+  responseSchema = null,
+  actionEventId,
 }, letGo) {
   const timestamp = now || new Date().toISOString();
 
@@ -209,9 +229,6 @@ async function transitionRecord({
   const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
   if (refused) return { success: false, ...refused };
 
-  // The id of the first event this action sends, chosen now so a call it
-  // makes can name it as the cause of the call's own events.
-  const actionEventId = crypto.randomUUID();
   // A call to an operation that requires an Idempotency-Key is made with this
   // record's id as the key: accepting a suggestion calls once, and only a call
   // that succeeds is kept under the key.
@@ -226,12 +243,23 @@ async function transitionRecord({
     return copy;
   };
   let updated = fresh();
-  let applied = await applyStepsInOrder(steps, updated, context, store, perform);
+  // What the steps' calls do to the domain is undone if one fails, so a
+  // catch: starts from the records as they were before the steps.
+  const stepsDid = openTransaction({ store, instance, domain: stateMachine.domain, cause: actionEventId });
+  let applied;
+  try {
+    applied = await applyStepsInOrder(steps, updated, context, store, perform);
+  } catch (e) {
+    stepsDid.rollback();
+    throw e;
+  }
   let target = transitionTo;
   let failure = null;
 
   // A call that failed: its catch: runs instead of the action's steps, and
   // says where the action ends; with none, the action fails and nothing is saved.
+  if (applied.failed?.step.catch) stepsDid.rollback();
+  else stepsDid.commit();
   if (applied.failed) {
     const { step, outcome } = applied.failed;
     if (!step.catch) return refusedBy(outcome);
@@ -281,16 +309,15 @@ async function transitionRecord({
   // Calls that name a record — a nested create, an update, another action —
   // mean what the API's route at that method and path means (step-calls.js).
   // Made once the record is saved, so an action called on it reads it as this
-  // one left it; one that fails puts the record back, and the action fails
-  // with it: nothing it did is kept, and none of its events are sent.
+  // one left it; one that fails fails the action, and its transaction puts
+  // back what it and the calls before it did.
   if (stepCalls) {
     const failed = await makePathCalls([
       ...pendingOperations.map(({ path, body }) => ({ method: 'POST', path, body })),
       ...(procedures.pendingOperations ?? []).map(({ path, body }) => ({ method: 'POST', path, body })),
       ...pendingAppends.map(({ path, body }) => ({ method: 'PATCH', path, body })),
-    ], { stepCalls, store, instance, now: timestamp, traceparent, causationid });
+    ], { stepCalls, store, instance, now: timestamp, traceparent, causationid: actionEventId });
     if (failed) {
-      putBack(store, resourceName, resource, result);
       return { success: false, status: failed.status, code: failed.code, error: failed.message, details: failed.details };
     }
   }
@@ -330,6 +357,7 @@ async function transitionRecord({
   // and answers with the call's failure, the record as it now is in details.
   if (failure) {
     return {
+      caught: true,
       success: false,
       status: failure.status,
       code: failure.body?.code,
@@ -406,28 +434,6 @@ export async function makePathCalls(calls, { stepCalls, store, instance, now, tr
     }
   }
   return null;
-}
-
-/**
- * Put a record back as it was before an action or reaction changed it, for one
- * whose call failed after it was saved: each field it changed, unless
- * something has changed that field since.
- *
- * @param {Object} store
- * @param {string} collection
- * @param {Object} before - The record as it was found
- * @param {Object|null} saved - The record as the action or reaction saved it
- */
-export function putBack(store, collection, before, saved) {
-  const current = saved ? store.findById(collection, before.id) : null;
-  if (!current) return;
-  const restored = { ...current };
-  for (const key of new Set([...Object.keys(before), ...Object.keys(saved)])) {
-    if (JSON.stringify(current[key]) !== JSON.stringify(saved[key])) continue;
-    if (key in before) restored[key] = before[key];
-    else delete restored[key];
-  }
-  store.insertResource(collection, restored);
 }
 
 /** An action refused because a call it made failed with nothing to handle it. */
