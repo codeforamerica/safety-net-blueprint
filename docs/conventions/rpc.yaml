@@ -172,6 +172,7 @@ behavioral_contract_steps:
     - set
     - emit
     - call
+    - fail            # fail: {status, code, message} — stop the action or reaction with an error
     - evaluate
     - if
     - match

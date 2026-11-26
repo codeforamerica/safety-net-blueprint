@@ -64,6 +64,10 @@ export type Transcript = {
      */
     readonly id: string;
     /**
+     * The profile it was started under, which says the transcription service. It does not change.
+     */
+    readonly profileId?: string;
+    /**
      * `recording` while the conversation is on the record, `paused`
      * while it is off it, and `closed` once it has ended.
      *
@@ -109,7 +113,7 @@ export type Transcript = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -247,6 +251,10 @@ export type TranscriptList = {
          */
         readonly id: string;
         /**
+         * The profile it was started under, which says the transcription service. It does not change.
+         */
+        readonly profileId?: string;
+        /**
          * `recording` while the conversation is on the record, `paused`
          * while it is off it, and `closed` once it has ended.
          *
@@ -292,7 +300,7 @@ export type TranscriptList = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -680,7 +688,7 @@ export type TranscriptionProfileWritable = {
      * lines a person types.
      *
      */
-    provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The languages the conversation may be in. One fixes the language;
      * several let the service tell which is being spoken among them.
@@ -719,7 +727,7 @@ export type TranscriptionProfile = {
      * lines a person types.
      *
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The languages the conversation may be in. One fixes the language;
      * several let the service tell which is being spoken among them.
@@ -773,7 +781,7 @@ export type TranscriptionProfileCreate = {
      * lines a person types.
      *
      */
-    provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The languages the conversation may be in. One fixes the language;
      * several let the service tell which is being spoken among them.
@@ -816,7 +824,7 @@ export type TranscriptionProfileUpdate = {
      * lines a person types.
      *
      */
-    provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The languages the conversation may be in. One fixes the language;
      * several let the service tell which is being spoken among them.
@@ -858,7 +866,7 @@ export type TranscriptionProfileList = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -921,83 +929,6 @@ export type AtRequest = {
 };
 
 /**
- * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
- *
- */
-export type GetConnectionRequest = {
-    /**
-     * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
-     *
-     */
-    audio: {
-        /**
-         * How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
-         *
-         */
-        encoding: 'linear16' | 'flac' | 'mulaw' | 'alaw' | 'amr' | 'amr_wb' | 'ogg_opus' | 'webm_opus' | 'speex_with_header_byte' | 'mp3';
-        /**
-         * Samples per second, e.g. 16000.
-         */
-        sampleRateHertz: number;
-        /**
-         * Channels in the audio. One means the service tells speakers apart by voice; more, that each speaker is on a channel of their own, as a phone call recorded with each side on its own channel is.
-         *
-         */
-        channelCount: number;
-    };
-    /**
-     * The protocols the software can connect over. The adapter picks one of them.
-     */
-    protocols: Array<'websocket' | 'webrtc'>;
-};
-
-/**
- * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
- *
- */
-export type StreamConnection = {
-    /**
-     * The transcription service, as the transcript's profile names it.
-     */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
-    /**
-     * How the software connects to the service.
-     */
-    protocol: 'websocket' | 'webrtc';
-    /**
-     * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
-     *
-     */
-    subprotocol?: string;
-    /**
-     * Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.
-     *
-     */
-    url: string;
-    /**
-     * The short-lived credential to present on connecting. Absent when the URL carries it.
-     *
-     */
-    accessToken?: string;
-    /**
-     * The kind of credential accessToken is, as OAuth names it.
-     */
-    tokenType?: string;
-    /**
-     * Seconds from now until the credential can no longer start a connection. Asking again before then is how a credential is renewed.
-     *
-     */
-    expiresIn: number;
-    /**
-     * Settings the server chose that the software sends on connecting, in its service's own names — the model and language, say — for a service that takes them then rather than when the credential is issued.
-     *
-     */
-    connectionParameters?: {
-        [key: string]: unknown;
-    };
-};
-
-/**
  * A transcript, including server-managed fields.
  */
 export type TranscriptWritable2 = {
@@ -1048,7 +979,7 @@ export type TranscriptWritable2 = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -1121,7 +1052,7 @@ export type TranscriptListWritable = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -1287,7 +1218,7 @@ export type TranscriptionProfileWritable2 = {
      * lines a person types.
      *
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The languages the conversation may be in. One fixes the language;
      * several let the service tell which is being spoken among them.
@@ -1324,7 +1255,7 @@ export type TranscriptionProfileListWritable = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -1593,6 +1524,10 @@ export type ListTranscriptsResponses = {
              */
             readonly id: string;
             /**
+             * The profile it was started under, which says the transcription service. It does not change.
+             */
+            readonly profileId?: string;
+            /**
              * `recording` while the conversation is on the record, `paused`
              * while it is off it, and `closed` once it has ended.
              *
@@ -1638,7 +1573,7 @@ export type ListTranscriptsResponses = {
                  * lines a person types.
                  *
                  */
-                provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+                provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
                 /**
                  * The languages the conversation may be in. One fixes the language;
                  * several let the service tell which is being spoken among them.
@@ -1858,6 +1793,10 @@ export type CreateTranscriptResponses = {
          */
         readonly id: string;
         /**
+         * The profile it was started under, which says the transcription service. It does not change.
+         */
+        readonly profileId?: string;
+        /**
          * `recording` while the conversation is on the record, `paused`
          * while it is off it, and `closed` once it has ended.
          *
@@ -1903,7 +1842,7 @@ export type CreateTranscriptResponses = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -2116,6 +2055,10 @@ export type GetTranscriptResponses = {
          */
         readonly id: string;
         /**
+         * The profile it was started under, which says the transcription service. It does not change.
+         */
+        readonly profileId?: string;
+        /**
          * `recording` while the conversation is on the record, `paused`
          * while it is off it, and `closed` once it has ended.
          *
@@ -2161,7 +2104,7 @@ export type GetTranscriptResponses = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -2354,6 +2297,10 @@ export type UpdateTranscriptResponses = {
          */
         readonly id: string;
         /**
+         * The profile it was started under, which says the transcription service. It does not change.
+         */
+        readonly profileId?: string;
+        /**
          * `recording` while the conversation is on the record, `paused`
          * while it is off it, and `closed` once it has ended.
          *
@@ -2399,7 +2346,7 @@ export type UpdateTranscriptResponses = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -3529,7 +3476,7 @@ export type ListTranscriptionProfilesResponses = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -3604,7 +3551,7 @@ export type CreateTranscriptionProfileData = {
          * lines a person types.
          *
          */
-        provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -3736,7 +3683,7 @@ export type CreateTranscriptionProfileResponses = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -3852,7 +3799,7 @@ export type GetTranscriptionProfileResponses = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -3910,7 +3857,7 @@ export type UpdateTranscriptionProfileData = {
          * lines a person types.
          *
          */
-        provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider?: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -4042,7 +3989,7 @@ export type UpdateTranscriptionProfileResponses = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -4252,6 +4199,10 @@ export type PauseTranscriptResponses = {
          */
         readonly id: string;
         /**
+         * The profile it was started under, which says the transcription service. It does not change.
+         */
+        readonly profileId?: string;
+        /**
          * `recording` while the conversation is on the record, `paused`
          * while it is off it, and `closed` once it has ended.
          *
@@ -4297,7 +4248,7 @@ export type PauseTranscriptResponses = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -4508,6 +4459,10 @@ export type ResumeTranscriptResponses = {
          */
         readonly id: string;
         /**
+         * The profile it was started under, which says the transcription service. It does not change.
+         */
+        readonly profileId?: string;
+        /**
          * `recording` while the conversation is on the record, `paused`
          * while it is off it, and `closed` once it has ended.
          *
@@ -4553,7 +4508,7 @@ export type ResumeTranscriptResponses = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -4594,216 +4549,6 @@ export type ResumeTranscriptResponses = {
 };
 
 export type ResumeTranscriptResponse = ResumeTranscriptResponses[keyof ResumeTranscriptResponses];
-
-export type GetConnectionTranscriptData = {
-    /**
-     * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
-     *
-     */
-    body: {
-        /**
-         * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
-         *
-         */
-        audio: {
-            /**
-             * How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
-             *
-             */
-            encoding: 'linear16' | 'flac' | 'mulaw' | 'alaw' | 'amr' | 'amr_wb' | 'ogg_opus' | 'webm_opus' | 'speex_with_header_byte' | 'mp3';
-            /**
-             * Samples per second, e.g. 16000.
-             */
-            sampleRateHertz: number;
-            /**
-             * Channels in the audio. One means the service tells speakers apart by voice; more, that each speaker is on a channel of their own, as a phone call recorded with each side on its own channel is.
-             *
-             */
-            channelCount: number;
-        };
-        /**
-         * The protocols the software can connect over. The adapter picks one of them.
-         */
-        protocols: Array<'websocket' | 'webrtc'>;
-    };
-    path: {
-        /**
-         * Unique identifier of the transcript.
-         */
-        transcriptId: string;
-    };
-    query?: never;
-    url: '/transcripts/{transcriptId}/get-connection';
-};
-
-export type GetConnectionTranscriptErrors = {
-    /**
-     * The request is malformed or contains invalid parameters.
-     */
-    400: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * The authenticated user does not have permission to perform this action.
-     */
-    403: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * The requested resource was not found.
-     */
-    404: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * The record is in a state this action can't start from, or one of its guards isn't met.
-     */
-    409: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * The request was well-formed but contained semantic errors.
-     */
-    422: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * An unexpected error occurred on the server.
-     */
-    500: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type GetConnectionTranscriptError = GetConnectionTranscriptErrors[keyof GetConnectionTranscriptErrors];
-
-export type GetConnectionTranscriptResponses = {
-    /**
-     * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
-     *
-     */
-    200: {
-        /**
-         * The transcription service, as the transcript's profile names it.
-         */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
-        /**
-         * How the software connects to the service.
-         */
-        protocol: 'websocket' | 'webrtc';
-        /**
-         * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
-         *
-         */
-        subprotocol?: string;
-        /**
-         * Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.
-         *
-         */
-        url: string;
-        /**
-         * The short-lived credential to present on connecting. Absent when the URL carries it.
-         *
-         */
-        accessToken?: string;
-        /**
-         * The kind of credential accessToken is, as OAuth names it.
-         */
-        tokenType?: string;
-        /**
-         * Seconds from now until the credential can no longer start a connection. Asking again before then is how a credential is renewed.
-         *
-         */
-        expiresIn: number;
-        /**
-         * Settings the server chose that the software sends on connecting, in its service's own names — the model and language, say — for a service that takes them then rather than when the credential is issued.
-         *
-         */
-        connectionParameters?: {
-            [key: string]: unknown;
-        };
-    };
-};
-
-export type GetConnectionTranscriptResponse = GetConnectionTranscriptResponses[keyof GetConnectionTranscriptResponses];
 
 export type CloseTranscriptData = {
     body: {
@@ -4974,6 +4719,10 @@ export type CloseTranscriptResponses = {
          */
         readonly id: string;
         /**
+         * The profile it was started under, which says the transcription service. It does not change.
+         */
+        readonly profileId?: string;
+        /**
          * `recording` while the conversation is on the record, `paused`
          * while it is off it, and `closed` once it has ended.
          *
@@ -5019,7 +4768,7 @@ export type CloseTranscriptResponses = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.

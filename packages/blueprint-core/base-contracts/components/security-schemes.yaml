@@ -1,0 +1,11 @@
+# How callers authenticate, shared by every API that requires it: an API
+# names a scheme in its components' securitySchemes with a $ref here, and an
+# operation requires it with `security`. See
+# docs/architecture/cross-cutting/identity-access.md.
+bearerAuth:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: >
+    The signed-in caller's token, a JWT from the state's identity provider.
+    An operation that requires it answers 401 without a valid one.

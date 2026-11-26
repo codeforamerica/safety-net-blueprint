@@ -3,8 +3,8 @@
  * while an action on its record waits on a call runs after the action, and
  * reads the record as the action left it. Shown with the transcription
  * session in a mock client and its transcript on a mock server: the
- * session's close calls the server's closeTranscript, and the server's
- * transcript closed event reaches the client before that call has answered.
+ * session's pause calls the server's pauseTranscript, and the server's
+ * transcript paused event reaches the client before that call has answered.
  */
 
 import { test, before, after } from 'node:test';
@@ -17,18 +17,17 @@ const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/ge
 
 let server;
 let client;
-// The server's answer to closeTranscript, held until the test lets it go.
-let holdClose = null;
+// The server's answer to pauseTranscript, held until the test lets it go.
+let holdPause = null;
+// The session adapter's streaming part, answering at once as it does.
+const adapter = ['startStream', 'pauseStream', 'stopStream']
+  .map((operation) => ({ operation, handler: async () => Response.json({ metadata: {} }, { status: 202 }) }));
 before(async () => {
   const { log, warn } = console;
   console.log = () => {}; console.warn = () => {};
   try {
     server = await createMockServer({
       contracts,
-      routing: [{
-        operation: 'issueTranscriptConnection',
-        handler: async (request) => Response.json({ metadata: (await request.json()).metadata, provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://transcribe.example', expiresIn: 300 }),
-      }],
     });
     client = await createMockClient({
       contracts,
@@ -36,11 +35,11 @@ before(async () => {
         domain: '*',
         handler: async (request) => {
           const answer = await server.fetch(request);
-          if (holdClose && request.method === 'POST' && /\/transcripts\/[^/]+\/close$/.test(new URL(request.url).pathname)) await holdClose;
+          if (holdPause && request.method === 'POST' && /\/transcripts\/[^/]+\/pause$/.test(new URL(request.url).pathname)) await holdPause;
           return answer;
         },
         except: [{ api: 'communication-transcription-sessions' }, { api: 'platform-events' }],
-      }],
+      }, ...adapter],
     });
   } finally { console.log = log; console.warn = warn; }
 });
@@ -57,28 +56,34 @@ test('a reaction arriving during an action on its record waits for it, and finds
   const profile = (await send(server, 'POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] })).body;
   const session = (await send(client, 'POST', '/communication/transcription-sessions', { profileId: profile.id, model: 'standard', client: 'test/1', startedAt: at })).body;
   const path = `/communication/transcription-sessions/${session.id}`;
-  assert.strictEqual((await send(client, 'POST', `${path}/get-connection`, { audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 }, protocols: ['websocket'] })).status, 200);
-  assert.strictEqual((await send(client, 'POST', `${path}/connect`, {})).status, 200);
-  assert.strictEqual((await send(client, 'POST', `${path}/stop`, { at })).status, 200);
-
-  let letClose;
-  holdClose = new Promise((resolve) => { letClose = resolve; });
-  const closing = send(client, 'POST', `${path}/close`, { at });
-  // The transcript is closed on the server, and its closed event reaches the
-  // client, while close waits for its answer.
+  assert.strictEqual((await send(client, 'POST', `${path}/start`, {})).status, 200);
   const { transcriptId } = (await send(client, 'GET', path)).body;
-  for (let i = 0; i < 100 && (await send(server, 'GET', `/communication/transcripts/${transcriptId}`)).body.status !== 'closed'; i++) {
+  // The adapter says it connected.
+  await send(client, 'POST', '/platform/events', {
+    specversion: '1.0', id: 'connected-1', source: '/communication', type: 'communication.transcription_session.connected',
+    subject: session.id, partitionkey: session.id, data: { transcriptId },
+  });
+  for (let i = 0; i < 100 && (await send(client, 'GET', path)).body.status !== 'connected'; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+
+  let letPause;
+  holdPause = new Promise((resolve) => { letPause = resolve; });
+  const pausing = send(client, 'POST', `${path}/pause`, { at });
+  // The transcript is paused on the server, and its paused event reaches the
+  // client, while pause waits for its answer.
+  for (let i = 0; i < 100 && (await send(server, 'GET', `/communication/transcripts/${transcriptId}`)).body.status !== 'paused'; i++) {
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   await new Promise((resolve) => setTimeout(resolve, 50));
-  assert.strictEqual((await send(client, 'GET', path)).body.status, 'stopping', 'the reaction waits for close');
-  letClose();
-  holdClose = null;
+  assert.strictEqual((await send(client, 'GET', path)).body.status, 'connected', 'the reaction waits for pause');
+  letPause();
+  holdPause = null;
 
-  assert.strictEqual((await closing).status, 200);
+  assert.strictEqual((await pausing).status, 200);
   await new Promise((resolve) => setTimeout(resolve, 20));
-  assert.strictEqual((await send(client, 'GET', path)).body.status, 'closed');
+  assert.strictEqual((await send(client, 'GET', path)).body.status, 'paused');
   const events = (await send(client, 'GET', '/platform/events?limit=100')).body.items
-    .filter((event) => event.subject === session.id && event.type.endsWith('.transcription_session.closed'));
-  assert.strictEqual(events.length, 1, 'closed is sent once');
+    .filter((event) => event.subject === session.id && event.type.endsWith('.transcription_session.paused'));
+  assert.strictEqual(events.length, 1, 'paused is sent once');
 });

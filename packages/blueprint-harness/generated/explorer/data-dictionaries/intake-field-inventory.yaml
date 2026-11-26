@@ -105,6 +105,7 @@ application.interviews[].links.application: { type: string }
 
 application.members[]: { type: list(ApplicationMember) }
 application.members[].id: { type: uuid }
+application.members[].applicationId: { type: uuid, relationship: Application }
 application.members[].firstName: { type: string }
 application.members[].lastName: { type: string }
 application.members[].dateOfBirth: { type: date }
@@ -186,6 +187,7 @@ application.details.application.slaInfo[].clockStartedAt: { type: datetime }
 application.details.application.slaInfo[].deadline: { type: datetime }
 application.details.application.members[]: { type: list(ApplicationMember) }
 application.details.application.members[].id: { type: uuid }
+application.details.application.members[].applicationId: { type: uuid, relationship: Application }
 application.details.application.members[].firstName: { type: string }
 application.details.application.members[].lastName: { type: string }
 application.details.application.members[].dateOfBirth: { type: date }

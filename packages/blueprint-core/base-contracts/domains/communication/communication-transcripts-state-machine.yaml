@@ -118,40 +118,6 @@ machines:
                   requestBody: {payload: {endedAt: $request.at}}
               - call: requestIdleCheck
               - emit: resumed
-      # The software streams audio straight to its transcription service; this
-      # gets it what it needs to, from the transcript audio adapter, which holds the
-      # service's secret. Asking again renews the credential.
-      - id: get-connection
-        description: Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
-        transition:
-          from: recording
-        schema:
-          request:
-            $ref: "#/$defs/GetConnectionRequest"
-        steps:
-          - call:
-              operationId: issueTranscriptConnection
-              requestBody:
-                payload:
-                  provider: $profile.provider
-                  model: $object.model
-                  languages: $profile.languages
-                  audio: $request.audio
-                  protocols: $request.protocols
-                  metadata: {transcriptId: $object.id}
-            bind: $connection
-        response:
-          schema:
-            $ref: "#/$defs/StreamConnection"
-          payload:
-            provider: $connection.provider
-            protocol: $connection.protocol
-            subprotocol: $connection.subprotocol
-            url: $connection.url
-            accessToken: $connection.accessToken
-            tokenType: $connection.tokenType
-            expiresIn: $connection.expiresIn
-            connectionParameters: $connection.connectionParameters
       - id: close
         description: End the transcript, at the time the client says. A pause still open ends then too.
         transition:
@@ -193,6 +159,60 @@ machines:
               - call:
                   PATCH: communication/transcripts/$this.data.transcriptId
                   requestBody: {payload: {lastActivityAt: $this.data.endedAt}}
+      # A session's adapter publishes the lines it hears, and the stretches
+      # it heard nothing, as the session's events; the transcript keeps them.
+      # The Idempotency-Key is the session and the line's key, so a line
+      # published again after a network error is added once. One the
+      # transcript doesn't accept, closed say, isn't kept. The entry's created
+      # event names the line_finished event as its cause (causationid), which
+      # is how a consumer finds the entry a line became. The transcript is
+      # the session's own, read from the session the event is about. An
+      # event whose data names another transcript is refused, not followed
+      # or corrected: whichever id is wrong, the line may be someone else's.
+      - type: communication.transcription_session.line_finished
+        description: Keep a finished line in the session's transcript.
+        context:
+          - session: {from: communication/transcription-sessions, where: {id: $this.subject}}
+        steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail: {status: 409, code: CONFLICT, message: "The line names a transcript that isn't its session's."}
+          - call:
+              operationId: addTranscriptEntry
+              parameters:
+                - {name: transcriptId, in: path, value: $session.transcriptId}
+                - {name: Idempotency-Key, in: header, value: "{$this.subject}.line.{$this.data.key}"}
+              requestBody:
+                payload:
+                  kind: line
+                  startedAt: $this.data.startedAt
+                  endedAt: $this.data.endedAt
+                  text: $this.data.text
+                  speaker: $this.data.speaker
+                  speakerLabel: $this.data.speakerLabel
+                  confidence: $this.data.confidence
+                  language: $this.data.language
+      - type: communication.transcription_session.connected
+        description: Keep the stretch nothing was captured in before the connection opened, as a gap, in the session's transcript.
+        context:
+          - session: {from: communication/transcription-sessions, where: {id: $this.subject}}
+        steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail: {status: 409, code: CONFLICT, message: "The connection names a transcript that isn't its session's."}
+          - if: has(this.data.gap)
+            then:
+              - call:
+                  operationId: addTranscriptEntry
+                  parameters:
+                    - {name: transcriptId, in: path, value: $session.transcriptId}
+                    - {name: Idempotency-Key, in: header, value: "{$this.subject}.gap.{$this.data.gap.startedAt}"}
+                  requestBody:
+                    payload:
+                      kind: gap
+                      startedAt: $this.data.gap.startedAt
+                      endedAt: $this.data.gap.endedAt
+                      cause: connection
       - type: communication.transcript.idle_check
         description: Close a transcript that has gone quiet; ask again if something arrived since the last check.
         transition: {from: recording}
@@ -262,10 +282,6 @@ machines:
             - actors: [system]
 
 $defs:
-  GetConnectionRequest:
-    $ref: "./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest"
-  StreamConnection:
-    $ref: "./communication-transcripts-schema.yaml#/$defs/StreamConnection"
   AtRequest:
     type: object
     additionalProperties: false

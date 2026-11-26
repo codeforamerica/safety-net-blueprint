@@ -150,12 +150,14 @@ paths:
     parameters:
       - $ref: "#/components/parameters/SuggestionIdParam"
     post:
-      summary: Accept suggestion
+      summary: Accept
       description: |-
         Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: acceptSuggestion
+      tags:
+        - Suggestions
       requestBody:
         content:
           application/json:
@@ -184,8 +186,6 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Suggestions
       x-relationship:
         type: state-machine-action
         domain: decision-support
@@ -195,9 +195,11 @@ paths:
     parameters:
       - $ref: "#/components/parameters/SuggestionIdParam"
     post:
-      summary: Dismiss suggestion
+      summary: Dismiss
       description: Say no, with a reason.
       operationId: dismissSuggestion
+      tags:
+        - Suggestions
       requestBody:
         required: true
         content:
@@ -227,8 +229,6 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Suggestions
       x-relationship:
         type: state-machine-action
         domain: decision-support
@@ -238,9 +238,11 @@ paths:
     parameters:
       - $ref: "#/components/parameters/SuggestionIdParam"
     post:
-      summary: Expire suggestion
+      summary: Expire
       description: Close a suggestion that no longer applies, before anyone decided.
       operationId: expireSuggestion
+      tags:
+        - Suggestions
       responses:
         "200":
           description: Transition applied successfully.
@@ -262,8 +264,6 @@ paths:
                 $ref: ../../components/responses.yaml#/Error
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Suggestions
       x-relationship:
         type: state-machine-action
         domain: decision-support

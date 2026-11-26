@@ -926,6 +926,28 @@ const OPERATION_RELATIONSHIP_TYPES = new Set(['state-machine-action', 'ruleset',
  * @param {Array} errors - Array to push errors to
  */
 export function validateOperationRelationships(spec, errors) {
+  // At the root, only external: the whole API is answered outside the contracts.
+  const root = spec['x-relationship'];
+  if (root && typeof root === 'object') {
+    if (root.type !== 'external') {
+      errors.push({
+        path: 'x-relationship',
+        rule: 'root-x-relationship-not-external',
+        message: `The document's root x-relationship has type "${root.type}"; at the root it takes only type "external", for an API answered outside the contracts, such as an adapter.`,
+        severity: 'error',
+      });
+    } else {
+      const extra = Object.keys(root).filter((key) => key !== 'type');
+      if (extra.length) {
+        errors.push({
+          path: 'x-relationship',
+          rule: 'root-x-relationship-external-fields',
+          message: `The document's root x-relationship has type "external", which takes no other field: remove ${extra.join(', ')}.`,
+          severity: 'error',
+        });
+      }
+    }
+  }
   if (!spec.paths) return;
 
   for (const [path, pathItem] of Object.entries(spec.paths)) {
@@ -996,6 +1018,21 @@ export function validateSpec(spec, specName, sameDomainSchemas = new Set()) {
 
   // Validate operation-level x-relationship annotations
   validateOperationRelationships(spec, errors);
+
+  // An adapter is named one and marked one, so neither the file name nor the
+  // mark changes what the tools do on its own.
+  const named = /-adapter-openapi\.ya?ml$/.test(String(specName ?? ''));
+  const marked = spec['x-relationship']?.type === 'external';
+  if (named !== marked) {
+    errors.push({
+      path: marked ? 'x-relationship' : '/',
+      rule: 'adapter-name-and-mark',
+      message: named
+        ? `${specName} is named as an adapter but its root has no x-relationship: { type: external }, so tools treat it as an ordinary API. Add the mark.`
+        : `${specName} is marked an adapter at its root but not named one. Name it <domain>-adapter-openapi.yaml, as adapters are.`,
+      severity: 'warning',
+    });
+  }
 
   // Runs before the paths guard below: a misplaced extension at the document
   // root or in info is worth reporting whether or not the spec has paths.

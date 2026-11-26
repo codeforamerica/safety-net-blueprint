@@ -302,7 +302,7 @@ const startingBodies = (docs, examples, op) => {
   ].map((sample) => ({ ...sample, value: trimmed(sample.value, fields) }))
     .filter((sample) => Object.keys(sample.value).length > 0);
   if (samples.length) return samples;
-  // An action's request, such as get-connection's, has no records to start
+  // An action's request, such as request-credentials's, has no records to start
   // from; its schema may give an example.
   const schema = followed(op.doc, json.schema, docs);
   if (schema?.example !== undefined) return [{ name: 'Example', value: schema.example }];

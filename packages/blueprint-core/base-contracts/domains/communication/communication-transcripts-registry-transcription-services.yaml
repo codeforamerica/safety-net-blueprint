@@ -32,5 +32,7 @@ entries:
     description: Soniox real-time. The software connects with a temporary key.
   speechmatics:
     description: Speechmatics real-time. The software connects with a temporary key.
+  whisper:
+    description: OpenAI's Whisper model, run by the state itself, on its own servers or in the page. Nothing leaves the state's hands.
   none:
     description: No transcription service — a chat, or lines a person typed. A transcript naming it has no model.

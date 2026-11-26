@@ -150,7 +150,9 @@ try {
     for (const [path, pathItem] of Object.entries(entry.content?.paths ?? {})) {
       for (const method of HTTP_METHODS) {
         const op = pathItem?.[method];
-        const rel = op?.['x-relationship'];
+        if (!op) continue;
+        // An adapter's operations are all external, though none says so itself.
+        const rel = op['x-relationship'] ?? (entry.adapter ? { type: 'external' } : null);
         if (!rel?.type || rel.type === 'fk') continue;
         // Answered outside the contracts: it names no artifact, so it has no id.
         if (rel.type !== 'external' && (!rel.domain || !rel.id)) continue;
@@ -1017,7 +1019,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     navSearch: true,
     extraStyle: OPERATION_STYLE,
   });
-  const withNav = page.replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
+  const withNav = markedAdapter(page, doc).replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
   if (!tryFile) return withNav;
   // The mock loads after the page has rendered, so reading never waits on it.
   return withNav.replace('</body>', () => `${MOUNT_SEND_PANELS}\n</body>`);
@@ -1142,7 +1144,16 @@ function renderServers(spec, raw) {
   </section>`;
 }
 
-function buildSocketPage({ slug, spec, raw, fileMap = new Map() }) {
+/**
+ * An adapter's page, marked: it's built, for whoever implements it, but Try
+ * it lists it rather than the API reference, and the home page skips it by
+ * this mark (hub.js).
+ */
+const markedAdapter = (page, doc) => (doc?.adapter
+  ? page.replace('</head>', () => '<meta name="blueprint-adapter" content="true"/>\n</head>')
+  : page);
+
+function buildSocketPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   const info = spec.info ?? {};
   const title = info.title ?? slug;
   const { sentTo, sentBy, replies } = messagesByDirection(spec, raw);
@@ -1199,7 +1210,7 @@ function buildSocketPage({ slug, spec, raw, fileMap = new Map() }) {
     navSearch: true,
     extraStyle: OPERATION_STYLE,
   });
-  return page.replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
+  return markedAdapter(page, doc).replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
 }
 
 // ── Index (landing) page ──────────────────────────────────────────────────
@@ -1218,9 +1229,10 @@ function countEndpoints(spec) {
 }
 
 function buildIndexPage(entries) {
-  // Group by x-domain; preserve insertion order (specs are already sorted)
+  // Group by x-domain; preserve insertion order (specs are already sorted).
+  // Adapters aren't public APIs: Try it's "Where calls go" lists them.
   const byDomain = new Map();
-  for (const entry of entries) {
+  for (const entry of entries.filter((e) => !e.doc?.adapter)) {
     const domain = entry.spec.info?.['x-domain'] ?? entry.slug;
     if (!byDomain.has(domain)) byDomain.set(domain, []);
     byDomain.get(domain).push(entry);
@@ -1232,7 +1244,7 @@ function buildIndexPage(entries) {
 
   const cards = [...byDomain.entries()].map(([domain, domainEntries]) => {
     // Use the "primary" spec (non-adapter, or first) for title/description/status
-    const primary = domainEntries.find(e => !e.slug.endsWith('-adapter') && !e.socket) ?? domainEntries[0];
+    const primary = domainEntries.find(e => !e.doc?.adapter && !e.socket) ?? domainEntries[0];
     const info    = primary.spec.info ?? {};
     const totalEndpoints = domainEntries.reduce((n, e) => n + countEndpoints(e.spec), 0);
     // The description's first sentence, however its lines wrap.

@@ -5,7 +5,7 @@ import { z } from 'zod';
 /**
  * Which transcript the session writes to: `transcriptId` for an existing
  * one, or what to start a new one with, which the session passes to
- * `createTranscript` the first time the software asks how to stream.
+ * `createTranscript` when it starts.
  *
  */
 export const zTranscriptionSessionWritable = z.object({
@@ -20,6 +20,40 @@ export const zTranscriptionSessionWritable = z.object({
         transcript: z.optional(z.string()),
         profile: z.optional(z.string())
     }).readonly())
+});
+
+export const zTranscriptionSessionList = z.object({
+    items: z.array(z.object({
+        transcriptId: z.optional(z.uuid()),
+        profileId: z.optional(z.uuid()),
+        model: z.optional(z.string()),
+        client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
+        subjectId: z.optional(z.uuid()),
+        links: z.optional(z.object({
+            transcript: z.optional(z.string()),
+            profile: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'created',
+            'connecting',
+            'connected',
+            'disconnected',
+            'paused',
+            'stopping',
+            'closed',
+            'failed'
+        ]),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
 });
 
 /**
@@ -69,92 +103,6 @@ export const zTranscriptionSessionCreate = z.object({
     id: z.optional(z.uuid())
 }));
 
-/**
- * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
- *
- */
-export const zGetConnectionRequest = z.object({
-    audio: z.object({
-        encoding: z.enum([
-            'linear16',
-            'flac',
-            'mulaw',
-            'alaw',
-            'amr',
-            'amr_wb',
-            'ogg_opus',
-            'webm_opus',
-            'speex_with_header_byte',
-            'mp3'
-        ]),
-        sampleRateHertz: z.int().gte(8000),
-        channelCount: z.int().gte(1)
-    }),
-    protocols: z.array(z.enum(['websocket', 'webrtc'])).min(1)
-});
-
-/**
- * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
- *
- */
-export const zStreamConnection = z.object({
-    provider: z.enum([
-        'assemblyai',
-        'aws-transcribe',
-        'azure-speech',
-        'deepgram',
-        'elevenlabs-scribe',
-        'fake-transcription',
-        'gladia',
-        'google-cloud-speech',
-        'google-gemini-live',
-        'none',
-        'openai-realtime',
-        'soniox',
-        'speechmatics'
-    ]),
-    protocol: z.enum(['websocket', 'webrtc']),
-    subprotocol: z.optional(z.string()),
-    url: z.url(),
-    accessToken: z.optional(z.string()),
-    tokenType: z.optional(z.string()),
-    expiresIn: z.int().gte(1),
-    connectionParameters: z.optional(z.record(z.string(), z.unknown()))
-});
-
-export const zConnectRequest = z.object({
-    gap: z.optional(z.object({
-        startedAt: z.iso.datetime({ offset: true }),
-        endedAt: z.iso.datetime({ offset: true })
-    }))
-});
-
-export const zLineInProgress = z.object({
-    key: z.string().max(255),
-    text: z.string(),
-    speaker: z.optional(z.enum([
-        'staff',
-        'client',
-        'unknown'
-    ])),
-    startedAt: z.iso.datetime({ offset: true })
-});
-
-export const zFinishedLine = z.object({
-    key: z.string().max(255),
-    startedAt: z.iso.datetime({ offset: true }),
-    endedAt: z.iso.datetime({ offset: true }),
-    text: z.string().min(1),
-    speaker: z.enum([
-        'staff',
-        'client',
-        'unknown'
-    ]),
-    speakerLabel: z.optional(z.string()),
-    confidence: z.optional(z.number().gte(0).lte(1)),
-    language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-});
-
 export const zAtRequest = z.object({
     at: z.iso.datetime({ offset: true })
 });
@@ -162,7 +110,7 @@ export const zAtRequest = z.object({
 /**
  * Which transcript the session writes to: `transcriptId` for an existing
  * one, or what to start a new one with, which the session passes to
- * `createTranscript` the first time the software asks how to stream.
+ * `createTranscript` when it starts.
  *
  */
 export const zTranscriptionSessionWritableWritable = z.object({
@@ -175,10 +123,26 @@ export const zTranscriptionSessionWritableWritable = z.object({
     subjectId: z.optional(z.uuid())
 });
 
+export const zTranscriptionSessionListWritable = z.object({
+    items: z.array(z.object({
+        transcriptId: z.optional(z.uuid()),
+        profileId: z.optional(z.uuid()),
+        model: z.optional(z.string()),
+        client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
+        subjectId: z.optional(z.uuid())
+    })),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
 /**
  * Which transcript the session writes to: `transcriptId` for an existing
  * one, or what to start a new one with, which the session passes to
- * `createTranscript` the first time the software asks how to stream.
+ * `createTranscript` when it starts.
  *
  */
 export const zTranscriptionSessionWritable2 = z.object({
@@ -207,6 +171,54 @@ export const zTranscriptionSessionCreateWritable = z.object({
  * Unique identifier of the session.
  */
 export const zTranscriptionSessionIdParam = z.uuid();
+
+export const zListTranscriptionSessionsData = z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0),
+        sort: z.optional(z.string())
+    }))
+});
+
+/**
+ * A paginated collection of sessions.
+ */
+export const zListTranscriptionSessionsResponse = z.object({
+    items: z.array(z.object({
+        transcriptId: z.optional(z.uuid()),
+        profileId: z.optional(z.uuid()),
+        model: z.optional(z.string()),
+        client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
+        subjectId: z.optional(z.uuid()),
+        links: z.optional(z.object({
+            transcript: z.optional(z.string()),
+            profile: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'created',
+            'connecting',
+            'connected',
+            'disconnected',
+            'paused',
+            'stopping',
+            'closed',
+            'failed'
+        ]),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
 
 export const zCreateTranscriptionSessionData = z.object({
     body: z.object({
@@ -298,161 +310,7 @@ export const zGetTranscriptionSessionResponse = z.object({
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
 
-export const zGetConnectionTranscriptionSessionData = z.object({
-    body: z.object({
-        audio: z.object({
-            encoding: z.enum([
-                'linear16',
-                'flac',
-                'mulaw',
-                'alaw',
-                'amr',
-                'amr_wb',
-                'ogg_opus',
-                'webm_opus',
-                'speex_with_header_byte',
-                'mp3'
-            ]),
-            sampleRateHertz: z.int().gte(8000),
-            channelCount: z.int().gte(1)
-        }),
-        protocols: z.array(z.enum(['websocket', 'webrtc'])).min(1)
-    }),
-    path: z.object({
-        transcriptionSessionId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
- *
- */
-export const zGetConnectionTranscriptionSessionResponse = z.object({
-    provider: z.enum([
-        'assemblyai',
-        'aws-transcribe',
-        'azure-speech',
-        'deepgram',
-        'elevenlabs-scribe',
-        'fake-transcription',
-        'gladia',
-        'google-cloud-speech',
-        'google-gemini-live',
-        'none',
-        'openai-realtime',
-        'soniox',
-        'speechmatics'
-    ]),
-    protocol: z.enum(['websocket', 'webrtc']),
-    subprotocol: z.optional(z.string()),
-    url: z.url(),
-    accessToken: z.optional(z.string()),
-    tokenType: z.optional(z.string()),
-    expiresIn: z.int().gte(1),
-    connectionParameters: z.optional(z.record(z.string(), z.unknown()))
-});
-
-export const zRenewConnectionTranscriptionSessionData = z.object({
-    body: z.object({
-        audio: z.object({
-            encoding: z.enum([
-                'linear16',
-                'flac',
-                'mulaw',
-                'alaw',
-                'amr',
-                'amr_wb',
-                'ogg_opus',
-                'webm_opus',
-                'speex_with_header_byte',
-                'mp3'
-            ]),
-            sampleRateHertz: z.int().gte(8000),
-            channelCount: z.int().gte(1)
-        }),
-        protocols: z.array(z.enum(['websocket', 'webrtc'])).min(1)
-    }),
-    path: z.object({
-        transcriptionSessionId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
- *
- */
-export const zRenewConnectionTranscriptionSessionResponse = z.object({
-    provider: z.enum([
-        'assemblyai',
-        'aws-transcribe',
-        'azure-speech',
-        'deepgram',
-        'elevenlabs-scribe',
-        'fake-transcription',
-        'gladia',
-        'google-cloud-speech',
-        'google-gemini-live',
-        'none',
-        'openai-realtime',
-        'soniox',
-        'speechmatics'
-    ]),
-    protocol: z.enum(['websocket', 'webrtc']),
-    subprotocol: z.optional(z.string()),
-    url: z.url(),
-    accessToken: z.optional(z.string()),
-    tokenType: z.optional(z.string()),
-    expiresIn: z.int().gte(1),
-    connectionParameters: z.optional(z.record(z.string(), z.unknown()))
-});
-
-export const zConnectTranscriptionSessionData = z.object({
-    body: z.optional(z.object({
-        gap: z.optional(z.object({
-            startedAt: z.iso.datetime({ offset: true }),
-            endedAt: z.iso.datetime({ offset: true })
-        }))
-    })),
-    path: z.object({
-        transcriptionSessionId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * A transcription session, including server-managed fields.
- */
-export const zConnectTranscriptionSessionResponse = z.object({
-    transcriptId: z.optional(z.uuid()),
-    profileId: z.optional(z.uuid()),
-    model: z.optional(z.string()),
-    client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
-    startedAt: z.optional(z.iso.datetime({ offset: true })),
-    subjectType: z.optional(z.enum(['interview', 'chat'])),
-    subjectId: z.optional(z.uuid()),
-    links: z.optional(z.object({
-        transcript: z.optional(z.string()),
-        profile: z.optional(z.string())
-    }).readonly())
-}).and(z.object({
-    id: z.uuid().readonly(),
-    status: z.enum([
-        'created',
-        'connecting',
-        'connected',
-        'disconnected',
-        'paused',
-        'stopping',
-        'closed',
-        'failed'
-    ]),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
-}));
-
-export const zDisconnectTranscriptionSessionData = z.object({
+export const zStartTranscriptionSessionData = z.object({
     body: z.optional(z.never()),
     path: z.object({
         transcriptionSessionId: z.uuid()
@@ -463,107 +321,7 @@ export const zDisconnectTranscriptionSessionData = z.object({
 /**
  * A transcription session, including server-managed fields.
  */
-export const zDisconnectTranscriptionSessionResponse = z.object({
-    transcriptId: z.optional(z.uuid()),
-    profileId: z.optional(z.uuid()),
-    model: z.optional(z.string()),
-    client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
-    startedAt: z.optional(z.iso.datetime({ offset: true })),
-    subjectType: z.optional(z.enum(['interview', 'chat'])),
-    subjectId: z.optional(z.uuid()),
-    links: z.optional(z.object({
-        transcript: z.optional(z.string()),
-        profile: z.optional(z.string())
-    }).readonly())
-}).and(z.object({
-    id: z.uuid().readonly(),
-    status: z.enum([
-        'created',
-        'connecting',
-        'connected',
-        'disconnected',
-        'paused',
-        'stopping',
-        'closed',
-        'failed'
-    ]),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
-}));
-
-export const zUpdateLineTranscriptionSessionData = z.object({
-    body: z.object({
-        key: z.string().max(255),
-        text: z.string(),
-        speaker: z.optional(z.enum([
-            'staff',
-            'client',
-            'unknown'
-        ])),
-        startedAt: z.iso.datetime({ offset: true })
-    }),
-    path: z.object({
-        transcriptionSessionId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * A transcription session, including server-managed fields.
- */
-export const zUpdateLineTranscriptionSessionResponse = z.object({
-    transcriptId: z.optional(z.uuid()),
-    profileId: z.optional(z.uuid()),
-    model: z.optional(z.string()),
-    client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
-    startedAt: z.optional(z.iso.datetime({ offset: true })),
-    subjectType: z.optional(z.enum(['interview', 'chat'])),
-    subjectId: z.optional(z.uuid()),
-    links: z.optional(z.object({
-        transcript: z.optional(z.string()),
-        profile: z.optional(z.string())
-    }).readonly())
-}).and(z.object({
-    id: z.uuid().readonly(),
-    status: z.enum([
-        'created',
-        'connecting',
-        'connected',
-        'disconnected',
-        'paused',
-        'stopping',
-        'closed',
-        'failed'
-    ]),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
-}));
-
-export const zAddLineTranscriptionSessionData = z.object({
-    body: z.object({
-        key: z.string().max(255),
-        startedAt: z.iso.datetime({ offset: true }),
-        endedAt: z.iso.datetime({ offset: true }),
-        text: z.string().min(1),
-        speaker: z.enum([
-            'staff',
-            'client',
-            'unknown'
-        ]),
-        speakerLabel: z.optional(z.string()),
-        confidence: z.optional(z.number().gte(0).lte(1)),
-        language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-    }),
-    path: z.object({
-        transcriptionSessionId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * A transcription session, including server-managed fields.
- */
-export const zAddLineTranscriptionSessionResponse = z.object({
+export const zStartTranscriptionSessionResponse = z.object({
     transcriptId: z.optional(z.uuid()),
     profileId: z.optional(z.uuid()),
     model: z.optional(z.string()),
@@ -687,86 +445,6 @@ export const zStopTranscriptionSessionData = z.object({
  * A transcription session, including server-managed fields.
  */
 export const zStopTranscriptionSessionResponse = z.object({
-    transcriptId: z.optional(z.uuid()),
-    profileId: z.optional(z.uuid()),
-    model: z.optional(z.string()),
-    client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
-    startedAt: z.optional(z.iso.datetime({ offset: true })),
-    subjectType: z.optional(z.enum(['interview', 'chat'])),
-    subjectId: z.optional(z.uuid()),
-    links: z.optional(z.object({
-        transcript: z.optional(z.string()),
-        profile: z.optional(z.string())
-    }).readonly())
-}).and(z.object({
-    id: z.uuid().readonly(),
-    status: z.enum([
-        'created',
-        'connecting',
-        'connected',
-        'disconnected',
-        'paused',
-        'stopping',
-        'closed',
-        'failed'
-    ]),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
-}));
-
-export const zCloseTranscriptionSessionData = z.object({
-    body: z.object({
-        at: z.iso.datetime({ offset: true })
-    }),
-    path: z.object({
-        transcriptionSessionId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * A transcription session, including server-managed fields.
- */
-export const zCloseTranscriptionSessionResponse = z.object({
-    transcriptId: z.optional(z.uuid()),
-    profileId: z.optional(z.uuid()),
-    model: z.optional(z.string()),
-    client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/)),
-    startedAt: z.optional(z.iso.datetime({ offset: true })),
-    subjectType: z.optional(z.enum(['interview', 'chat'])),
-    subjectId: z.optional(z.uuid()),
-    links: z.optional(z.object({
-        transcript: z.optional(z.string()),
-        profile: z.optional(z.string())
-    }).readonly())
-}).and(z.object({
-    id: z.uuid().readonly(),
-    status: z.enum([
-        'created',
-        'connecting',
-        'connected',
-        'disconnected',
-        'paused',
-        'stopping',
-        'closed',
-        'failed'
-    ]),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
-}));
-
-export const zFailTranscriptionSessionData = z.object({
-    body: z.optional(z.never()),
-    path: z.object({
-        transcriptionSessionId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * A transcription session, including server-managed fields.
- */
-export const zFailTranscriptionSessionResponse = z.object({
     transcriptId: z.optional(z.uuid()),
     profileId: z.optional(z.uuid()),
     model: z.optional(z.string()),

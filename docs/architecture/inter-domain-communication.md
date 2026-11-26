@@ -120,6 +120,39 @@ The `type` field is always derived implicitly: `{domain}.{resource}.{event}`. Th
 - `GET` requests (read operations) never emit events — only state-changing operations do
 - Events are not emitted by the state machine at creation time — the REST create handler handles this universally
 
+**3. Published by a running adapter**
+
+A [running adapter](cross-cutting/adapters.md#a-running-adapter) is a resource's implementation for one outside system, such as a transcription session's adapter for one transcription service. It reports what happened by publishing the resource's own events with `publishEvent`, which the resource follows under `on:`. Those events are declared under the resource's `emits:` like any other, and described as published by the adapter.
+
+### Who publishes an event
+
+An event states one fact, and whoever owns the fact publishes it. When two parties each have a fact about the same thing, there are two events.
+
+A transcription session's adapter publishes `line_finished`: the adapter finished this line. The transcript decides whether to keep it, adds an entry, and the entry's `created` event says the transcript kept it. A screen that shows lines as they come follows `line_finished`. Anything that needs what's on the record follows the entry. The entry's event names the `line_finished` it came from as its cause (`causationid`), so the two can be matched without a field of their own: link a reaction's result to what caused it by causation, not by copying the cause's key.
+
+Only the owner of a record can say what happened to it. If the adapter published "added to the transcript", it would be wrong whenever the transcript refused, after it closed for example. This is also what makes the write eventually consistent: a line is said before it's kept, and the moment between is visible to anyone who looks.
+
+### Events from outside the server
+
+Most events are published by the blueprint's own state machines and handlers, on the server. A running adapter in a browser publishes from outside, through the platform's `publishEvent`, and that brings four things to get right.
+
+**Checks.** A browser publishing an event is no less trustworthy than a browser calling an operation, but the checks move. An operation checks its own caller and data. `publishEvent` takes every event type through one operation, so the server needs a rule for each type: who may publish it, and for which subjects ([`security.yaml`](../conventions/security.yaml), `event_publishing`). It sets `authtype` and `authid` from the caller's token and checks the data against the event's schema.
+
+**Order.** The publisher sets `partitionkey` to the subject, so a subscriber handles one subject's events in order. The last line of a session reaches the transcript before the session's `ended` closes it.
+
+**Retries.** The publisher keeps events it couldn't send and retries them in order. Whatever keeps the result keeps it once, by a key the event carries: the transcript keeps a line once for its session and the line's key.
+
+**Hearing back.** Publishing answers only that the event was accepted. If the transcript refuses a line, that comes back as the transcript's own event, not as the response. A publisher that needs to know follows the events, as the session follows its transcript.
+
+### Where the event bus runs
+
+Contracts say *publish* and *subscribe*. Where the bus runs is [routing](../conventions/patterns/routing.yaml), the same as where an operation runs. `publishEvent` is an operation, routed like any other:
+
+- **Everything that follows the event runs in the page:** the bus is an emitter in the page, and the event never leaves the browser. It's as fast as an SPA's own events. The explorer's transcription demo works this way.
+- **Something that follows it runs on a service:** the event goes to the state's event log, and the service's subscribers get it from there. The transcript on a state's server works this way.
+
+A contract never names an emitter in the page, because another deployment might run the same resource on a server.
+
 ---
 
 ## `/events` Endpoint

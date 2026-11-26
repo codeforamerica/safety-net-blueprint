@@ -10,13 +10,12 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `communication.transcript.paused` | [Communication/Transcript](communication.md#transcript) | [Communication/TranscriptionSession](communication.md#transcriptionsession) |
 | `communication.transcript.resumed` | [Communication/Transcript](communication.md#transcript) | *(none)* |
 | `communication.transcript_entry.created` | *(unknown)* | [Communication/Transcript](communication.md#transcript) |
-| `communication.transcription_session.closed` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
-| `communication.transcription_session.connected` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
+| `communication.transcription_session.connected` | *(unknown)* | [Communication/TranscriptionSession](communication.md#transcriptionsession), [Communication/Transcript](communication.md#transcript) |
 | `communication.transcription_session.connecting` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
-| `communication.transcription_session.disconnected` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
-| `communication.transcription_session.failed` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
-| `communication.transcription_session.line_added` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
-| `communication.transcription_session.line_updated` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
+| `communication.transcription_session.disconnected` | *(unknown)* | [Communication/TranscriptionSession](communication.md#transcriptionsession) |
+| `communication.transcription_session.ended` | *(unknown)* | [Communication/TranscriptionSession](communication.md#transcriptionsession) |
+| `communication.transcription_session.failed` | *(unknown)* | [Communication/TranscriptionSession](communication.md#transcriptionsession) |
+| `communication.transcription_session.line_finished` | *(unknown)* | [Communication/Transcript](communication.md#transcript) |
 | `communication.transcription_session.paused` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
 | `communication.transcription_session.stopping` | [Communication/TranscriptionSession](communication.md#transcriptionsession) | *(none)* |
 | `decision-support.suggestion.accepted` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
@@ -42,6 +41,11 @@ These events are subscribed to but have no emitter in the current state machines
 - `communication.transcript.created` — subscribed by [Communication/Transcript](communication.md#transcript)
 - `communication.transcript.idle_check` — subscribed by [Communication/Transcript](communication.md#transcript)
 - `communication.transcript_entry.created` — subscribed by [Communication/Transcript](communication.md#transcript)
+- `communication.transcription_session.connected` — subscribed by [Communication/TranscriptionSession](communication.md#transcriptionsession), [Communication/Transcript](communication.md#transcript)
+- `communication.transcription_session.disconnected` — subscribed by [Communication/TranscriptionSession](communication.md#transcriptionsession)
+- `communication.transcription_session.ended` — subscribed by [Communication/TranscriptionSession](communication.md#transcriptionsession)
+- `communication.transcription_session.failed` — subscribed by [Communication/TranscriptionSession](communication.md#transcriptionsession)
+- `communication.transcription_session.line_finished` — subscribed by [Communication/Transcript](communication.md#transcript)
 - `decision-support.suggestion.created` — subscribed by [Decision Support/Suggestion](decision-support.md)
 - `decision-support.suggestion.suggestion_expiry` — subscribed by [Decision Support/Suggestion](decision-support.md)
 - `intake.application.review_reminder` — subscribed by [Intake/Application](intake.md#application)

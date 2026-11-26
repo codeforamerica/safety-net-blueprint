@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Blueprint Harness — Transcript Audio Adapter API</title>
+  <title>Blueprint Harness — Transcription Session Adapter API</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -133,18 +133,19 @@
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 
   </style>
+<meta name="blueprint-adapter" content="true"/>
 </head>
 <body>
   <div id="page-header">
-    <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Transcript Audio Adapter API</a></div>
+    <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Transcription Session Adapter API</a></div>
     <div style="background:#2B1A78;color:#FFFFFF;">
     <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:0.9375rem;font-weight:800;">Transcript Audio Adapter API</span>
+      <span style="font-size:0.9375rem;font-weight:800;">Transcription Session Adapter API</span>
       <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v0.1.0</span>
       <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;padding:1px 6px;border-radius:100px;flex-shrink:0;background:rgba(194,192,232,0.12);color:#b0a8d8;border:1px solid rgba(194,192,232,0.2);">Alpha</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">2 endpoints</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">5 endpoints</span>
     </div>
-    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcripts-audio-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter-openapi.yaml</code></a></div>
+    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcription-sessions-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcription-sessions-adapter-openapi.yaml</code></a></div>
   </div>
   </div>
   <div class="page-layout">
@@ -157,8 +158,20 @@
       </div>
       <div id="sidebar-nav">
         <div class="nav-section">
-    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>issue-connection</span></div>
-    <a href="#op-post-issue-connection" class="nav-link nav-op" title="Issue a connection to a transcription service">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>streams</span></div>
+    <a href="#op-post-streams" class="nav-link nav-op" title="Start streaming for a session">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-streams-transcriptionSessionId-pause" class="nav-link nav-op" title="Pause streaming">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>pause</span></span>
+    </a><a href="#op-post-streams-transcriptionSessionId-stop" class="nav-link nav-op" title="Stop streaming">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>stop</span></span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>credentials</span></div>
+    <a href="#op-post-credentials" class="nav-link nav-op" title="Request credentials for a transcription service">
       <span class="nav-method nav-method-post">POST</span>
       <span class="nav-op-path"><span></span></span>
     </a>
@@ -173,38 +186,526 @@
     </nav>
     <main id="content">
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Contracted interface for the state-provided transcript audio adapter. The blueprint calls it when transcription software asks how to connect, and the adapter answers with where the software connects and a short-lived credential — from the transcription service, or one it signs for a relay the state runs in front of a service a browser can't reach. An adapter that signs for a relay publishes the public keys the relay checks those tokens with.</p><p style="margin:0 0 6px;">The adapter is stateless: one request, one answer. It maps the languages and audio it's given to what its service takes, and holds everything that doesn't change from one call to the next — a region, a custom vocabulary, redaction — as its own configuration. Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The state's transcription session adapter: how a transcription session reaches one transcription service. It has two parts.</p><p style="margin:0 0 6px;"><strong>The streaming part,</strong> beside the session: the session calls it to start, pause and stop streaming. Started, it gets a credential from the server part, opens the connection, streams the audio, and reports what happens by publishing the session's events with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">publishEvent</code> — connected, disconnected, failed, a line in progress, a finished line, and ended. It never calls the session's operations, and the session's API has none for it.</p><p style="margin:0 0 6px;"><strong>The credentials part,</strong> which holds the service's secret: it answers with where the streaming part connects and a short-lived credential — from the transcription service, or one it signs for a relay the state runs in front of a service a client can't reach — and publishes the public keys a relay checks those tokens with. It's stateless: one request, one answer. It maps the languages and audio it's given to what its service takes, and holds everything that doesn't change from one call to the next — a region, a custom vocabulary, redaction — as its own configuration.</p><p style="margin:0 0 6px;">Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
       
-    </div><section id="section-connections" style="margin-bottom:2.5rem;">
+    </div><section id="section-streaming" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
-        <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Connections</h2>
-        <p style="font-size:12px;color:#666;">Issuing what transcription software connects with.</p>
+        <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Streaming</h2>
+        <p style="font-size:12px;color:#666;">The streaming part. Starting, pausing and stopping the stream, called by the session.</p>
       </div>
-      <div id="op-post-issue-connection" class="content-item op-post" data-try-op="issueTranscriptConnection" data-try-file="base/domains/communication/communication-transcripts-audio-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+      <div id="op-post-streams" class="content-item op-post" data-try-op="startStream" data-try-file="base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/issue-connection</code>
-        <span class="op-name">Issue a connection to a transcription service</span>
+        <code class="op-path">/streams</code>
+        <span class="op-name">Start streaming for a session</span>
       </span>
-      <code class="op-id" title="operationId">issueTranscriptConnection</code>
+      <code class="op-id" title="operationId">startStream</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
-        <a href="#op-post-issue-connection" class="permalink" title="Link to this endpoint">#</a>
+        <a href="#op-post-streams" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Answers with where transcription software connects and a credential that starts one connection, for the service the request names. Every service fits the one answer: a URL that may carry the credential, as Amazon Transcribe's presigned URL does; a token, as ElevenLabs, Deepgram and AssemblyAI issue; or, for a service behind a relay, the relay's URL, its subprotocol and a JWT the adapter signs for it.</p><p style="margin:0 0 6px;">Asked again, it issues a fresh credential: that is how software renews one, and how it reconnects.</p></div></div>
+        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Called by the session when it starts, and again when it resumes. Answers at once; the work goes on after it. The adapter gets a credential from requestCredentials, connects to the service, streams the audio, and publishes the session's events as things happen, each with the session's id as its subject and partition key, so one session's events stay in order:</p><p style="margin:0 0 6px;">- <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">connected</code> when the connection opens, with the stretch nothing   was captured in as <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">gap</code>: after a reconnect, from when it dropped;   on the first connection, when <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">lastActivityAt</code> is given, from then. - <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">disconnected</code> when it drops. It then reconnects with a fresh   credential and publishes <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">connected</code> again. - <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">failed</code> when it gives up connecting. - <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">line_updated</code> for a line in progress, and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">line_finished</code> once,   for each finished line. A line is published again after a network   error, with the same key; the transcript keeps it once, and its   entry's created event names the <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">line_finished</code> it came from as its   cause (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">causationid</code>). - <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ended</code> after stopStream, once the last line is published.</p><p style="margin:0 0 6px;">It renews its credential before it runs out, the same way.</p></div></div>
         
         
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
-      <span class="schema-name">ConnectionRequest</span>
-      <span class="returns">→</span> <span class="schema-name">ConnectionResponse</span>
+      <span class="schema-name">StreamRequest</span>
+      <span class="returns">→</span> <span class="schema-name">StreamResponse</span>
+      <span class="pill">application/json</span>
+      <span class="pill pill-req">required</span>
+    </h4>
+    <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span class="ftype">object</span>
+        
+        
+      </div>
+      <div class="fdesc">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</span>
+        <span class="ftype">string · uuid</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">The session, the subject of every event the adapter publishes.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptId</span>
+        <span class="ftype">string · uuid</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">The session's transcript, on every event the adapter publishes.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">provider</span>
+        <span class="ftype">enum</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">The transcription service, an entry of the transcription-services registry.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">assemblyai</code><code class="value-chip">aws-transcribe</code><code class="value-chip">azure-speech</code><code class="value-chip">deepgram</code><code class="value-chip">elevenlabs-scribe</code><code class="value-chip">fake-transcription</code><code class="value-chip">gladia</code><code class="value-chip">google-cloud-speech</code><code class="value-chip">google-gemini-live</code><code class="value-chip">none</code><code class="value-chip">openai-realtime</code><code class="value-chip">soniox</code><code class="value-chip">speechmatics</code><code class="value-chip">whisper</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">model</span>
+        <span class="ftype">string</span>
+        
+        
+      </div>
+      <div class="fdesc">The service's model, from the transcript.</div>
+      
+    </div><div style="padding:7px 0;">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">languages</span>
+              <span class="ftype">array[Language]</span>
+              
+              
+              
+            </span>
+            <span class="fdesc">The languages the conversation may be in, from the transcript's profile.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">lastActivityAt</span>
+        <span class="ftype">string · date-time</span>
+        
+        
+      </div>
+      <div class="fdesc">When a session carries on a transcript that's still recording, when the transcript last heard from anyone. The adapter reports from then to its first connection as a gap.
+</div>
+      
+    </div><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+              <span class="ftype">object</span>
+              <span class="fpreview">{ transcript, transcriptionSession }</span>
+              
+              <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            </span>
+            <span class="fdesc">Related resource links.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSession</span>
+        <span class="ftype">string · uri-reference</span>
+        
+        
+      </div>
+      <div class="fdesc">Link to the related TranscriptionSession resource.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcript</span>
+        <span class="ftype">string · uri-reference</span>
+        
+        
+      </div>
+      <div class="fdesc">Link to the related Transcript resource.</div>
+      
+    </div></div>
+        </details>
+      </div></div>
+  </div>
+      </div>
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">202</button><button type="button" class="resp-tab resp-bad" data-resp="1">400</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">Starting. What happens is published as the session's events. <span class="schema-name">StreamResponse</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span class="ftype">object</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The request is malformed or contains invalid parameters. <span class="schema-name">BadRequest</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
+    </div>
+  </details>
+</div><div id="op-post-streams-transcriptionSessionId-pause" class="content-item op-post" data-try-op="pauseStream" data-try-file="base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+        <code class="op-path">/streams/{transcriptionSessionId}/pause</code>
+        <span class="op-name">Pause streaming</span>
+      </span>
+      <code class="op-id" title="operationId">pauseStream</code>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
+        <a href="#op-post-streams-transcriptionSessionId-pause" class="permalink" title="Link to this endpoint">#</a>
+      </span>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Called by the session when the conversation goes off the record. The adapter stops sending audio and closes the connection, so no audio goes to the service. A line already finished may still be published. Starting again is startStream.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">StreamResponse</span></div>
+        <div class="op-section params-section">
+      <h4 class="op-h">Path parameters</h4>
+      <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
+      <div class="field-head">
+        <code class="fname">transcriptionSessionId</code>
+        <span class="ftype">string · uuid</span>
+        <span class="freq">required</span>
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The session being streamed for.</p></div></div>
+      
+      
+    </div>
+    </div>
+        <div class="op-section request-body-section">
+    <h4 class="op-h">Body
+      
+      
+      <span class="pill">application/json</span>
+      
+    </h4>
+    <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span class="ftype">object</span>
+        
+        
+      </div>
+      <div class="fdesc">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</div>
+      
+    </div></div>
+  </div>
+      </div>
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">202</button><button type="button" class="resp-tab resp-bad" data-resp="1">404</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">Pausing. <span class="schema-name">StreamResponse</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span class="ftype">object</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The requested resource was not found. <span class="schema-name">NotFound</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
+    </div>
+  </details>
+</div><div id="op-post-streams-transcriptionSessionId-stop" class="content-item op-post" data-try-op="stopStream" data-try-file="base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+        <code class="op-path">/streams/{transcriptionSessionId}/stop</code>
+        <span class="op-name">Stop streaming</span>
+      </span>
+      <code class="op-id" title="operationId">stopStream</code>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
+        <a href="#op-post-streams-transcriptionSessionId-stop" class="permalink" title="Link to this endpoint">#</a>
+      </span>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Called by the session when the conversation is over. The adapter sends the end of the audio, waits for the last text, publishes the last <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">line_finished</code>, closes the connection, and publishes <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ended</code>. With no connection open, paused or disconnected, it publishes <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ended</code> at once.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">StreamResponse</span></div>
+        <div class="op-section params-section">
+      <h4 class="op-h">Path parameters</h4>
+      <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
+      <div class="field-head">
+        <code class="fname">transcriptionSessionId</code>
+        <span class="ftype">string · uuid</span>
+        <span class="freq">required</span>
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The session being streamed for.</p></div></div>
+      
+      
+    </div>
+    </div>
+        <div class="op-section request-body-section">
+    <h4 class="op-h">Body
+      
+      
+      <span class="pill">application/json</span>
+      
+    </h4>
+    <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span class="ftype">object</span>
+        
+        
+      </div>
+      <div class="fdesc">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</div>
+      
+    </div></div>
+  </div>
+      </div>
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">202</button><button type="button" class="resp-tab resp-bad" data-resp="1">404</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">Stopping. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ended</code> is published when it's done. <span class="schema-name">StreamResponse</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
+        <span class="ftype">object</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The requested resource was not found. <span class="schema-name">NotFound</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
+    </div>
+  </details>
+</div>
+    </section><section id="section-credentials" style="margin-bottom:2.5rem;">
+      <div style="margin-bottom:1rem;">
+        <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Credentials</h2>
+        <p style="font-size:12px;color:#666;">The credentials part. Issuing what the streaming part connects with.</p>
+      </div>
+      <div id="op-post-credentials" class="content-item op-post" data-try-op="requestCredentials" data-try-file="base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+        <code class="op-path">/credentials</code>
+        <span class="op-name">Request credentials for a transcription service</span>
+      </span>
+      <code class="op-id" title="operationId">requestCredentials</code>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
+        <a href="#op-post-credentials" class="permalink" title="Link to this endpoint">#</a>
+      </span>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Answers with where the streaming part connects and a credential that starts one connection, for the service the request names. Every service fits the one answer: a URL that may carry the credential, as Amazon Transcribe's presigned URL does; a token, as ElevenLabs, Deepgram and AssemblyAI issue; or, for a service behind a relay, the relay's URL, its subprotocol and a JWT the adapter signs for it.</p><p style="margin:0 0 6px;">Called by the streaming part. Asked again, it issues a fresh credential: that is how the streaming part renews one, and how it reconnects. Check the caller's sign-in before issuing one: the credential spends the state's account with the service.</p></div></div>
+        
+        
+        <div class="op-section request-body-section">
+    <h4 class="op-h">Body
+      <span class="schema-name">CredentialsRequest</span>
+      <span class="returns">→</span> <span class="schema-name">CredentialsResponse</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -226,7 +727,7 @@
         
       </div>
       <div class="fdesc">The transcription service, an entry of the transcription-services registry.</div>
-      <div class="values"><span class="values-label">Values</span><code class="value-chip">assemblyai</code><code class="value-chip">aws-transcribe</code><code class="value-chip">azure-speech</code><code class="value-chip">deepgram</code><code class="value-chip">elevenlabs-scribe</code><code class="value-chip">fake-transcription</code><code class="value-chip">gladia</code><code class="value-chip">google-cloud-speech</code><code class="value-chip">google-gemini-live</code><code class="value-chip">none</code><code class="value-chip">openai-realtime</code><code class="value-chip">soniox</code><code class="value-chip">speechmatics</code></div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">assemblyai</code><code class="value-chip">aws-transcribe</code><code class="value-chip">azure-speech</code><code class="value-chip">deepgram</code><code class="value-chip">elevenlabs-scribe</code><code class="value-chip">fake-transcription</code><code class="value-chip">gladia</code><code class="value-chip">google-cloud-speech</code><code class="value-chip">google-gemini-live</code><code class="value-chip">none</code><code class="value-chip">openai-realtime</code><code class="value-chip">soniox</code><code class="value-chip">speechmatics</code><code class="value-chip">whisper</code></div>
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">model</span>
@@ -308,7 +809,7 @@
               <span class="freq">required</span>
               
             </span>
-            <span class="fdesc">The protocols the software can connect over. The adapter answers with one of them.</span>
+            <span class="fdesc">The protocols the streaming part can connect over. The adapter answers with one of them.</span>
           </summary>
           <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
         </details>
@@ -317,9 +818,9 @@
       </div>
       <aside class="op-side"><div class="op-section responses-section">
     <h4 class="op-h">Responses</h4>
-    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">400</button><button type="button" class="resp-tab resp-bad" data-resp="2">422</button><button type="button" class="resp-tab resp-bad" data-resp="3">500</button></div>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">400</button><button type="button" class="resp-tab resp-bad" data-resp="2">401</button><button type="button" class="resp-tab resp-bad" data-resp="3">422</button><button type="button" class="resp-tab resp-bad" data-resp="4">500</button></div>
     <div class="resp-panel" data-resp="0">
-      <div class="fdesc">Where and how the software connects. <span class="schema-name">ConnectionResponse</span> <span class="pill">application/json</span></div>
+      <div class="fdesc">Where and how the streaming part connects. <span class="schema-name">CredentialsResponse</span> <span class="pill">application/json</span></div>
       <div class="body-fields"><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
@@ -338,7 +839,7 @@
         
       </div>
       <div class="fdesc">The transcription service, as the transcript's profile names it.</div>
-      <div class="values"><span class="values-label">Values</span><code class="value-chip">assemblyai</code><code class="value-chip">aws-transcribe</code><code class="value-chip">azure-speech</code><code class="value-chip">deepgram</code><code class="value-chip">elevenlabs-scribe</code><code class="value-chip">fake-transcription</code><code class="value-chip">gladia</code><code class="value-chip">google-cloud-speech</code><code class="value-chip">google-gemini-live</code><code class="value-chip">none</code><code class="value-chip">openai-realtime</code><code class="value-chip">soniox</code><code class="value-chip">speechmatics</code></div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">assemblyai</code><code class="value-chip">aws-transcribe</code><code class="value-chip">azure-speech</code><code class="value-chip">deepgram</code><code class="value-chip">elevenlabs-scribe</code><code class="value-chip">fake-transcription</code><code class="value-chip">gladia</code><code class="value-chip">google-cloud-speech</code><code class="value-chip">google-gemini-live</code><code class="value-chip">none</code><code class="value-chip">openai-realtime</code><code class="value-chip">soniox</code><code class="value-chip">speechmatics</code><code class="value-chip">whisper</code></div>
     </div><div style="padding:7px 0;">
         <details>
           <summary class="field-summary">
@@ -445,6 +946,36 @@
       
     </div></div>
     </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">Authentication is required or the provided credentials are invalid. <span class="schema-name">Unauthorized</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="3" hidden>
       <div class="fdesc">The service can't take what the request asks for — several languages for a service that takes one and can't detect among them, say, or an audio encoding it doesn't accept — named in details.
  <span class="pill">application/json</span></div>
       <div class="body-fields"><div class="field">
@@ -475,7 +1006,7 @@
       <div class="fdesc">Additional error details.</div>
       
     </div></div>
-    </div><div class="resp-panel" data-resp="3" hidden>
+    </div><div class="resp-panel" data-resp="4" hidden>
       <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
       <div class="body-fields"><div class="field">
       <div class="field-head">
@@ -515,7 +1046,7 @@
         <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Keys</h2>
         <p style="font-size:12px;color:#666;">The public keys a relay checks the adapter's tokens with.</p>
       </div>
-      <div id="op-get-.well-known-jwks.json" class="content-item op-get" data-try-op="getTranscriptConnectionKeys" data-try-file="base/domains/communication/communication-transcripts-audio-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+      <div id="op-get-.well-known-jwks.json" class="content-item op-get" data-try-op="getCredentialKeys" data-try-file="base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
@@ -524,7 +1055,7 @@
         <code class="op-path">/.well-known/jwks.json</code>
         <span class="op-name">The public keys a relay checks tokens with</span>
       </span>
-      <code class="op-id" title="operationId">getTranscriptConnectionKeys</code>
+      <code class="op-id" title="operationId">getCredentialKeys</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>

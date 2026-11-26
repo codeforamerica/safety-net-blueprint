@@ -63,6 +63,8 @@ function scanPages(dir, labelFn = defaultLabel) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter(f => f.endsWith('.html') && f !== 'index.html')
+    // An adapter's page, which Try it lists rather than the API reference.
+    .filter(f => !readFileSync(join(dir, f), 'utf8').includes('<meta name="blueprint-adapter"'))
     .map(f => ({ slug: f.replace('.html', ''), label: labelFn(f.replace('.html', '')) }))
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }

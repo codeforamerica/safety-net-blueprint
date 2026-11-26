@@ -629,8 +629,8 @@ test('relationship-resolver tests', async (t) => {
 
     const props = result.components.schemas.Task.properties;
 
-    // FK field removed, renamed field added
-    assert.strictEqual(props.assignedToId, undefined, 'FK field should be removed');
+    // FK field kept, expanded field added beside it
+    assert.ok('assignedToId' in props, 'assignedToId stays beside the expanded record');
     assert.ok(props.assignedTo, 'renamed field should exist');
 
     // Inline subset with only the requested fields
@@ -707,7 +707,7 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(spec, 'links-only', schemaIndex);
 
     const props = result.components.schemas.Task.properties;
-    assert.strictEqual(props.assignedToId, undefined, 'FK field should be removed');
+    assert.ok('assignedToId' in props, 'assignedToId stays beside the expanded record');
     assert.strictEqual(props.assignedTo.$ref, '#/components/schemas/User');
   });
 
@@ -828,7 +828,7 @@ test('relationship-resolver tests', async (t) => {
     const schemaIndex = buildSchemaIndex(new Map([['spec.yaml', spec]]));
     const { result } = resolveRelationships(spec, 'links-only', schemaIndex);
 
-    assert.deepStrictEqual(result.components.schemas.Task.required, ['id', 'assignedTo']);
+    assert.deepStrictEqual(result.components.schemas.Task.required, ['id', 'assignedToId', 'assignedTo']);
   });
 
   // ===========================================================================
@@ -887,7 +887,7 @@ test('relationship-resolver tests', async (t) => {
     const props = result.components.schemas.Task.properties;
 
     // assignedToId removed, assignedTo added with expanded schema (per-field override)
-    assert.strictEqual(props.assignedToId, undefined, 'FK field should be removed');
+    assert.ok('assignedToId' in props, 'assignedToId stays beside the expanded record');
     assert.ok(props.assignedTo, 'renamed expanded field should exist');
     assert.ok(props.assignedTo.properties?.id);
     assert.ok(props.assignedTo.properties?.name);
@@ -973,7 +973,7 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(spec, 'expand', schemaIndex);
 
     const props = result.components.schemas.ApplicationMember.properties;
-    assert.strictEqual(props.personId, undefined, 'personId should be removed (forward expanded)');
+    assert.ok('personId' in props, 'personId stays beside the expanded record');
     assert.ok(props.person, 'person should be inlined');
   });
 
@@ -1013,7 +1013,7 @@ test('relationship-resolver tests', async (t) => {
     const { result, warnings } = resolveRelationships(spec, 'expand', schemaIndex);
 
     const props = result.components.schemas.ApplicationMember.properties;
-    assert.strictEqual(props.applicationId, undefined, 'applicationId removed by explicit expand');
+    assert.ok('applicationId' in props, 'applicationId stays beside the expanded record');
     assert.ok(props.application, 'application should be inlined per explicit override');
     assert.strictEqual(props.application.type, 'object', 'subset uses inline object, not $ref');
     assert.ok(props.application.properties.id && props.application.properties.name, 'subset contains the requested fields');
@@ -1089,7 +1089,7 @@ test('relationship-resolver tests', async (t) => {
 
     const { result: examples, warnings } = resolveExampleRelationships(examplesData, expandRenames, examplesIndex);
 
-    assert.strictEqual(examples.MemberExample1.applicationId, undefined, 'FK field should be removed from example');
+    assert.ok('applicationId' in examples.MemberExample1, 'applicationId stays beside the expanded record');
     assert.ok(examples.MemberExample1.application, 'application field should be inlined in example');
     assert.deepStrictEqual(
       examples.MemberExample1.application,
@@ -1305,7 +1305,7 @@ test('relationship-resolver tests', async (t) => {
 
     // Verification.memberId is a lateral (forward) → expand to Verification.member
     const verificationProps = result.components.schemas.Verification.properties;
-    assert.strictEqual(verificationProps.memberId, undefined, 'memberId removed by lateral expansion');
+    assert.ok('memberId' in verificationProps, 'memberId stays beside the expanded record');
     assert.ok(verificationProps.member, 'Verification.member should be inlined');
 
     // ApplicationMember.applicationId is a back-reference → stays scalar (cascade stops here)
@@ -1363,7 +1363,7 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(spec, 'expand', schemaIndex);
 
     const noteProps = result.components.schemas.ApplicationNote.properties;
-    assert.strictEqual(noteProps.memberId, undefined, 'memberId removed by lateral expansion');
+    assert.ok('memberId' in noteProps, 'memberId stays beside the expanded record');
     assert.ok(noteProps.member, 'ApplicationNote.member should be inlined');
 
     const memberProps = result.components.schemas.ApplicationMember.properties;
@@ -1419,7 +1419,7 @@ test('relationship-resolver tests', async (t) => {
     const { result } = resolveRelationships(spec, 'expand', schemaIndex);
 
     const entryProps = result.components.schemas.ReviewProgressEntry.properties;
-    assert.strictEqual(entryProps.memberId, undefined, 'memberId removed by lateral expansion');
+    assert.ok('memberId' in entryProps, 'memberId stays beside the expanded record');
     assert.ok(entryProps.member, 'ReviewProgressEntry.member should be inlined');
 
     const memberProps = result.components.schemas.ApplicationMember.properties;
@@ -2168,7 +2168,7 @@ test('relationship-resolver tests', async (t) => {
     const { result, warnings } = resolveExampleRelationships(examplesData, expandRenames, examplesIndex);
 
     assert.strictEqual(warnings.length, 0);
-    assert.strictEqual(result.TaskExample1.assignedToId, undefined, 'FK field should be removed');
+    assert.ok('assignedToId' in result.TaskExample1, 'assignedToId stays beside the expanded record');
     assert.deepStrictEqual(result.TaskExample1.assignedTo, {
       id: 'user-001', name: 'Jane Smith', email: 'jane@example.gov'
     });
@@ -2176,7 +2176,7 @@ test('relationship-resolver tests', async (t) => {
 
   await t.test('resolveExampleRelationships - recursively expands FK fields on related record when no fields specified', () => {
     // Task.assignedToId → User (no fields), User.teamId → Team (no fields)
-    // The full User record should have teamId expanded to team object
+    // The full User record should have team expanded beside teamId
     const examplesData = {
       TaskExample1: { id: 'task-001', assignedToId: 'user-001' }
     };
@@ -2197,6 +2197,7 @@ test('relationship-resolver tests', async (t) => {
     assert.deepStrictEqual(result.TaskExample1.assignedTo, {
       id: 'user-001',
       name: 'Jane Smith',
+      teamId: 'team-001',
       team: { id: 'team-001', name: 'Intake Team' }
     });
   });
@@ -2239,7 +2240,7 @@ test('relationship-resolver tests', async (t) => {
 
     assert.strictEqual(warnings.length, 1);
     assert.ok(warnings[0].includes('user-missing'));
-    assert.strictEqual(result.TaskExample1.assignedToId, undefined);
+    assert.ok('assignedToId' in result.TaskExample1, 'assignedToId stays beside the expanded record');
     assert.strictEqual(result.TaskExample1.assignedTo, 'user-missing');
   });
 
@@ -2494,7 +2495,7 @@ test('relationship-resolver tests', async (t) => {
     const schemas = result.components.schemas;
 
     // Response schema: householdId → household (expanded)
-    assert.strictEqual(schemas.Application.properties.householdId, undefined, 'response FK renamed away');
+    assert.ok('householdId' in schemas.Application.properties, 'householdId stays beside the expanded record');
     assert.ok(schemas.Application.properties.household, 'response FK expanded to inline object');
 
     // Request schema: householdId stays as plain scalar — no rename, no expansion

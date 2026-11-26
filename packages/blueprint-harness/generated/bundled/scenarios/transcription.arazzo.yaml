@@ -5,28 +5,28 @@ info:
   x-domain: communication
   x-capability: transcripts
   description: |
-    A staff member transcribes a conversation as it's spoken. The client in their browser sends the audio straight to a transcription service and tells the session what happens; the session keeps the transcript on the server; the state's transcript audio adapter gives the credential the client connects with.
+    A staff member transcribes a conversation as it's spoken. The staff member starts, pauses and stops the session. The session's adapter, in their browser, sends the audio straight to a transcription service and publishes what happens as the session's events; the session follows them, and the transcript keeps the lines on the server. The adapter's credentials part gives the credential the adapter connects with.
 
     The main path starts, transcribes one line and stops. The other situations each start their own session.
   x-actors:
     - id: staff
       name: Staff member
-      description: Starts, pauses, resumes and stops transcribing, from their browser.
-    - id: client
-      name: Client
-      description: The app in the staff member's browser. It sends the audio to the service and tells the session what happens. This scenario plays its part.
+      description: Starts, pauses, resumes and stops transcribing, from their browser, and sees the lines as they come.
     - id: session
       name: Session
-      description: Keeps track of the client's connection. It runs in the browser; in this demo, the mock runs it.
+      description: Keeps track of the connection, and calls its adapter to start, pause and stop. It runs in the browser; in this demo, the mock runs it.
+    - id: adapter
+      name: Adapter's streaming part
+      description: The session's adapter for the transcription service, its streaming part, in the staff member's browser. It sends the audio to the service and publishes what happens as the session's events. This scenario plays its part; a stub takes the session's calls to it.
     - id: transcript
       name: Transcript
       description: Keeps the transcript and its rules, on the server. In this demo, the mock runs it.
     - id: service
       name: Service
       description: Turns the audio into text. In this demo, a fake the mock stands in for with stubs.
-    - id: adapter
-      name: Adapter
-      description: The state's transcript audio adapter, which holds the service's secret and gives the client a short-lived credential. In this demo, the mock stands in for it with stubs.
+    - id: adapterServer
+      name: Adapter's credentials part
+      description: The adapter's credentials part, on the state's server, which holds the service's secret and gives the streaming part a short-lived credential. In this demo, the mock stands in for it with stubs.
     - id: supervisor
       name: Supervisor
       description: Someone else with access to the transcript.
@@ -40,6 +40,9 @@ sourceDescriptions:
   - name: sessionEvents
     url: ../base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml
     type: asyncapi
+  - name: adapter
+    url: ../base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml
+    type: openapi
   - name: transcripts
     url: ../base/domains/communication/communication-transcripts-openapi.yaml
     type: openapi
@@ -61,15 +64,15 @@ components:
 workflows:
   - workflowId: startAndConnect
     summary: Starting and connecting
-    description: The staff member starts transcribing. The client asks how to connect, connects straight to the service, and tells the session the connection is open.
+    description: The staff member starts transcribing. The session starts a transcript and calls its adapter, which gets a credential, connects straight to the service, and publishes that it's connected.
     x-branch: main
     steps:
-      - stepId: start
+      - stepId: create
         x-actors:
           - staff
           - session
         description: |
-          Start a session
+          Create a session
 
           - It says what to start a transcript with: the profile, the model, the client and when the conversation began. No transcript exists yet.
           - The profile, `english-interviews`, is one the harness seeds, as a state seeds its own. It uses the harness's fake service, and has no limit on time with nothing added, so a transcript under it never closes on its own partway through.
@@ -93,19 +96,74 @@ workflows:
         x-actors:
           - adapter
         description: |
-          Gives a credential for the service
+          Takes the session's call to start streaming
 
-          - The adapter holds the service's secret and gives the client a credential that lasts minutes. The mock can't do that itself: without a stub it answers `POST /issue-connection` with `501`.
-          - This stub answers the next `POST /issue-connection` as the adapter would: where to connect, and a token good for five minutes.
+          - The session calls its adapter to start. This scenario plays the adapter, so a stub takes the call, and the adapter's work follows in the steps below.
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
             match:
               method: POST
-              url: /issue-connection
+              url: /streams
+            response:
+              status: 202
+              body:
+                metadata: {}
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: start
+        x-actors:
+          - staff
+          - session
+          - adapter
+        description: |
+          Start
+
+          - The session has no transcript yet, so it starts one, under the profile it was created with, then reads the profile for the service and languages, and calls its adapter to start streaming.
+          - The session is `connecting`.
+        operationId: $sourceDescriptions.sessions.startTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.create.outputs.id
+        requestBody:
+          payload: {}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'connecting'
+        outputs:
+          transcriptId: $response.body#/transcriptId
+      - stepId: connecting
+        x-actors:
+          - session
+          - staff
+        description: |
+          Status: connecting
+
+          - The page follows the session's events, so whatever changes the session, the staff member sees.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnecting
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $steps.create.outputs.id
+      - stepId: adapterServerStub
+        x-actors:
+          - adapterServer
+        description: |
+          Gives a credential for the service
+
+          - The adapter's credentials part holds the service's secret and gives a credential that lasts minutes. The mock can't do that itself: without a stub it answers `POST /credentials` with `501`.
+          - This stub answers the next `POST /credentials` as the credentials part would: where to connect, and a token good for five minutes.
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /credentials
             response:
               status: 200
               body:
+                metadata: {}
                 provider: fake-transcription
                 protocol: websocket
                 url: wss://fake-transcription.example/stream
@@ -115,23 +173,24 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors:
-          - client
-          - session
+          - adapter
+          - adapterServer
         description: |
-          Ask how to connect
+          Ask for credentials
 
-          - The session has no transcript yet, so it starts one, under the profile it was created with, then asks the transcript how to connect. The transcript asks the adapter, and the stub above answers.
+          - The adapter asks its credentials part, with the service, model and languages the session started it with, and the audio it will send.
           - The answer says where to connect, which messages the connection uses (`subprotocol`), and the credential. The audio goes straight to the service; it never passes through the server.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
+        operationId: $sourceDescriptions.adapter.requestCredentials
         requestBody:
           payload:
+            metadata:
+              transcriptionSessionId: $steps.create.outputs.id
+            provider: fake-transcription
+            model: standard
+            languages:
+              - en-US
             audio:
               encoding: linear16
               sampleRateHertz: 16000
@@ -145,18 +204,6 @@ workflows:
         outputs:
           subprotocol: $response.body#/subprotocol
           accessToken: $response.body#/accessToken
-      - stepId: connecting
-        x-actors:
-          - session
-          - client
-        description: |
-          Status: connecting
-
-          - The client follows the session's events, so whatever changes the session, the client hears about.
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnecting
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
       - stepId: serviceStub
         x-actors:
           - service
@@ -175,19 +222,19 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendStart
         x-actors:
-          - client
+          - adapter
           - service
         description: |
           Open the connection, with the audio format
 
-          - The service here is a fake that uses the relay contract's messages, so the mock can stand in for it. A real service uses its own messages, such as Deepgram's or Amazon's. The session and the transcript work the same either way.
-          - The client opens a WebSocket to where the session said, with the credential in the `Sec-WebSocket-Protocol` header rather than the URL, since URLs get logged. Its first message says what audio is coming.
+          - The service here is a fake that uses the relay contract's messages, so the mock can stand in for it. A real service uses its own messages, such as Deepgram's or Amazon's; an adapter for it speaks them. The session and the transcript work the same either way.
+          - The adapter opens a WebSocket to where its credentials part said, with the credential in the `Sec-WebSocket-Protocol` header rather than the URL, since URLs get logged. Its first message says what audio is coming.
         operationId: $sourceDescriptions.audio.receiveStart
         action: send
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
+            value: "{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}"
         requestBody:
           payload:
             type: start
@@ -200,49 +247,53 @@ workflows:
       - stepId: started
         x-actors:
           - service
-          - client
+          - adapter
         description: |
           Ready
 
           - The service is ready for audio.
         operationId: $sourceDescriptions.audio.sendStarted
         action: receive
-      - stepId: connect
+      - stepId: publishConnected
         x-actors:
-          - client
+          - adapter
           - session
         description: |
-          Connection open
+          Publish connected
 
-          - The client opened the connection to the service itself, so only it knows it worked. The session is `connected`, and names the transcript it started.
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+          - The adapter opened the connection to the service itself, so only it knows it worked. It publishes that as the session's event, with the session's id as the subject and the partition key, so the session's events stay in order.
+          - The session follows it to `connected`.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
+        action: send
+        requestBody:
+          payload:
+            subject: $steps.create.outputs.id
+            partitionkey: $steps.create.outputs.id
+            data:
+              transcriptId: $steps.start.outputs.transcriptId
+      - stepId: connected
+        x-actors:
+          - staff
+          - session
+        description: |
+          Get the session: connected
+
+          - It names the transcript it started.
+        operationId: $sourceDescriptions.sessions.getTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {}
+            value: $steps.create.outputs.id
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'connected'
-        outputs:
-          transcriptId: $response.body#/transcriptId
-      - stepId: connected
-        x-actors:
-          - session
-          - client
-        description: "Status: connected"
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
     outputs:
-      sessionId: $steps.start.outputs.id
-      transcriptId: $steps.connect.outputs.transcriptId
+      sessionId: $steps.create.outputs.id
+      transcriptId: $steps.start.outputs.transcriptId
   - workflowId: eachLine
     summary: Each line spoken
-    description: One line is spoken. The service sends its text while it's in progress and once it's final, and the client passes each on to the session.
+    description: One line is spoken. The service sends its text while it's in progress and once it's final, and the adapter publishes each as the session's event. The transcript keeps the finished line.
     x-branch: main
     dependsOn:
       - startAndConnect
@@ -281,12 +332,12 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendAudio
         x-actors:
-          - client
+          - adapter
           - service
         description: |
           Audio
 
-          - Binary frames, in the format the client gave when it opened the connection. The client sends them as it captures them, about ten a second.
+          - Binary frames, in the format the adapter gave when it opened the connection. It sends them as it captures them, about ten a second.
         operationId: $sourceDescriptions.audio.receiveAudio
         action: send
         requestBody:
@@ -294,7 +345,7 @@ workflows:
       - stepId: textInProgress
         x-actors:
           - service
-          - client
+          - adapter
         description: |
           Text in progress
 
@@ -306,44 +357,30 @@ workflows:
         outputs:
           key: $message.payload#/id
           text: $message.payload#/alternatives/0/transcript
-      - stepId: updateLine
+      - stepId: publishLineUpdated
         x-actors:
-          - client
-          - session
+          - adapter
+          - staff
         description: |
-          Update the line in progress
+          Publish the line in progress
 
-          - The client passes it on with the result's `id` as the line's key. Nothing is saved.
-        operationId: $sourceDescriptions.sessions.updateLineTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $workflows.startAndConnect.outputs.sessionId
+          - With the result's `id` as the line's key. The page shows it. Nothing is kept.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineUpdated
+        action: send
         requestBody:
           payload:
-            key: $steps.textInProgress.outputs.key
-            text: $steps.textInProgress.outputs.text
-            speaker: staff
-            startedAt: "2026-10-12T10:00:05Z"
-        successCriteria:
-          - condition: $statusCode == 200
-      - stepId: lineUpdated
-        x-actors:
-          - session
-          - client
-        description: |
-          Line in progress, to show
-
-          - The session sends the line back as an event, and that's what the page shows. It's only an event; nothing is saved.
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineUpdated
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $workflows.startAndConnect.outputs.sessionId && $message.payload#/data/key == 'r1'
+            subject: $workflows.startAndConnect.outputs.sessionId
+            partitionkey: $workflows.startAndConnect.outputs.sessionId
+            data:
+              transcriptId: $workflows.startAndConnect.outputs.transcriptId
+              key: $steps.textInProgress.outputs.key
+              text: $steps.textInProgress.outputs.text
+              speaker: staff
+              startedAt: "2026-10-12T10:00:05Z"
       - stepId: finalText
         x-actors:
           - service
-          - client
+          - adapter
         description: |
           Final text
 
@@ -355,58 +392,77 @@ workflows:
         outputs:
           key: $message.payload#/id
           text: $message.payload#/alternatives/0/transcript
-      - stepId: addLine
+      - stepId: publishLineFinished
         x-actors:
-          - client
-          - session
+          - adapter
+          - transcript
         description: |
-          Add the finished line
+          Publish the finished line
 
-          - The client passes it on with the same key. Its times are the result's offsets added to when the conversation began, by the client's clock.
-          - The session adds it to the transcript with the key, so if the request is sent again, the line is saved once.
-        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $workflows.startAndConnect.outputs.sessionId
+          - With the same key. Its times are the result's offsets added to when the conversation began, by the browser's clock.
+          - The transcript keeps it, once for the session and the key, so if it's published again after a network error, it's still kept once. The page swaps the line in progress for it.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
+        action: send
         requestBody:
           payload:
-            key: $steps.finalText.outputs.key
-            text: $steps.finalText.outputs.text
-            speaker: staff
-            startedAt: "2026-10-12T10:00:05Z"
-            endedAt: "2026-10-12T10:00:06Z"
-        successCriteria:
-          - condition: $statusCode == 200
-      - stepId: lineAdded
+            subject: $workflows.startAndConnect.outputs.sessionId
+            partitionkey: $workflows.startAndConnect.outputs.sessionId
+            data:
+              transcriptId: $workflows.startAndConnect.outputs.transcriptId
+              key: $steps.finalText.outputs.key
+              text: $steps.finalText.outputs.text
+              speaker: staff
+              startedAt: "2026-10-12T10:00:05Z"
+              endedAt: "2026-10-12T10:00:06Z"
+        outputs:
+          eventId: $response.body#/id
+      - stepId: lineKept
         x-actors:
-          - session
-          - client
+          - transcript
+          - staff
         description: |
-          Finished line, to show
+          Entry added
 
-          - It carries the line's key and the saved entry, so the page swaps the line in progress for the saved one.
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineAdded
+          - The transcript's own event, for the line it kept. The line is now part of the record.
+          - It names the `line_finished` the adapter published as its cause, in `causationid`, which is how anything that saw the line finds the entry it became.
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptEntryCreated
         action: receive
         successCriteria:
-          - condition: $message.payload#/subject == $workflows.startAndConnect.outputs.sessionId && $message.payload#/data/key == 'r1'
+          - condition: $message.payload#/data/transcriptId == $workflows.startAndConnect.outputs.transcriptId && $message.payload#/data/kind == 'line'
+          - condition: $message.payload#/causationid == $steps.publishLineFinished.outputs.eventId
   - workflowId: stopping
     summary: Stopping
-    description: The staff member stops. The client sends the end of the audio, adds the last line the service sends, and closes the session, which closes the transcript.
+    description: The staff member stops. The session calls its adapter to stop; the adapter sends the end of the audio, publishes the last line the service sends, then publishes that it's done, and the session closes the transcript.
     x-branch: main
     dependsOn:
       - startAndConnect
       - eachLine
     steps:
+      - stepId: adapterStub
+        x-actors:
+          - adapter
+        description: Takes the session's call to stop streaming
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /streams/{$workflows.startAndConnect.outputs.sessionId}/stop
+            response:
+              status: 202
+              body:
+                metadata: {}
+        successCriteria:
+          - condition: $statusCode == 201
       - stepId: stop
         x-actors:
           - staff
           - session
+          - adapter
         description: |
           Stop
 
-          - The session is `stopping`. The client sends the end of the audio and waits for the last text.
+          - The session calls its adapter to stop, and is `stopping`. The adapter sends the end of the audio and waits for the last text.
         operationId: $sourceDescriptions.sessions.stopTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -447,7 +503,7 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendEnd
         x-actors:
-          - client
+          - adapter
           - service
         description: |
           End of the audio
@@ -461,7 +517,7 @@ workflows:
       - stepId: lastText
         x-actors:
           - service
-          - client
+          - adapter
         description: Last text
         operationId: $sourceDescriptions.audio.sendResult
         action: receive
@@ -470,63 +526,68 @@ workflows:
         outputs:
           key: $message.payload#/id
           text: $message.payload#/alternatives/0/transcript
-      - stepId: lastLine
+      - stepId: publishLastLine
         x-actors:
-          - client
-          - session
+          - adapter
+          - transcript
         description: |
-          Add the last line
+          Publish the last line
 
-          - Still saved: the session takes lines while stopping, and this one began before the transcript closes.
-        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $workflows.startAndConnect.outputs.sessionId
+          - Still kept: the transcript is still recording, and the line began before it closes.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
+        action: send
         requestBody:
           payload:
-            key: $steps.lastText.outputs.key
-            text: $steps.lastText.outputs.text
-            speaker: staff
-            startedAt: "2026-10-12T10:00:08Z"
-            endedAt: "2026-10-12T10:00:10Z"
-        successCriteria:
-          - condition: $statusCode == 200
+            subject: $workflows.startAndConnect.outputs.sessionId
+            partitionkey: $workflows.startAndConnect.outputs.sessionId
+            data:
+              transcriptId: $workflows.startAndConnect.outputs.transcriptId
+              key: $steps.lastText.outputs.key
+              text: $steps.lastText.outputs.text
+              speaker: staff
+              startedAt: "2026-10-12T10:00:08Z"
+              endedAt: "2026-10-12T10:00:10Z"
       - stepId: ended
         x-actors:
           - service
-          - client
+          - adapter
         description: |
           Done
 
           - No more text is coming, and the service closes the connection.
         operationId: $sourceDescriptions.audio.sendEnded
         action: receive
-      - stepId: close
+      - stepId: publishEnded
         x-actors:
-          - client
+          - adapter
           - session
         description: |
-          Close
+          Publish ended
 
-          - The last text is in and the connection is closed. The session closes the transcript, at the time the client says.
-        operationId: $sourceDescriptions.sessions.closeTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $workflows.startAndConnect.outputs.sessionId
+          - The last line is published and the connection closed. The session closes the transcript, at the time the adapter says the last text came in.
+          - It's published after the last line with the same partition key, so the transcript keeps the line before it closes.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionEnded
+        action: send
         requestBody:
           payload:
-            at: "2026-10-12T10:00:11Z"
+            subject: $workflows.startAndConnect.outputs.sessionId
+            partitionkey: $workflows.startAndConnect.outputs.sessionId
+            data:
+              transcriptId: $workflows.startAndConnect.outputs.transcriptId
+              at: "2026-10-12T10:00:11Z"
+      - stepId: sessionClosed
+        x-actors:
+          - session
+          - staff
+        description: "Status: closed"
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionClosed
+        action: receive
         successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == 'closed'
+          - condition: $message.payload#/subject == $workflows.startAndConnect.outputs.sessionId
       - stepId: transcriptClosed
         x-actors:
           - transcript
-          - client
+          - staff
         description: |
           Status: closed
 
@@ -537,7 +598,7 @@ workflows:
           - condition: $message.payload#/subject == $workflows.startAndConnect.outputs.transcriptId
       - stepId: timeline
         x-actors:
-          - client
+          - staff
           - transcript
         description: |
           Get the timeline
@@ -556,15 +617,15 @@ workflows:
           - condition: $response.body#/items/1/text == "Thank you, that's everything."
   - workflowId: rejectedBeforeConnecting
     summary: What's rejected before connecting
-    description: A session started without saying which model turns speech into text can't connect, and a session that hasn't connected can't add lines.
+    description: A session created without saying which model turns speech into text can't start, and a session that hasn't started can't pause.
     x-branch: other
     steps:
-      - stepId: startWithoutAModel
+      - stepId: createWithoutAModel
         x-actors:
           - staff
           - session
         description: |
-          Start a session without a model
+          Create a session without a model
 
           - The session doesn't check the model. The transcript does, when the session starts it.
         operationId: $sourceDescriptions.sessions.createTranscriptionSession
@@ -579,36 +640,30 @@ workflows:
           - condition: $statusCode == 201
         outputs:
           id: $response.body#/id
-      - stepId: getConnectionWithoutAModel
+      - stepId: startWithoutAModel
         x-actors:
-          - client
+          - staff
           - session
         description: |
-          Try to ask how to connect: rejected (409)
+          Try to start: rejected (409)
 
-          - Asking how to connect starts the transcript, and the transcript rejects it: under a profile that uses a transcription service, a transcript has to say which model turns speech into text.
-          - The transcript's `409` comes back as the session's answer, and the session stays in `created`.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+          - Starting starts the transcript, and the transcript rejects it: under a profile that uses a transcription service, a transcript has to say which model turns speech into text.
+          - The transcript's `409` comes back as the session's answer, the adapter is never called, and the session stays in `created`.
+        operationId: $sourceDescriptions.sessions.startTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.startWithoutAModel.outputs.id
+            value: $steps.createWithoutAModel.outputs.id
         requestBody:
-          payload:
-            audio:
-              encoding: linear16
-              sampleRateHertz: 16000
-              channelCount: 1
-            protocols:
-              - websocket
+          payload: {}
         successCriteria:
           - condition: $statusCode == 409
-      - stepId: start
+      - stepId: create
         x-actors:
           - staff
           - session
-        description: Start a session
+        description: Create a session
         operationId: $sourceDescriptions.sessions.createTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -622,39 +677,35 @@ workflows:
           - condition: $statusCode == 201
         outputs:
           id: $response.body#/id
-      - stepId: lineBeforeConnecting
+      - stepId: pauseBeforeConnecting
         x-actors:
-          - client
+          - staff
           - session
         description: |
-          Try to add a line before connecting: rejected (409)
+          Try to pause before connecting: rejected (409)
 
-          - A session adds a line only while connected, paused or stopping.
-        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
+          - A session pauses only while connected, when there's audio to take off the record.
+        operationId: $sourceDescriptions.sessions.pauseTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.create.outputs.id
         requestBody:
           payload:
-            key: early
-            startedAt: "2026-10-12T11:00:01Z"
-            endedAt: "2026-10-12T11:00:02Z"
-            text: Too soon.
-            speaker: staff
+            at: "2026-10-12T11:00:01Z"
         successCriteria:
           - condition: $statusCode == 409
   - workflowId: offTheRecord
     summary: Going off the record
-    description: The staff member pauses. The client adds the line said just before the pause, ends the connection so nothing said off the record leaves the browser, and connects again when they resume.
+    description: The staff member pauses. The session calls its adapter to pause, so nothing said off the record leaves the browser; the adapter publishes the line said just before the pause, and the transcript keeps it. On resume, the session starts the adapter again.
     x-branch: other
     steps:
       - stepId: connected
         x-actors:
           - staff
-          - client
           - session
+          - adapter
         description: |
           Start and connect, as in the main path
 
@@ -663,14 +714,31 @@ workflows:
         outputs:
           sessionId: $outputs.sessionId
           transcriptId: $outputs.transcriptId
+      - stepId: adapterStubPause
+        x-actors:
+          - adapter
+        description: Takes the session's call to pause streaming
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /streams/{$steps.connected.outputs.sessionId}/pause
+            response:
+              status: 202
+              body:
+                metadata: {}
+        successCriteria:
+          - condition: $statusCode == 201
       - stepId: pause
         x-actors:
           - staff
           - session
+          - adapter
         description: |
           Pause
 
-          - The session pauses the transcript, at the time the client says.
+          - The session calls its adapter to pause first, so no audio leaves the browser once it's off the record, then pauses the transcript, at the time the staff member says.
         operationId: $sourceDescriptions.sessions.pauseTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -686,11 +754,8 @@ workflows:
       - stepId: paused
         x-actors:
           - session
-          - client
-        description: |
-          Status: paused
-
-          - On `paused`, the client stops sending audio and ends the connection.
+          - staff
+        description: "Status: paused"
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionPaused
         action: receive
         successCriteria:
@@ -717,12 +782,12 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendFinalize
         x-actors:
-          - client
+          - adapter
           - service
         description: |
           Ask for the final text so far
 
-          - So a line said just before the pause still reaches the transcript.
+          - On pause, the adapter stops sending audio and asks for what the service still has, so a line said just before the pause still reaches the transcript.
         operationId: $sourceDescriptions.audio.receiveFinalize
         action: send
         requestBody:
@@ -731,7 +796,7 @@ workflows:
       - stepId: finalText
         x-actors:
           - service
-          - client
+          - adapter
         description: Final text
         operationId: $sourceDescriptions.audio.sendResult
         action: receive
@@ -740,53 +805,36 @@ workflows:
         outputs:
           key: $message.payload#/id
           text: $message.payload#/alternatives/0/transcript
-      - stepId: lineBeforeThePause
+      - stepId: publishLineBeforeThePause
         x-actors:
-          - client
-          - session
+          - adapter
+          - transcript
         description: |
-          Add the line said before the pause: saved
+          Publish the line said before the pause
 
-          - The session takes a line while paused, and the transcript saves it because it started before the pause.
-        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.connected.outputs.sessionId
+          - The transcript keeps it, though it's paused, because the line started before the pause.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
+        action: send
         requestBody:
           payload:
-            key: $steps.finalText.outputs.key
-            text: $steps.finalText.outputs.text
-            speaker: client
-            startedAt: "2026-10-12T10:00:07Z"
-            endedAt: "2026-10-12T10:00:09Z"
-        successCriteria:
-          - condition: $statusCode == 200
-      - stepId: getConnectionWhilePaused
+            subject: $steps.connected.outputs.sessionId
+            partitionkey: $steps.connected.outputs.sessionId
+            data:
+              transcriptId: $steps.connected.outputs.transcriptId
+              key: $steps.finalText.outputs.key
+              text: $steps.finalText.outputs.text
+              speaker: client
+              startedAt: "2026-10-12T10:00:07Z"
+              endedAt: "2026-10-12T10:00:09Z"
+      - stepId: lineKept
         x-actors:
-          - client
-          - session
-        description: |
-          Try to ask how to connect: rejected (409)
-
-          - Off the record, the session gives no credential and doesn't ask the adapter for one.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.connected.outputs.sessionId
-        requestBody:
-          payload:
-            audio:
-              encoding: linear16
-              sampleRateHertz: 16000
-              channelCount: 1
-            protocols:
-              - websocket
+          - transcript
+          - staff
+        description: Entry added
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptEntryCreated
+        action: receive
         successCriteria:
-          - condition: $statusCode == 409
+          - condition: $message.payload#/data/transcriptId == $steps.connected.outputs.transcriptId && $message.payload#/data/kind == 'line'
       - stepId: serviceStubEnd
         x-actors:
           - service
@@ -804,7 +852,7 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendEnd
         x-actors:
-          - client
+          - adapter
           - service
         description: End of the audio
         operationId: $sourceDescriptions.audio.receiveEnd
@@ -815,7 +863,7 @@ workflows:
       - stepId: ended
         x-actors:
           - service
-          - client
+          - adapter
         description: |
           Done
 
@@ -824,10 +872,9 @@ workflows:
         action: receive
       - stepId: stillPaused
         x-actors:
-          - client
+          - staff
           - session
-        description: |
-          Get the session: paused, no connection
+        description: "Get the session: paused, no connection"
         operationId: $sourceDescriptions.sessions.getTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -837,14 +884,31 @@ workflows:
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'paused'
+      - stepId: adapterStubStart
+        x-actors:
+          - adapter
+        description: Takes the session's call to start streaming again
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /streams
+            response:
+              status: 202
+              body:
+                metadata: {}
+        successCriteria:
+          - condition: $statusCode == 201
       - stepId: resume
         x-actors:
           - staff
           - session
+          - adapter
         description: |
           Resume
 
-          - The session resumes the transcript and is `connecting`: the client asks how to connect again.
+          - The session resumes the transcript and calls its adapter to start streaming again. It's `connecting`.
         operationId: $sourceDescriptions.sessions.resumeTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -859,26 +923,28 @@ workflows:
           - condition: $response.body#/status == 'connecting'
       - stepId: reconnected
         x-actors:
-          - client
+          - adapter
           - session
         description: |
           Connect again, with a new credential
 
-          - The same steps as starting and connecting, on the same session: a new credential, and a new connection.
+          - The same steps as connecting the first time, on the same session: a new credential, and a new connection.
         workflowId: reconnect
         parameters:
           - name: sessionId
             value: $steps.connected.outputs.sessionId
+          - name: transcriptId
+            value: $steps.connected.outputs.transcriptId
   - workflowId: newCredential
     summary: Getting a new credential before the old one runs out
-    description: Before the credential runs out, the client gets a new one without closing the connection.
+    description: Before the credential runs out, the adapter gets a new one from its credentials part without closing the connection. The session isn't involved.
     x-branch: other
     steps:
       - stepId: connected
         x-actors:
           - staff
-          - client
           - session
+          - adapter
         description: |
           Start and connect, as in the main path
 
@@ -887,19 +953,20 @@ workflows:
         outputs:
           sessionId: $outputs.sessionId
           transcriptId: $outputs.transcriptId
-      - stepId: adapterStub
+      - stepId: adapterServerStub
         x-actors:
-          - adapter
+          - adapterServer
         description: Gives a new credential
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
             match:
               method: POST
-              url: /issue-connection
+              url: /credentials
             response:
               status: 200
               body:
+                metadata: {}
                 provider: fake-transcription
                 protocol: websocket
                 url: wss://fake-transcription.example/stream
@@ -911,20 +978,21 @@ workflows:
           - condition: $statusCode == 201
       - stepId: renew
         x-actors:
-          - client
-          - session
+          - adapter
+          - adapterServer
         description: |
-          Get a new credential, keeping the connection
+          Ask for a new credential, keeping the connection
 
-          - The session stays `connected`. The connection isn't closed, and no event is sent.
-        operationId: $sourceDescriptions.sessions.renewConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.connected.outputs.sessionId
+          - The same request as the first time. Asked again, the credentials part gives a fresh credential.
+        operationId: $sourceDescriptions.adapter.requestCredentials
         requestBody:
           payload:
+            metadata:
+              transcriptionSessionId: $steps.connected.outputs.sessionId
+            provider: fake-transcription
+            model: standard
+            languages:
+              - en-US
             audio:
               encoding: linear16
               sampleRateHertz: 16000
@@ -933,17 +1001,34 @@ workflows:
               - websocket
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/expiresIn == 300
+          - condition: $response.body#/accessToken == 'fake-service-token-2'
+      - stepId: stillConnected
+        x-actors:
+          - staff
+          - session
+        description: |
+          Get the session: still connected
+
+          - The connection isn't closed, and nothing is published.
+        operationId: $sourceDescriptions.sessions.getTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.connected.outputs.sessionId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'connected'
   - workflowId: supervisorPauses
     summary: When a supervisor pauses the transcript
-    description: A supervisor pauses the transcript directly, not through the session. The session follows the transcript off the record, and the client ends the connection, as when the staff member pauses. Only the staff member can resume.
+    description: A supervisor pauses the transcript directly, not through the session. The session follows the transcript off the record and calls its adapter to pause, as when the staff member pauses. Only the staff member can resume.
     x-branch: other
     steps:
       - stepId: connected
         x-actors:
           - staff
-          - client
           - session
+          - adapter
         description: |
           Start and connect, as in the main path
 
@@ -952,6 +1037,22 @@ workflows:
         outputs:
           sessionId: $outputs.sessionId
           transcriptId: $outputs.transcriptId
+      - stepId: adapterStubPause
+        x-actors:
+          - adapter
+        description: Takes the session's call to pause streaming
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /streams/{$steps.connected.outputs.sessionId}/pause
+            response:
+              status: 202
+              body:
+                metadata: {}
+        successCriteria:
+          - condition: $statusCode == 201
       - stepId: pauseTheTranscript
         x-actors:
           - supervisor
@@ -989,11 +1090,11 @@ workflows:
       - stepId: sessionPaused
         x-actors:
           - session
-          - client
+          - staff
         description: |
           Status: paused
 
-          - The same event as when the staff member pauses, so the client ends the connection either way.
+          - The session follows and calls its adapter to pause, as when the staff member pauses.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionPaused
         action: receive
         successCriteria:
@@ -1015,7 +1116,7 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendEnd
         x-actors:
-          - client
+          - adapter
           - service
         description: End of the audio
         operationId: $sourceDescriptions.audio.receiveEnd
@@ -1026,18 +1127,35 @@ workflows:
       - stepId: ended
         x-actors:
           - service
-          - client
+          - adapter
         description: Done
         operationId: $sourceDescriptions.audio.sendEnded
         action: receive
+      - stepId: adapterStubStart
+        x-actors:
+          - adapter
+        description: Takes the session's call to start streaming again
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /streams
+            response:
+              status: 202
+              body:
+                metadata: {}
+        successCriteria:
+          - condition: $statusCode == 201
       - stepId: resume
         x-actors:
           - staff
           - session
+          - adapter
         description: |
           Resume
 
-          - The session resumes the transcript and is `connecting`.
+          - The session resumes the transcript and calls its adapter to start streaming again. It's `connecting`.
         operationId: $sourceDescriptions.sessions.resumeTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -1052,23 +1170,25 @@ workflows:
           - condition: $response.body#/status == 'connecting'
       - stepId: reconnected
         x-actors:
-          - client
+          - adapter
           - session
         description: Connect again, with a new credential
         workflowId: reconnect
         parameters:
           - name: sessionId
             value: $steps.connected.outputs.sessionId
+          - name: transcriptId
+            value: $steps.connected.outputs.transcriptId
   - workflowId: connectionDrops
     summary: When the connection drops
-    description: The connection to the service drops partway through. The client connects again with a new credential, and the transcript records how long nothing was recorded.
+    description: The connection to the service drops partway through. The adapter publishes that, connects again with a new credential, and publishes how long nothing was captured, which the transcript keeps as a gap.
     x-branch: other
     steps:
       - stepId: connected
         x-actors:
           - staff
-          - client
           - session
+          - adapter
         description: |
           Start and connect, as in the main path
 
@@ -1104,7 +1224,7 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendAudio
         x-actors:
-          - client
+          - adapter
           - service
         description: Audio
         operationId: $sourceDescriptions.audio.receiveAudio
@@ -1114,7 +1234,7 @@ workflows:
       - stepId: finalText
         x-actors:
           - service
-          - client
+          - adapter
         description: Final text
         operationId: $sourceDescriptions.audio.sendResult
         action: receive
@@ -1123,38 +1243,59 @@ workflows:
         outputs:
           key: $message.payload#/id
           text: $message.payload#/alternatives/0/transcript
-      - stepId: addLine
+      - stepId: publishLineFinished
         x-actors:
-          - client
-          - session
+          - adapter
+          - transcript
         description: |
-          Add the finished line
+          Publish the finished line
 
-          - What arrived before the drop is saved.
-        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.connected.outputs.sessionId
+          - What arrived before the drop is kept.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
+        action: send
         requestBody:
           payload:
-            key: $steps.finalText.outputs.key
-            text: $steps.finalText.outputs.text
-            speaker: client
-            startedAt: "2026-10-12T10:00:02Z"
-            endedAt: "2026-10-12T10:00:03Z"
-        successCriteria:
-          - condition: $statusCode == 200
-      - stepId: dropped
+            subject: $steps.connected.outputs.sessionId
+            partitionkey: $steps.connected.outputs.sessionId
+            data:
+              transcriptId: $steps.connected.outputs.transcriptId
+              key: $steps.finalText.outputs.key
+              text: $steps.finalText.outputs.text
+              speaker: client
+              startedAt: "2026-10-12T10:00:02Z"
+              endedAt: "2026-10-12T10:00:03Z"
+      - stepId: lineKept
         x-actors:
-          - client
+          - transcript
+          - staff
+        description: Entry added
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptEntryCreated
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/data/transcriptId == $steps.connected.outputs.transcriptId && $message.payload#/data/kind == 'line'
+      - stepId: publishDisconnected
+        x-actors:
+          - adapter
           - session
         description: |
-          Connection dropped
+          Publish disconnected
 
-          - The client saw the connection close. The session is `disconnected`, and the client tries again.
-        operationId: $sourceDescriptions.sessions.disconnectTranscriptionSession
+          - The adapter saw the connection close. The session follows it to `disconnected`, and the adapter tries again.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
+        action: send
+        requestBody:
+          payload:
+            subject: $steps.connected.outputs.sessionId
+            partitionkey: $steps.connected.outputs.sessionId
+            data:
+              transcriptId: $steps.connected.outputs.transcriptId
+              at: "2026-10-12T10:00:04Z"
+      - stepId: disconnected
+        x-actors:
+          - staff
+          - session
+        description: "Get the session: disconnected"
+        operationId: $sourceDescriptions.sessions.getTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -1163,41 +1304,44 @@ workflows:
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'disconnected'
-      - stepId: disconnected
-        x-actors:
-          - session
-          - client
-        description: "Status: disconnected"
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
       - stepId: reconnected
         x-actors:
-          - client
+          - adapter
           - session
         description: |
-          Connect again, with a new credential and how long nothing was recorded
+          Connect again, with a new credential and how long nothing was captured
 
-          - The transcript saves that stretch as a gap, with `cause` `connection`, after the line from before the drop.
+          - The transcript keeps that stretch as a gap, with `cause` `connection`, after the line from before the drop.
         workflowId: reconnect
         parameters:
           - name: sessionId
             value: $steps.connected.outputs.sessionId
+          - name: transcriptId
+            value: $steps.connected.outputs.transcriptId
           - name: gap
             value:
               startedAt: "2026-10-12T10:00:04Z"
               endedAt: "2026-10-12T10:00:08Z"
+      - stepId: gapKept
+        x-actors:
+          - transcript
+          - staff
+        description: |
+          Entry added: the gap
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptEntryCreated
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/data/transcriptId == $steps.connected.outputs.transcriptId && $message.payload#/data/kind == 'gap'
   - workflowId: connectingFails
     summary: When connecting again fails
-    description: The connection drops, and the service rejects the new one. The client gives up and the session fails, but the transcript stays open for a new session to pick up.
+    description: The connection drops, and the service rejects the new one. The adapter gives up and publishes that, and the session fails, but the transcript stays open for a new session to pick up.
     x-branch: other
     steps:
       - stepId: connected
         x-actors:
           - staff
-          - client
           - session
+          - adapter
         description: |
           Start and connect, as in the main path
 
@@ -1230,7 +1374,7 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendAudio
         x-actors:
-          - client
+          - adapter
           - service
         description: |
           Audio
@@ -1240,33 +1384,34 @@ workflows:
         action: send
         requestBody:
           payload: (16-bit PCM audio)
-      - stepId: dropped
-        x-actors:
-          - client
-          - session
-        description: Connection dropped
-        operationId: $sourceDescriptions.sessions.disconnectTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.connected.outputs.sessionId
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == 'disconnected'
-      - stepId: adapterStub
+      - stepId: publishDisconnected
         x-actors:
           - adapter
+          - session
+        description: Publish disconnected
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
+        action: send
+        requestBody:
+          payload:
+            subject: $steps.connected.outputs.sessionId
+            partitionkey: $steps.connected.outputs.sessionId
+            data:
+              transcriptId: $steps.connected.outputs.transcriptId
+              at: "2026-10-12T10:00:03Z"
+      - stepId: adapterServerStub
+        x-actors:
+          - adapterServer
         description: Gives a new credential
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
             match:
               method: POST
-              url: /issue-connection
+              url: /credentials
             response:
               status: 200
               body:
+                metadata: {}
                 provider: fake-transcription
                 protocol: websocket
                 url: wss://fake-transcription.example/stream
@@ -1276,22 +1421,20 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnectionAgain
+      - stepId: requestCredentialsAgain
         x-actors:
-          - client
-          - session
-        description: |
-          Ask how to connect
-
-          - The session already has its transcript, so it only gets a new credential.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.connected.outputs.sessionId
+          - adapter
+          - adapterServer
+        description: Ask for credentials
+        operationId: $sourceDescriptions.adapter.requestCredentials
         requestBody:
           payload:
+            metadata:
+              transcriptionSessionId: $steps.connected.outputs.sessionId
+            provider: fake-transcription
+            model: standard
+            languages:
+              - en-US
             audio:
               encoding: linear16
               sampleRateHertz: 16000
@@ -1325,7 +1468,7 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendStartAgain
         x-actors:
-          - client
+          - adapter
           - service
         description: Open the connection, with the audio format
         operationId: $sourceDescriptions.audio.receiveStart
@@ -1333,7 +1476,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: "{$steps.getConnectionAgain.outputs.subprotocol}, {$steps.getConnectionAgain.outputs.accessToken}"
+            value: "{$steps.requestCredentialsAgain.outputs.subprotocol}, {$steps.requestCredentialsAgain.outputs.accessToken}"
         requestBody:
           payload:
             type: start
@@ -1346,21 +1489,35 @@ workflows:
       - stepId: refused
         x-actors:
           - service
-          - client
+          - adapter
         description: Error
         operationId: $sourceDescriptions.audio.sendError
         action: receive
         successCriteria:
           - condition: $message.payload#/code == 'network'
-      - stepId: fail
+      - stepId: publishFailed
         x-actors:
-          - client
+          - adapter
           - session
         description: |
-          Give up
+          Publish failed
 
-          - After as many tries as it allows, the client gives up. The session is `failed`.
-        operationId: $sourceDescriptions.sessions.failTranscriptionSession
+          - After as many tries as it allows, the adapter gives up. The session follows it to `failed`.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionFailed
+        action: send
+        requestBody:
+          payload:
+            subject: $steps.connected.outputs.sessionId
+            partitionkey: $steps.connected.outputs.sessionId
+            data:
+              transcriptId: $steps.connected.outputs.transcriptId
+              reason: The service is unavailable.
+      - stepId: failed
+        x-actors:
+          - staff
+          - session
+        description: "Get the session: failed"
+        operationId: $sourceDescriptions.sessions.getTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -1369,18 +1526,9 @@ workflows:
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'failed'
-      - stepId: failed
-        x-actors:
-          - session
-          - client
-        description: "Status: failed"
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionFailed
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
       - stepId: transcriptStillOpen
         x-actors:
-          - client
+          - staff
           - transcript
         description: |
           Get the transcript: still recording
@@ -1399,17 +1547,17 @@ workflows:
       transcriptId: $steps.connected.outputs.transcriptId
   - workflowId: newSessionPicksUp
     summary: A new session picks up the transcript
-    description: After the page reloads, or a session fails, a new session carries on the same transcript, and the time since its last line is saved as a gap.
+    description: After the page reloads, or a session fails, a new session carries on the same transcript. The session gives its adapter when the transcript last heard from anyone, and the adapter publishes the time since as a gap when it connects.
     x-branch: other
     dependsOn:
       - connectingFails
     steps:
-      - stepId: start
+      - stepId: create
         x-actors:
           - staff
           - session
         description: |
-          Start a session for the same transcript
+          Create a session for the same transcript
 
           - Given the transcript's id instead of a profile: the page kept it, or found it by who the conversation is about.
         operationId: $sourceDescriptions.sessions.createTranscriptionSession
@@ -1425,135 +1573,78 @@ workflows:
       - stepId: adapterStub
         x-actors:
           - adapter
-        description: Gives a credential for the service
+        description: Takes the session's call to start streaming
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
             match:
               method: POST
-              url: /issue-connection
+              url: /streams
             response:
-              status: 200
+              status: 202
               body:
-                provider: fake-transcription
-                protocol: websocket
-                url: wss://fake-transcription.example/stream
-                subprotocol: blueprint.transcripts.relay.v1
-                accessToken: fake-service-token
-                tokenType: Bearer
-                expiresIn: 300
+                metadata: {}
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnection
+      - stepId: start
         x-actors:
-          - client
+          - staff
           - session
+          - adapter
         description: |
-          Ask how to connect
+          Start
 
-          - The session already names a transcript, so no new one is started.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+          - The session already names a transcript, so no new one is started. It calls its adapter with when the transcript last heard from anyone.
+        operationId: $sourceDescriptions.sessions.startTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.create.outputs.id
         requestBody:
-          payload:
-            audio:
-              encoding: linear16
-              sampleRateHertz: 16000
-              channelCount: 1
-            protocols:
-              - websocket
+          payload: {}
         successCriteria:
           - condition: $statusCode == 200
-        outputs:
-          subprotocol: $response.body#/subprotocol
-          accessToken: $response.body#/accessToken
+          - condition: $response.body#/status == 'connecting'
       - stepId: connecting
         x-actors:
           - session
-          - client
+          - staff
         description: "Status: connecting"
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnecting
         action: receive
         successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
-      - stepId: serviceStub
+          - condition: $message.payload#/subject == $steps.create.outputs.id
+      - stepId: reconnected
         x-actors:
-          - service
-        description: Answers a new connection with ready
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            "on": start
-            send:
-              - type: started
-        successCriteria:
-          - condition: $statusCode == 201
-      - stepId: sendStart
-        x-actors:
-          - client
-          - service
-        description: Open the connection, with the audio format
-        operationId: $sourceDescriptions.audio.receiveStart
-        action: send
-        parameters:
-          - name: Sec-WebSocket-Protocol
-            in: header
-            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
-        requestBody:
-          payload:
-            type: start
-            audio:
-              encoding: linear16
-              sampleRateHertz: 16000
-              channelCount: 1
-            languages:
-              - en-US
-      - stepId: started
-        x-actors:
-          - service
-          - client
-        description: Ready
-        operationId: $sourceDescriptions.audio.sendStarted
-        action: receive
-      - stepId: connect
-        x-actors:
-          - client
+          - adapter
           - session
         description: |
-          Connection open, with how long nothing was recorded
+          Connect, with how long nothing was captured
 
-          - The gap runs from when the transcript was last heard from to now.
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+          - The gap runs from when the transcript was last heard from to now. The transcript keeps it.
+        workflowId: reconnect
         parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload:
-            gap:
+          - name: sessionId
+            value: $steps.create.outputs.id
+          - name: transcriptId
+            value: $workflows.connectingFails.outputs.transcriptId
+          - name: gap
+            value:
               startedAt: "2026-10-12T10:00:00Z"
               endedAt: "2026-10-12T10:01:00Z"
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == 'connected'
-      - stepId: connected
+      - stepId: gapKept
         x-actors:
-          - session
-          - client
+          - transcript
+          - staff
         description: |
-          Status: connected
+          Entry added: the gap
 
           - On the same transcript the failed session started.
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptEntryCreated
         action: receive
         successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
+          - condition: $message.payload#/data/transcriptId == $workflows.connectingFails.outputs.transcriptId && $message.payload#/data/kind == 'gap'
   - workflowId: nothingAdded
     summary: When nothing is added for 30 minutes
     description: A transcript nobody adds anything to closes itself once its profile's time limit passes, so one left open by mistake doesn't stay open forever. The transcript asks the platform's scheduler to check back, and closes if nothing was added when the check comes.
@@ -1576,13 +1667,13 @@ workflows:
           - condition: $statusCode == 201
       - stepId: start
         x-actors:
-          - client
+          - staff
           - transcript
         description: |
           Start a transcript, then add nothing
 
           - Under `english-interviews-30-minutes`, a profile the harness seeds: the same as `english-interviews`, but a transcript under it closes after 30 minutes with nothing added.
-          - In a conversation, the session starts the transcript the first time the client asks how to connect. This starts it directly, because the scheduler's stub answers at once: through the session, the transcript would close before the session finished connecting.
+          - In a conversation, the session starts the transcript when it starts. This starts it directly, because the scheduler's stub answers at once: through the session, the transcript would close before the session finished connecting.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -1610,7 +1701,7 @@ workflows:
       - stepId: closed
         x-actors:
           - transcript
-          - client
+          - staff
         description: |
           Status: closed
 
@@ -1622,7 +1713,7 @@ workflows:
           - condition: $message.payload#/authtype == 'system'
       - stepId: whenItClosed
         x-actors:
-          - client
+          - staff
           - transcript
         description: |
           Get the transcript: closed as of when it started
@@ -1640,30 +1731,34 @@ workflows:
           - condition: $response.body#/closedAt == '2026-10-12T12:00:00Z'
   - workflowId: reconnect
     summary: Connect again, with a new credential
-    description: Get a new credential and connect again, saving a gap when one is given.
+    description: The adapter gets a new credential, connects again, and publishes that it's connected, with a gap when one is given.
     inputs:
       type: object
       required:
         - sessionId
+        - transcriptId
       properties:
         sessionId:
+          type: string
+        transcriptId:
           type: string
         gap:
           type: object
     steps:
-      - stepId: adapterStub
+      - stepId: adapterServerStub
         x-actors:
-          - adapter
+          - adapterServer
         description: Gives a new credential
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
             match:
               method: POST
-              url: /issue-connection
+              url: /credentials
             response:
               status: 200
               body:
+                metadata: {}
                 provider: fake-transcription
                 protocol: websocket
                 url: wss://fake-transcription.example/stream
@@ -1673,22 +1768,20 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors:
-          - client
-          - session
-        description: |
-          Ask how to connect
-
-          - The session already has its transcript, so it only gets a new credential.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $inputs.sessionId
+          - adapter
+          - adapterServer
+        description: Ask for credentials
+        operationId: $sourceDescriptions.adapter.requestCredentials
         requestBody:
           payload:
+            metadata:
+              transcriptionSessionId: $inputs.sessionId
+            provider: fake-transcription
+            model: standard
+            languages:
+              - en-US
             audio:
               encoding: linear16
               sampleRateHertz: 16000
@@ -1700,15 +1793,6 @@ workflows:
         outputs:
           subprotocol: $response.body#/subprotocol
           accessToken: $response.body#/accessToken
-      - stepId: connecting
-        x-actors:
-          - session
-          - client
-        description: "Status: connecting"
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnecting
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $inputs.sessionId
       - stepId: serviceStub
         x-actors:
           - service
@@ -1724,7 +1808,7 @@ workflows:
           - condition: $statusCode == 201
       - stepId: sendStart
         x-actors:
-          - client
+          - adapter
           - service
         description: |
           Open the connection, with the audio format
@@ -1735,7 +1819,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
+            value: "{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}"
         requestBody:
           payload:
             type: start
@@ -1748,36 +1832,38 @@ workflows:
       - stepId: started
         x-actors:
           - service
-          - client
+          - adapter
         description: Ready
         operationId: $sourceDescriptions.audio.sendStarted
         action: receive
-      - stepId: connect
+      - stepId: publishConnected
         x-actors:
-          - client
+          - adapter
           - session
         description: |
-          Connection open
+          Publish connected
 
-          - With a gap, if one is given: how long nothing was recorded, which the session adds to the transcript.
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+          - With a gap, if one is given: how long nothing was captured, which the transcript keeps.
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
+        action: send
+        requestBody:
+          payload:
+            subject: $inputs.sessionId
+            partitionkey: $inputs.sessionId
+            data:
+              transcriptId: $inputs.transcriptId
+              gap: $inputs.gap
+      - stepId: connected
+        x-actors:
+          - staff
+          - session
+        description: "Get the session: connected"
+        operationId: $sourceDescriptions.sessions.getTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
             value: $inputs.sessionId
-        requestBody:
-          payload:
-            gap: $inputs.gap
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'connected'
-      - stepId: connected
-        x-actors:
-          - session
-          - client
-        description: "Status: connected"
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $inputs.sessionId

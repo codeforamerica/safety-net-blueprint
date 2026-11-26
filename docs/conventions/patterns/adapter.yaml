@@ -6,17 +6,25 @@ version: "1.0"
 
 pattern: Adapter
 summary: >
-  A stateless HTTP service a state runs between the blueprint and a system it
-  doesn't control — a rules engine, a legacy platform, a vendor — implementing
-  a contract so the blueprint never depends on the system's own API.
+  Code a state runs between the blueprint and a system it doesn't control — a
+  rules engine, a legacy platform, a vendor — implementing a contract so the
+  blueprint never depends on the system's own API. Most adapters answer one
+  request at a time; a running adapter works over time for one resource, as
+  its implementation, and reports by publishing that resource's events.
 
 use_when:
   - >-
     The blueprint needs something from a system outside it, which a state runs
     or buys.
   - >-
-    Each call is one request and one answer, with no effect on the blueprint's
-    own data.
+    For a request-and-answer adapter: each call is one request and one answer,
+    with no effect on the blueprint's own data.
+  - >-
+    For a running adapter: a resource's work goes on over time with the system
+    outside — a stream, a call, a long-lived connection — the system produces
+    results and changes as they happen, such as lines heard, a dropped
+    connection or the end, and the resource's state follows them, as a
+    transcription session's does.
   - >-
     The system holds a secret the blueprint and the page shouldn't, such as a
     vendor's key.
@@ -25,9 +33,13 @@ do_not_use_when:
   - case: The other side is another blueprint domain.
     use_instead: The cross-domain communication pattern (patterns/cross-domain-communication.yaml).
   - case: The browser and a vendor exchange a live stream.
-    use_instead: The browser-to-vendor stream pattern (patterns/browser-vendor-stream.yaml), which uses an adapter only to issue the credential.
-  - case: The answer takes longer than one request.
+    use_instead: The browser-to-vendor stream pattern (patterns/browser-vendor-stream.yaml), which builds on a running adapter.
+  - case: A long job that ends in one result, such as a document processed in the background.
     use_instead: An async command through Data Exchange (patterns/cross-domain-communication.yaml, async_command).
+  - case: The system already publishes events the blueprint can receive.
+    use_instead: Subscribe to them under on:, with no adapter between.
+  - case: A running adapter would have to keep data itself.
+    use_instead: Keep it in a resource that follows the adapter's events, as the transcript keeps the lines a session's adapter publishes.
 
 rules:
   - >-
@@ -36,7 +48,7 @@ rules:
     otherwise the state defines it.
   - >-
     Put the contract beside the API it serves, named for it with -adapter, as
-    eligibility-adapter-openapi.yaml, communication-transcripts-audio-adapter-openapi.yaml.
+    eligibility-adapter-openapi.yaml, communication-transcription-sessions-adapter-openapi.yaml.
   - >-
     Call it from a state machine step by operationId.
   - >-
@@ -44,12 +56,40 @@ rules:
     unchanged, without reading it (patterns/context-passthrough.yaml); build
     requests on the adapter base schemas.
   - >-
-    Keep the adapter stateless: one request, one answer. Settings that don't
-    change between calls are the adapter's own configuration, not request
-    fields.
+    Keep a request-and-answer adapter stateless: one request, one answer.
+    Settings that don't change between calls are the adapter's own
+    configuration, not request fields.
+  - >-
+    For a running adapter, the resource calls the adapter's operations —
+    start, pause, stop — and the adapter reports only by publishing the
+    resource's own events with publishEvent, declared under the resource's
+    emits and described as published by the adapter. The resource follows them
+    under on:. Give the adapter no operations on the resource's API: that API
+    is what the resource's consumers call, and a report from the adapter is
+    something that happened, not a request.
+  - >-
+    A running adapter's operations answer at once (202) and the work goes on
+    after; describe on its start operation which events it publishes and when,
+    so an adapter can be written from the contract alone.
+  - >-
+    A running adapter puts the resource's id on every event it publishes as
+    subject and partitionkey, so one resource's events stay in order, and
+    gives each report a key when it may be published again after a network
+    error, so whatever keeps it keeps it once.
+  - >-
+    When the resource follows something that already happened elsewhere —
+    its record closed by someone else — and tells its adapter, catch a failed
+    call to the adapter and follow anyway.
   - >-
     In demos and tests, answer it with an HTTP stub on the mock, or in a page
-    with a routing handler.
+    with a routing handler. For a running adapter, stub its operations (202)
+    and play the adapter by publishing the resource's events, as the
+    transcription scenarios do; or answer its operations in the page with a
+    reference adapter, as the explorer's Whisper does.
+  - >-
+    Name a running adapter's operations for what the resource asks of it, a
+    verb and the work: startStream, pauseStream, stopStream
+    (naming.yaml, operation_ids).
   - >-
     Ship a reference implementation of an adapter when the other side is a
     common vendor service that many states use the same way, such as Amazon
@@ -66,7 +106,11 @@ rules:
     and the mock, means the same API built to run in a browser.
 
 example: >
-  The eligibility adapter, beside eligibility; the transcript audio adapter, which
-  issues a transcription service's short-lived credential.
+  The eligibility adapter, beside eligibility, answers one request at a time.
+  The transcription session adapter is a running adapter: the session calls
+  its startStream, pauseStream and stopStream; it publishes the session's
+  connected, disconnected, failed, line_updated, line_finished and ended; and
+  its credentials part's requestCredentials issues a transcription service's
+  short-lived credential.
 
 rationale: docs/architecture/cross-cutting/adapters.md

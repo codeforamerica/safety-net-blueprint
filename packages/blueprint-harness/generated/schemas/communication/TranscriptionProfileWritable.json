@@ -27,7 +27,8 @@
         "none",
         "openai-realtime",
         "soniox",
-        "speechmatics"
+        "speechmatics",
+        "whisper"
       ]
     },
     "languages": {

@@ -1,0 +1,424 @@
+openapi: 3.1.0
+x-relationship:
+  type: external
+info:
+  title: Transcription Session Adapter API
+  version: 0.1.0
+  x-domain: communication
+  x-capability: transcripts
+  x-status: alpha
+  x-visibility: external
+  description: |
+    The state's transcription session adapter: how a transcription session
+    reaches one transcription service. It has two parts.
+
+    **The streaming part,** beside the session: the session calls it to start,
+    pause and stop streaming. Started, it gets a credential from the server
+    part, opens the connection, streams the audio, and reports what happens
+    by publishing the session's events with `publishEvent` — connected,
+    disconnected, failed, a line in progress, a finished line, and ended. It
+    never calls the session's operations, and the session's API has none
+    for it.
+
+    **The credentials part,** which holds the service's secret: it answers
+    with where the streaming part connects and a
+    short-lived credential — from the transcription service, or one it
+    signs for a relay the state runs in front of a service a client can't
+    reach — and publishes the public keys a relay checks those tokens with.
+    It's stateless: one request, one answer. It maps the languages and audio
+    it's given to what its service takes, and holds everything that doesn't
+    change from one call to the next — a region, a custom vocabulary,
+    redaction — as its own configuration.
+
+    Requests extend AdapterRequest, so the adapter echoes metadata back
+    unchanged.
+servers:
+  - url: https://adapter.example.com
+    description: Production server
+  - url: http://localhost:1080
+    description: Local development server
+tags:
+  - name: Streaming
+    description: The streaming part. Starting, pausing and stopping the stream, called by the session.
+  - name: Credentials
+    description: The credentials part. Issuing what the streaming part connects with.
+  - name: Keys
+    description: The public keys a relay checks the adapter's tokens with.
+paths:
+  /streams:
+    post:
+      summary: Start streaming for a session
+      description: |
+        Called by the session when it starts, and again when it resumes.
+        Answers at once; the work goes on after it. The adapter gets a
+        credential from requestCredentials, connects to the service, streams
+        the audio, and publishes the session's events as things happen, each
+        with the session's id as its subject and partition key, so one
+        session's events stay in order:
+
+        - `connected` when the connection opens, with the stretch nothing
+          was captured in as `gap`: after a reconnect, from when it dropped;
+          on the first connection, when `lastActivityAt` is given, from then.
+        - `disconnected` when it drops. It then reconnects with a fresh
+          credential and publishes `connected` again.
+        - `failed` when it gives up connecting.
+        - `line_updated` for a line in progress, and `line_finished` once,
+          for each finished line. A line is published again after a network
+          error, with the same key; the transcript keeps it once, and its
+          entry's created event names the `line_finished` it came from as its
+          cause (`causationid`).
+        - `ended` after stopStream, once the last line is published.
+
+        It renews its credential before it runs out, the same way.
+      operationId: startStream
+      tags:
+        - Streaming
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamRequest"
+      responses:
+        "202":
+          description: Starting. What happens is published as the session's events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamResponse"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /streams/{transcriptionSessionId}/pause:
+    post:
+      summary: Pause streaming
+      description: |
+        Called by the session when the conversation goes off the record.
+        The adapter stops sending audio and closes the connection, so
+        no audio goes to the service. A line already finished may still be
+        published. Starting again is startStream.
+      operationId: pauseStream
+      tags:
+        - Streaming
+      parameters:
+        - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: ../../components/adapter.yaml#/AdapterRequest
+      responses:
+        "202":
+          description: Pausing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamResponse"
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /streams/{transcriptionSessionId}/stop:
+    post:
+      summary: Stop streaming
+      description: |
+        Called by the session when the conversation is over. The adapter
+        sends the end of the audio, waits for the last text, publishes the
+        last `line_finished`, closes the connection, and publishes `ended`.
+        With no connection open, paused or disconnected, it publishes
+        `ended` at once.
+      operationId: stopStream
+      tags:
+        - Streaming
+      parameters:
+        - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: ../../components/adapter.yaml#/AdapterRequest
+      responses:
+        "202":
+          description: Stopping. `ended` is published when it's done.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamResponse"
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /credentials:
+    post:
+      summary: Request credentials for a transcription service
+      description: |
+        Answers with where the streaming part connects and a credential
+        that starts one connection, for the service the request names. Every
+        service fits the one answer: a URL that may carry the credential, as
+        Amazon Transcribe's presigned URL does; a token, as ElevenLabs,
+        Deepgram and AssemblyAI issue; or, for a service behind a relay, the
+        relay's URL, its subprotocol and a JWT the adapter signs for it.
+
+        Called by the streaming part. Asked again, it issues a fresh
+        credential: that is how the streaming part renews one, and how it
+        reconnects. Check the caller's sign-in before
+        issuing one: the credential spends the state's account with the service.
+      operationId: requestCredentials
+      security:
+        - bearerAuth: []
+      tags:
+        - Credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialsRequest"
+      responses:
+        "200":
+          description: Where and how the streaming part connects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialsResponse"
+              example:
+                metadata:
+                  transcriptionSessionId: 7a1e0c2d-0000-4000-8000-0000000000c9
+                  transcriptId: 7a1e0c2d-0000-4000-8000-0000000000c1
+                provider: elevenlabs-scribe
+                protocol: websocket
+                url: wss://api.elevenlabs.io/v1/speech-to-text/realtime
+                accessToken: sutkn_example
+                tokenType: Bearer
+                expiresIn: 900
+                connectionParameters:
+                  model_id: scribe_v2_realtime
+                  language_code: en
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "401":
+          $ref: ../../components/responses.yaml#/Unauthorized
+        "422":
+          description: |
+            The service can't take what the request asks for — several languages for a service that takes one and can't detect among them, say, or an audio encoding it doesn't accept — named in details.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /.well-known/jwks.json:
+    get:
+      summary: The public keys a relay checks tokens with
+      description: |
+        The public keys of the tokens the adapter signs for a relay, as a JSON
+        Web Key Set (RFC 7517). A relay reads them to check a token's
+        signature, choosing the key by the token's `kid`, and may cache them.
+        To change keys, publish the new one before signing with it, and keep
+        the old one until the tokens it signed have expired. An adapter that
+        signs no tokens, because no service it issues for sits behind a
+        relay, answers 404.
+      operationId: getCredentialKeys
+      security: []
+      tags:
+        - Keys
+      responses:
+        "200":
+          description: The adapter's public keys.
+          content:
+            application/jwk-set+json:
+              schema:
+                $ref: "#/components/schemas/JsonWebKeySet"
+              example:
+                keys:
+                  - kty: EC
+                    crv: P-256
+                    kid: relay-2026-11
+                    use: sig
+                    alg: ES256
+                    x: f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU
+                    "y": x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+components:
+  parameters:
+    TranscriptionSessionIdParam:
+      name: transcriptionSessionId
+      in: path
+      required: true
+      description: The session being streamed for.
+      schema:
+        type: string
+        format: uuid
+  securitySchemes:
+    bearerAuth:
+      $ref: ../../components/security-schemes.yaml#/bearerAuth
+  schemas:
+    StreamRequest:
+      description: |
+        What to stream for: the session and its transcript, whose ids the adapter puts on the events it publishes, and what its credential is requested for, from the transcript and its profile.
+      allOf:
+        - $ref: ../../components/adapter.yaml#/AdapterRequest
+        - type: object
+          required:
+            - transcriptionSessionId
+            - transcriptId
+            - provider
+          properties:
+            transcriptionSessionId:
+              type: string
+              format: uuid
+              description: The session, the subject of every event the adapter publishes.
+              x-relationship:
+                resource: TranscriptionSession
+                style: links-only
+            transcriptId:
+              type: string
+              format: uuid
+              description: The session's transcript, on every event the adapter publishes.
+              x-relationship:
+                resource: Transcript
+                style: links-only
+            provider:
+              type: string
+              description: The transcription service, an entry of the transcription-services registry.
+              example: elevenlabs-scribe
+              enum:
+                - assemblyai
+                - aws-transcribe
+                - azure-speech
+                - deepgram
+                - elevenlabs-scribe
+                - fake-transcription
+                - gladia
+                - google-cloud-speech
+                - google-gemini-live
+                - none
+                - openai-realtime
+                - soniox
+                - speechmatics
+                - whisper
+            model:
+              type: string
+              description: The service's model, from the transcript.
+              example: scribe_v2_realtime
+            languages:
+              type: array
+              minItems: 1
+              items:
+                $ref: ../../schemas/enums.yaml#/$defs/Language
+              description: The languages the conversation may be in, from the transcript's profile.
+            lastActivityAt:
+              type: string
+              format: date-time
+              description: |
+                When a session carries on a transcript that's still recording, when the transcript last heard from anyone. The adapter reports from then to its first connection as a gap.
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                transcriptionSession:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related TranscriptionSession resource.
+                transcript:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Transcript resource.
+    StreamResponse:
+      description: The request's metadata, echoed back.
+      allOf:
+        - $ref: ../../components/adapter.yaml#/AdapterResponse
+    CredentialsRequest:
+      description: |
+        What the service needs to issue a credential: the service, model and languages the adapter was started with, and the audio and protocols the streaming part streams with.
+      allOf:
+        - $ref: ../../components/adapter.yaml#/AdapterRequest
+        - type: object
+          required:
+            - provider
+            - audio
+            - protocols
+          properties:
+            provider:
+              type: string
+              description: The transcription service, an entry of the transcription-services registry.
+              example: elevenlabs-scribe
+              enum:
+                - assemblyai
+                - aws-transcribe
+                - azure-speech
+                - deepgram
+                - elevenlabs-scribe
+                - fake-transcription
+                - gladia
+                - google-cloud-speech
+                - google-gemini-live
+                - none
+                - openai-realtime
+                - soniox
+                - speechmatics
+                - whisper
+            model:
+              type: string
+              description: The service's model, for a service that fixes it when issuing the credential.
+              example: scribe_v2_realtime
+            languages:
+              type: array
+              minItems: 1
+              items:
+                $ref: ../../schemas/enums.yaml#/$defs/Language
+              description: |
+                The languages the conversation may be in. The adapter maps them to what its service takes — one, a list, or none to detect — and answers 422 when it can't. Absent, the service detects the language, if it can.
+              example:
+                - en-US
+                - es-US
+            audio:
+              $ref: ./communication-transcripts-schema.yaml#/$defs/AudioFormat
+            protocols:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items:
+                $ref: ./communication-transcripts-schema.yaml#/$defs/StreamProtocol
+              description: The protocols the streaming part can connect over. The adapter answers with one of them.
+    JsonWebKeySet:
+      description: A JSON Web Key Set (RFC 7517), public keys only.
+      type: object
+      required:
+        - keys
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            required:
+              - kty
+              - kid
+            properties:
+              kty:
+                type: string
+                description: The key type
+                such as EC or RSA.: null
+              kid:
+                type: string
+                description: The key's id
+                which a token names in its header.: null
+              use:
+                type: string
+                const: sig
+              alg:
+                type: string
+                description: The algorithm the key signs with
+                such as ES256.: null
+            description: A public key, with the parameters its key type takes (RFC 7518).
+    CredentialsResponse:
+      description: Where and how the streaming part connects, with metadata echoed back.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: ../../components/adapter.yaml#/AdapterResponse
+        - $ref: ./communication-transcripts-schema.yaml#/$defs/StreamConnectionFields

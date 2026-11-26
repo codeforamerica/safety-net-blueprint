@@ -41,6 +41,8 @@ naming:
   # RPC example: claimTask, completeTask, submitApplication
   # AsyncAPI operations resolve generates: send or receive + the message name,
   # sendIntakeApplicationSubmitted, receiveIntakeApplicationSubmitted.
+  # A running adapter's operations: what the resource asks of it, a verb and
+  # the work, startStream, pauseStream, stopStream (patterns/adapter.yaml).
   operation_ids: camelCase
 
   # Naming an operation from a state machine call, a suggestion's call or a
@@ -132,16 +134,16 @@ naming:
     rules:
       - >-
         Name an action for what happens, as an imperative verb, in kebab-case
-        (action_ids): pause, get-connection, add-line.
+        (action_ids): start, pause, process-suggestions.
       - >-
         An action that changes the state leads to the state of the same word,
         and sends the event named for the state it enters: pause leads to
-        paused and sends paused; connect leads to connected and sends
-        connected. A developer who knows one knows the others, and the event
-        and the state can't disagree.
+        paused and sends paused; stop leads to stopping and sends stopping. A
+        developer who knows one knows the others, and the event and the state
+        can't disagree.
       - >-
         An action that doesn't change the state sends an event named for what
-        happened: add-line sends line_added.
+        happened, in the past tense.
       - >-
         Take a state's name from a standard where one names the same thing,
         such as WebRTC's for a connection's states, and keep it where it agrees
@@ -150,9 +152,10 @@ naming:
         A resource's created event is generated and always named created, so
         name a machine's initial state created when nothing else fits better.
     example: >-
-      The transcription session: get-connection → connecting, connect →
-      connected, pause → paused, stop → stopping, close → closed; update-line
-      sends line_updated.
+      The transcription session: pause → paused, stop → stopping, each sending
+      the event of its state's name; start → connecting, since starting
+      connects. Its adapter publishes connected and ended, and the session
+      follows them to connected and closed.
 
 # =============================================================================
 # Spec Authoring Style

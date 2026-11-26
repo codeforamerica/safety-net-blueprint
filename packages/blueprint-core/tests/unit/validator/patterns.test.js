@@ -1042,7 +1042,7 @@ test('Pattern Validator Tests', async (t) => {
   await t.test('validateOperationRelationships - external takes only its type', () => {
     const check = (relationship) => {
       const errors = [];
-      validateOperationRelationships({ paths: { '/issue-connection': { post: { 'x-relationship': relationship, responses: {} } } } }, errors);
+      validateOperationRelationships({ paths: { '/credentials': { post: { 'x-relationship': relationship, responses: {} } } } }, errors);
       return errors;
     };
     assert.strictEqual(check({ type: 'external' }).length, 0);
@@ -1052,8 +1052,28 @@ test('Pattern Validator Tests', async (t) => {
 
   await t.test('validateOperationRelationships - error for a type no operation takes', () => {
     const errors = [];
-    validateOperationRelationships({ paths: { '/issue-connection': { post: { 'x-relationship': { type: 'extrenal' }, responses: {} } } } }, errors);
+    validateOperationRelationships({ paths: { '/credentials': { post: { 'x-relationship': { type: 'extrenal' }, responses: {} } } } }, errors);
     assert.ok(errors.some((e) => e.rule === 'operation-x-relationship-unknown-type' && /"extrenal"/.test(e.message)));
+  });
+
+  await t.test('validateOperationRelationships - a document root takes only external, with no other field', () => {
+    const check = (relationship) => {
+      const errors = [];
+      validateOperationRelationships({ 'x-relationship': relationship }, errors);
+      return errors.map((e) => e.rule);
+    };
+    assert.deepStrictEqual(check({ type: 'external' }), []);
+    assert.deepStrictEqual(check({ type: 'ruleset', domain: 'intake', id: 'x' }), ['root-x-relationship-not-external']);
+    assert.deepStrictEqual(check({ type: 'external', domain: 'communication' }), ['root-x-relationship-external-fields']);
+  });
+
+  await t.test('validateSpec - an adapter is named one and marked one', () => {
+    const rules = (spec, name) => validateSpec(spec, name).filter((e) => e.rule === 'adapter-name-and-mark').map((e) => e.severity);
+    const marked = { openapi: '3.1.0', 'x-relationship': { type: 'external' }, info: {} };
+    assert.deepStrictEqual(rules(marked, 'eligibility-adapter-openapi.yaml'), []);
+    assert.deepStrictEqual(rules({ openapi: '3.1.0', info: {} }, 'intake-openapi.yaml'), []);
+    assert.deepStrictEqual(rules({ openapi: '3.1.0', info: {} }, 'eligibility-adapter-openapi.yaml'), ['warning'], 'named but not marked');
+    assert.deepStrictEqual(rules(marked, 'eligibility-openapi.yaml'), ['warning'], 'marked but not named');
   });
 
   await t.test('validateOperationRelationships - no error when no paths', () => {

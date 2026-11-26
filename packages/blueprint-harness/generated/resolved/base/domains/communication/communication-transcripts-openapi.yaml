@@ -455,12 +455,14 @@ paths:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
-      summary: Pause transcript
+      summary: Pause
       description: |-
         Take the conversation off the record, at the time the client says.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: pauseTranscript
+      tags:
+        - Transcripts
       requestBody:
         required: true
         content:
@@ -490,8 +492,6 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Transcripts
       x-relationship:
         type: state-machine-action
         domain: communication
@@ -501,12 +501,14 @@ paths:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
-      summary: Resume transcript
+      summary: Resume
       description: |-
         Put the conversation back on the record, at the time the client says. Already recording, nothing changes.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: resumeTranscript
+      tags:
+        - Transcripts
       requestBody:
         required: true
         content:
@@ -536,69 +538,23 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Transcripts
       x-relationship:
         type: state-machine-action
         domain: communication
         resource: Transcript
         id: resume
-  /transcripts/{transcriptId}/get-connection:
-    parameters:
-      - $ref: "#/components/parameters/TranscriptIdParam"
-    post:
-      summary: Get connection transcript
-      description: |-
-        Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
-
-        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
-      operationId: getConnectionTranscript
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GetConnectionRequest"
-      responses:
-        "200":
-          description: Transition applied successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StreamConnection"
-        "400":
-          $ref: ../../components/responses.yaml#/BadRequest
-        "403":
-          $ref: ../../components/responses.yaml#/Forbidden
-        "404":
-          $ref: ../../components/responses.yaml#/NotFound
-        "409":
-          description: The record is in a state this action can't start from, or one of its guards isn't met.
-          content:
-            application/json:
-              schema:
-                $ref: ../../components/responses.yaml#/Error
-        "422":
-          $ref: ../../components/responses.yaml#/UnprocessableEntity
-        "500":
-          $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Transcripts
-      x-relationship:
-        type: state-machine-action
-        domain: communication
-        resource: Transcript
-        id: get-connection
   /transcripts/{transcriptId}/close:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
-      summary: Close transcript
+      summary: Close
       description: |-
         End the transcript, at the time the client says. A pause still open ends then too.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: closeTranscript
+      tags:
+        - Transcripts
       requestBody:
         required: true
         content:
@@ -628,8 +584,6 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Transcripts
       x-relationship:
         type: state-machine-action
         domain: communication
@@ -719,6 +673,13 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier, given when the record was created or else generated by the server.
+            profileId:
+              type: string
+              format: uuid
+              readOnly: true
+              description: The profile it was started under, which says the transcription service. It does not change.
+              x-relationship:
+                resource: TranscriptionProfile
             status:
               type: string
               readOnly: true
@@ -1071,6 +1032,7 @@ components:
             - openai-realtime
             - soniox
             - speechmatics
+            - whisper
         languages:
           type: array
           minItems: 1
@@ -1182,10 +1144,6 @@ components:
           type: string
           format: date-time
           description: When it happened, by the client's clock.
-    GetConnectionRequest:
-      $ref: ./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest
-    StreamConnection:
-      $ref: ./communication-transcripts-schema.yaml#/$defs/StreamConnection
   examples:
     TranscriptExample1:
       summary: A transcript of an interview, recording
@@ -1193,6 +1151,7 @@ components:
         id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         subjectType: interview
         subjectId: 5c1f8a2e-0d3b-4e6f-9a7c-2b4d6e8f0a1c
+        profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
         model: standard
         client: interview-assistant/0.1.0
         status: recording

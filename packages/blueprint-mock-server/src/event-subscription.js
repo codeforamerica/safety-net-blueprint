@@ -205,7 +205,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     const onEvents = smEntry.machine?.on;
     if (!Array.isArray(onEvents)) continue;
     for (const entry of onEvents) {
-      if (entry.type && Array.isArray(entry.steps)) {
+      // A transition alone is a reaction too: the record moves to its state.
+      if (entry.type && (Array.isArray(entry.steps) || entry.transition?.to)) {
         machineEventSubs.push({ smEntry, entry });
       }
     }
@@ -384,6 +385,10 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       const unhandled = ({ step, outcome }) => {
         failed = true;
         restore();
+        if (step.fail !== undefined) {
+          console.error(`Machine onEvent "${entry.type}": failed with ${outcome.status}: ${outcome.body?.message ?? ''} — nothing saved`);
+          return;
+        }
         const named = typeof step.call === 'string' ? step.call : step.call.operationId;
         // The fields at fault, when the API named them: "invalid data" alone
         // leaves whoever reads the log to reproduce the call to find out.
@@ -392,7 +397,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       };
 
       stepsDid = openTransaction({ store, instance, domain: smEntry.domain, cause: event.id });
-      const reaction = whenReady(applyStepsWithCalls(entry.steps, resource, context, store, perform), (applied) => {
+      const reaction = whenReady(applyStepsWithCalls(entry.steps ?? [], resource, context, store, perform), (applied) => {
         if (applied.failed?.step.catch) stepsDid.rollback();
         else stepsDid.commit();
         if (!applied.failed) return finish(applied, context, entry.transition?.to);

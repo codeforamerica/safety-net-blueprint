@@ -81,7 +81,7 @@ The script can send some APIs to real services by setting `BlueprintExplorer.rou
 ```js
 // portal.js
 BlueprintExplorer.routing = [{
-  api: 'communication-transcripts-audio-adapter',
+  api: 'communication-transcription-sessions-adapter',
   handler: async (request) => { /* add the token, then forward the call */ },
 }];
 ```

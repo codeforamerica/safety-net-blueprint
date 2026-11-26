@@ -109,6 +109,8 @@ const STYLE = `
   #mock-panel .mp-switch button[aria-pressed="true"] { background: #2B1A78; color: #fff; cursor: default; }
   #mock-panel .mp-route .mp-note { margin-top: .3rem; }
   #mock-panel .mp-route .mp-edit { margin: .3rem 0 0; }
+  #mock-panel .mp-adapter { flex: 1; min-width: 0; font-weight: 600; }
+  #mock-panel .mp-adapter a { color: #2B1A78; }
 `;
 
 // How many events the log shows: the mock's list hands back at most this many at once.
@@ -289,21 +291,26 @@ function serverChooser(running) {
   return box;
 }
 
-function routingSection(running, events) {
-  const entries = siteRouting();
-  const chooser = serverChooser(running);
-  if (!entries.length) return [chooser, ...(chosenServer(options) ? [] : [el('p', 'Every call is answered by the mock in this page.', 'mp-none')])];
-  const callsOut = stubChoices(extract(options.contracts, 'docs')).operations;
-  const box = el('div');
-  for (const entry of entries) {
-    const local = inPage(options, entry);
-    const row = el('div', '', 'mp-route');
-    const head = el('div', '', 'mp-route-head');
+/**
+ * One row of "Where calls go": what it covers, with a switch between the real
+ * service and the mock in this page when the site routes it, and, answered
+ * here, a stub form for each call the mock can't answer itself.
+ *
+ * @param {object} running
+ * @param {object[]} events
+ * @param {{ entry?: object, label: HTMLElement, covers: (o: object) => boolean, callsOut: object[] }} row
+ */
+function routeRow(running, events, { entry = null, label, covers, callsOut }) {
+  const local = !entry || inPage(options, entry);
+  const row = el('div', '', 'mp-route');
+  const head = el('div', '', 'mp-route-head');
+  head.append(label);
+  if (entry) {
     const toggle = el('span', '', 'mp-switch');
     toggle.setAttribute('role', 'group');
     toggle.setAttribute('aria-label', `Where ${entryName(entry)} goes`);
-    for (const [label, toPage] of [['Real service', false], ['Mock in this page', true]]) {
-      const button = Object.assign(el('button', label), { type: 'button' });
+    for (const [text, toPage] of [['Real service', false], ['Mock in this page', true]]) {
+      const button = Object.assign(el('button', text), { type: 'button' });
       button.setAttribute('aria-pressed', String(local === toPage));
       button.onclick = async () => {
         if (local === toPage) return;
@@ -315,19 +322,69 @@ function routingSection(running, events) {
       };
       toggle.append(button);
     }
-    head.append(el('code', entryName(entry) === '*' ? '* (every domain)' : entryName(entry)), toggle);
-    row.append(head, el('p', local ? 'Answered by the mock in this page.' : `Sent to ${destinationOf(entry)}.`, 'mp-route-to'));
-    if (local) {
-      for (const operation of callsOut.filter((o) => entryFor([entry], { operationId: o.operationId, api: o.apiName, domain: o.domain }))) {
-        row.append(el('p', `The mock can't answer ${operation.key} itself: it answers 501 until a stub stands in for the service.`, 'mp-note'));
-        const add = Object.assign(el('button', 'Add an HTTP stub for it', 'mp-edit'), { type: 'button' });
-        add.onclick = () => openEditor(running, 'http', events, null, operation.key);
-        row.append(add);
-      }
-    }
-    box.append(row);
+    head.append(toggle);
   }
-  return [chooser, el('p', 'This site sends these its own way, whatever server is chosen above:', 'mp-note'), box];
+  row.append(head, el('p', local ? 'Answered by the mock in this page.' : `Sent to ${destinationOf(entry)}.`, 'mp-route-to'));
+  if (local) {
+    for (const operation of callsOut.filter(covers)) {
+      row.append(el('p', `The mock can't answer ${operation.key} itself: it answers 501 until a stub stands in for the service.`, 'mp-note'));
+      const add = Object.assign(el('button', 'Add an HTTP stub for it', 'mp-edit'), { type: 'button' });
+      add.onclick = () => openEditor(running, 'http', events, null, operation.key);
+      row.append(add);
+    }
+  }
+  return row;
+}
+
+/**
+ * Where calls go: the server picked in the page; the adapters, the services
+ * the contracts call but don't answer, each answered here by stubs or, where
+ * the site routes it, by the real service; and the site's other routing.
+ */
+function routingSection(running, events) {
+  const docs = extract(options.contracts, 'docs');
+  const entries = siteRouting();
+  const chooser = serverChooser(running);
+  const callsOut = stubChoices(docs).operations;
+  const adapters = docs.filter((doc) => doc.adapter);
+  const parts = [chooser];
+
+  if (adapters.length) {
+    const box = el('div');
+    for (const adapter of adapters) {
+      // An adapter's contract, on its API reference page, for whoever implements it.
+      const label = el('span', '', 'mp-adapter');
+      const title = Object.assign(el('a', adapter.content?.info?.title ?? adapter.api), {
+        href: new URL(`../api-reference/${adapter.api}.html`, options.scope).href,
+        title: 'Its contract',
+      });
+      label.append(title);
+      box.append(routeRow(running, events, {
+        entry: entries.find((entry) => entry.api === adapter.api) ?? null,
+        label,
+        covers: (o) => o.apiName === adapter.api,
+        callsOut,
+      }));
+    }
+    parts.push(el('p', 'Adapters: services the contracts call but don\'t answer. Each is answered here by stubs, or by the real service where this site routes it.', 'mp-note'), box);
+  }
+
+  const others = entries.filter((entry) => !adapters.some((adapter) => adapter.api === entry.api));
+  if (others.length) {
+    const box = el('div');
+    for (const entry of others) {
+      const name = entryName(entry);
+      box.append(routeRow(running, events, {
+        entry,
+        label: el('code', name === '*' ? '* (every domain)' : name),
+        covers: (o) => Boolean(entryFor([entry], { operationId: o.operationId, api: o.apiName, domain: o.domain })),
+        callsOut,
+      }));
+    }
+    parts.push(el('p', 'This site sends these its own way, whatever server is chosen above:', 'mp-note'), box);
+  }
+  if (!adapters.length && !entries.length && !chosenServer(options)) parts.push(el('p', 'Every call is answered by the mock in this page.', 'mp-none'));
+  return parts;
 }
 
 /** The timers waiting, each with Fire, pinned at the top of the activity log while there are any. */

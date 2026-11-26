@@ -216,7 +216,10 @@ x_extensions:
       ruleset, or composition) to record which contract artifact produced the endpoint;
       and on an operation something outside the contracts answers (type: external),
       such as a state's adapter's, which servers built from the contracts answer only
-      with a stub or by routing it.
+      with a stub or by routing it. At an OpenAPI or AsyncAPI document's root, type:
+      external makes the whole API answered outside the contracts: an adapter, or
+      the relay an adapter streams to. Every operation is external, and core's
+      doc.adapter is true.
       The type field controls which other fields are required and how tooling interprets
       the annotation. Omitting type is equivalent to type: fk for backward compatibility.
       Every writable field named …Id that holds a uuid must declare it; validation
@@ -224,8 +227,9 @@ x_extensions:
       x-derived are exempt, and a uuid naming something outside the contract set
       declares resource: External.
     location: >
-      Schema property level (FK fields); or operation level (generated endpoints injected
-      by the resolve pipeline).
+      Schema property level (FK fields); operation level (generated endpoints injected
+      by the resolve pipeline, or one external operation); or the document root, with
+      type external only, for an adapter or a relay.
     type: object
     fields:
       type: >
@@ -234,9 +238,10 @@ x_extensions:
         state-machine-action (operation generated from a state machine action),
         ruleset (operation generated from a rules contract ruleset),
         composition (operation generated from a compositions contract),
-        external (operation answered outside the contracts: give it on each operation
-        of an adapter or other outside API, with no other field; resolve gives it to
-        an API kept only because a chosen one calls it).
+        external (answered outside the contracts, with no other field: give it at
+        the root of an adapter's document, named <domain>-adapter-openapi.yaml, and
+        on a single operation of an otherwise ordinary API; resolve gives it to each
+        operation of an API kept only because a chosen one calls it).
       resource: >
         For fk: name of the related schema (PascalCase, e.g., Queue). Required
         when type is fk or absent. For state-machine-action: the resource whose
@@ -248,7 +253,8 @@ x_extensions:
         for same-domain references. Values must be a valid Domain enum value.
       style: >
         FK only. Controls how the resolver transforms the FK field. "expand" inlines
-        the related resource; "links-only" adds a links navigation object. Omitting
+        the related resource beside the FK, which stays; "links-only" adds a links
+        navigation object. Omitting
         style leaves the field untouched — x-relationship is metadata only.
         A Polymorphic reference takes only "links-only", written on the field
         itself; the set's style doesn't reach it. Its link goes to the record its
@@ -289,6 +295,11 @@ x_extensions:
         x-relationship:
           resource: Application
           domain: intake
+
+      # Document root — an adapter: every operation is answered outside the contracts
+      openapi: 3.1.0
+      x-relationship:
+        type: external
 
       # Operation — generated from a state machine action
       post:

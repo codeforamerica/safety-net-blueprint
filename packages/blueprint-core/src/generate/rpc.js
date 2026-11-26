@@ -157,11 +157,12 @@ const CALL_FAILURE = 'It calls another operation. When that call fails, the acti
 /**
  * Generate an OpenAPI overlay for a single state machine.
  * @param {Object} stateMachine - The parsed state machine contract
- * @param {{ itemPath: string, paramRefs: Array, tag: string, schemaRef: string }} endpointInfo
+ * @param {{ itemPath: string, schemaRef: string, tags?: string[] }} endpointInfo - tags: the
+ *   resource's own operations', which its actions are listed under too
  * @returns {Object} Overlay document
  */
 export function generateOverlay(stateMachine, endpointInfo) {
-  const { itemPath, schemaRef, relativePath, spec } = endpointInfo;
+  const { itemPath, schemaRef, relativePath, spec, tags = [] } = endpointInfo;
   const apiSpecRef = relativePath || stateMachine.apiSpec;
 
   const paramIndex = spec ? buildParameterIndex([{ relativePath: apiSpecRef, spec }]) : new Map();
@@ -186,9 +187,11 @@ export function generateOverlay(stateMachine, endpointInfo) {
       const calls = callsAnOperation(transition.steps);
       const described = transition.description || `Trigger the ${transition.id} transition (${fromLabel} → ${to}).`;
       const operation = {
-        summary: `${transition.id.charAt(0).toUpperCase() + transition.id.slice(1).replace(/-/g, ' ')} ${objectName.toLowerCase()}`,
+        // The action, in words: it's listed with its resource's operations.
+        summary: transition.id.charAt(0).toUpperCase() + transition.id.slice(1).replace(/-/g, ' '),
         description: calls ? `${described}\n\n${CALL_FAILURE}` : described,
         operationId,
+        ...(tags.length ? { tags: [...tags] } : {}),
       };
 
       const requestBody = buildRequestBody(transition.schema?.request || null, stateMachine.$defs);
@@ -308,6 +311,7 @@ export function generateRpcOverlays(docs) {
         {
           itemPath,
           schemaRef: getOperation?.responses?.['200']?.content?.['application/json']?.schema?.$ref ?? null,
+          tags: getOperation?.tags ?? [],
           relativePath: api.relativePath ?? api.path,
           spec: api.content,
         },

@@ -406,22 +406,22 @@ Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` 
 
 ### Answering in a page
 
-A page with no backend — a live demo running in the browser — answers an operation with a `handler`. A transcript's `get-connection` action calls the transcript audio adapter's `issueTranscriptConnection`, which a state runs to issue a transcription service's short-lived credential. A demo that gets one from Amazon Cognito instead answers that operation in the page, echoing the request's `metadata` as every adapter does:
+A page with no backend — a live demo running in the browser — answers an operation with a `handler`. A transcription session's adapter calls its credentials part's `requestCredentials`, which a state runs to issue a transcription service's short-lived credential. A demo that gets one from Amazon Cognito instead answers that operation in the page, echoing the request's `metadata` as every adapter does:
 
 ```js
 const mock = await createMockServer({
   contracts,
   routing: [{
-    operation: 'issueTranscriptConnection',
+    operation: 'requestCredentials',
     handler: async (request) => {
       const { metadata, ...asked } = await request.json();
-      return Response.json({ metadata, ...await connectionFromCognito(asked) });
+      return Response.json({ metadata, ...await credentialsFromCognito(asked) });
     },
   }],
 });
 ```
 
-A test answers it with an [HTTP stub](#http-stubs) on `POST /issue-connection` instead, as the harness's transcript scenario does.
+A test answers it with an [HTTP stub](#http-stubs) on `POST /credentials` instead, as the harness's transcript scenario does.
 
 A handler can also forward the call to a real service, adding what only the page has, such as the visitor's sign-in token. Send only the headers the service reads, not the request's own: a header the page adds, such as the explorer's `X-Caller-Id`, fails every call with "Failed to fetch" unless the service's CORS allows it. A route with `to` passes on only an allowlist of headers for the same reason. Read the body before sending it on: passed along as the request's own stream, Chrome sends it only to a server that speaks HTTP/2, and any other refuses the call.
 

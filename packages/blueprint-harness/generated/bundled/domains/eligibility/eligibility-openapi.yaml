@@ -1312,9 +1312,11 @@ paths:
           format: uuid
         example: 00000000-0000-0000-0001-000000000001
     post:
-      summary: Complete determination
+      summary: Complete
       description: Marks the determination as complete once all program results are resolved.
       operationId: completeDetermination
+      tags:
+        - Determinations
       responses:
         "200":
           description: Transition applied successfully.
@@ -1496,8 +1498,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Determinations
       x-relationship:
         type: state-machine-action
         domain: eligibility

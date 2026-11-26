@@ -8,55 +8,48 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
 
 ### Actions
 
-- **get-connection** — Get where to connect and a short-lived credential, starting the transcript the first time.
-  - Transition: `created`/`disconnected`/`connecting` → `connecting`
-  - If `!has(object.transcriptId)`:
+- **start** — Start streaming. A new transcript is started, unless the session names one to carry on.
+  - Transition: `created` → `connecting`
+  - If `has(object.transcriptId)`:
+    - `getTranscript`
+    - `getTranscriptionProfile`
+    - `startStream`
+  - Else:
     - `createTranscript`
     - sets `transcriptId`
-  - `getConnectionTranscript`
+    - `getTranscriptionProfile`
+    - `startStream`
   - Emit: `communication.transcription_session.connecting`
-- **renew-connection** — Get a fresh credential while connected, with no change to the session.
-  - Transition: no state change
-  - `getConnectionTranscript`
-- **connect** — The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
-  - Transition: `connecting` → `connected`
-  - If `has(request.gap)`:
-    - `addTranscriptEntry`
-  - Emit: `communication.transcription_session.connected`
-- **disconnect** — The connection to the service dropped; the software will try again.
-  - Transition: `connected` → `disconnected`
-  - Emit: `communication.transcription_session.disconnected`
-- **update-line** — A line in progress, to show. Nothing is kept; it's tied to its finished line by its key.
-  - Transition: no state change
-  - Emit: `communication.transcription_session.line_updated`
-- **add-line** — A finished line, added to the transcript with its key, so a retry adds it once. Allowed while paused, for the last text before the pause; the transcript keeps it if it started before.
-  - Transition: no state change
-  - `addTranscriptEntry`
-  - Emit: `communication.transcription_session.line_added`
-- **pause** — Take the conversation off the record. The transcript keeps the pause; the software closes the connection.
+- **pause** — Take the conversation off the record. The transcript keeps the pause; the adapter closes the connection.
   - Transition: `connected` → `paused`
+  - `pauseStream`
   - `pauseTranscript`
   - Emit: `communication.transcription_session.paused`
-- **resume** — Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.
+- **resume** — Put the conversation back on the record, and start the adapter streaming again. From created, a new session carries on a paused transcript.
   - Transition: `created`/`paused` → `connecting`
   - `resumeTranscript`
+  - `getTranscript`
+  - `getTranscriptionProfile`
+  - `startStream`
   - Emit: `communication.transcription_session.connecting`
-- **stop** — Finish. The software sends the end of the audio and waits for the last text, or closes at once when no connection is open.
-  - Transition: `connected`/`paused`/`disconnected` → `stopping`
+- **stop** — Finish. The adapter sends the end of the audio and publishes the last text, then ended, which closes the transcript.
+  - Transition: `connecting`/`connected`/`paused`/`disconnected` → `stopping`
+  - `stopStream`
   - Emit: `communication.transcription_session.stopping`
-- **close** — The last text is in and the connection is closed; the transcript closes.
-  - Transition: `stopping` → `closed`
-  - `closeTranscript`
-  - Emit: `communication.transcription_session.closed`
-- **fail** — The software gave up connecting or reconnecting. The transcript stays open.
-  - Transition: `connecting`/`disconnected` → `failed`
-  - Emit: `communication.transcription_session.failed`
 
 ### Event subscriptions
 
+- **`communication.transcription_session.connected`**
+- **`communication.transcription_session.disconnected`**
+- **`communication.transcription_session.failed`**
+- **`communication.transcription_session.ended`**
+  - `closeTranscript`
+  - Emits `communication.transcription_session.closed`
 - **`communication.transcript.paused`**
+  - `pauseStream`
   - Emits `communication.transcription_session.paused`
 - **`communication.transcript.closed`**
+  - `stopStream`
   - Emits `communication.transcription_session.closed`
 
 ---
@@ -76,9 +69,6 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
     - `PATCH communication/transcripts/$object.id/entries/$openPause.id`
     - Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.
     - Emit: `communication.transcript.resumed`
-- **get-connection** — Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
-  - Transition: no state change
-  - `issueTranscriptConnection`
 - **close** — End the transcript, at the time the client says. A pause still open ends then too.
   - Transition: `recording`/`paused` → `closed`
   - sets `closedAt`
@@ -95,6 +85,15 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
 - **`communication.transcript_entry.created`**
   - If `this.data.kind is not "pause"`:
     - `PATCH communication/transcripts/$this.data.transcriptId`
+- **`communication.transcription_session.line_finished`**
+  - Look up: session (from `event.subject`)
+  - If `this.data.transcriptId is not session.transcriptId`:
+  - `addTranscriptEntry`
+- **`communication.transcription_session.connected`**
+  - Look up: session (from `event.subject`)
+  - If `this.data.transcriptId is not session.transcriptId`:
+  - If `has(this.data.gap)`:
+    - `addTranscriptEntry`
 - **`communication.transcript.idle_check`**
   - Look up: newActivity
   - If `newActivity is not null`:

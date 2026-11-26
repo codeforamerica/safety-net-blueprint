@@ -488,7 +488,10 @@ function applyLinksOnly(schema, fields) {
 
 /**
  * Apply expand style to a schema.
- * Renames the FK field (fooId → foo) and replaces it with the related object schema.
+ * Adds the related object beside the FK field (fooId, and foo), keeping the
+ * FK, so whatever reads the record — a client, or a state machine step that
+ * called the operation — finds the id under the same name whatever the
+ * deployment's style.
  * Resolution is build-time: the expanded object is always present, no query param needed.
  *
  * For full-object expand (no fields list), copies the target schema and all its transitive
@@ -536,30 +539,25 @@ function applyExpand(schemaName, schema, fields, schemaIndex, warnings, spec) {
 
     const expandedFieldName = deriveLinkName(propertyName);
 
-    if (sourceSchema) {
-      // FK lives in a domain schema $defs entry.
-      // Delete it there, then add the expanded field to the OpenAPI spec's inline
-      // allOf properties block so the $ref target resolves in the correct namespace.
-      if (sourceSchema.properties) {
-        delete sourceSchema.properties[propertyName];
-        if (Array.isArray(sourceSchema.required)) {
-          const idx = sourceSchema.required.indexOf(propertyName);
-          if (idx !== -1) sourceSchema.required[idx] = expandedFieldName;
-        }
+    // Where the FK is required, the expanded record is too.
+    const requireBeside = (s) => {
+      if (Array.isArray(s?.required) && s.required.includes(propertyName) && !s.required.includes(expandedFieldName)) {
+        s.required.push(expandedFieldName);
       }
+    };
+
+    if (sourceSchema) {
+      // FK lives in a domain schema $defs entry, and stays there. The expanded
+      // field goes in the OpenAPI spec's inline allOf properties block so the
+      // $ref target resolves in the correct namespace.
+      requireBeside(sourceSchema);
       const inlineProps = findPropertiesObject(schema);
       if (inlineProps) {
         inlineProps[expandedFieldName] = expandedSchema;
       }
-      const schemasToCheck = [schema, ...(Array.isArray(schema.allOf) ? schema.allOf : [])];
-      for (const s of schemasToCheck) {
-        if (Array.isArray(s.required)) {
-          const idx = s.required.indexOf(propertyName);
-          if (idx !== -1) s.required[idx] = expandedFieldName;
-        }
-      }
+      for (const s of [schema, ...(Array.isArray(schema.allOf) ? schema.allOf : [])]) requireBeside(s);
     } else {
-      // FK lives inline in the OpenAPI spec — existing behaviour.
+      // FK lives inline in the OpenAPI spec: the expanded field goes beside it.
       const propertySources = schema.properties ? [schema.properties] : [];
       if (Array.isArray(schema.allOf)) {
         for (const entry of schema.allOf) {
@@ -569,19 +567,12 @@ function applyExpand(schemaName, schema, fields, schemaIndex, warnings, spec) {
 
       for (const props of propertySources) {
         if (propertyName in props) {
-          delete props[propertyName];
           props[expandedFieldName] = expandedSchema;
           break;
         }
       }
 
-      const schemasToCheck = [schema, ...(Array.isArray(schema.allOf) ? schema.allOf : [])];
-      for (const s of schemasToCheck) {
-        if (Array.isArray(s.required)) {
-          const idx = s.required.indexOf(propertyName);
-          if (idx !== -1) s.required[idx] = expandedFieldName;
-        }
-      }
+      for (const s of [schema, ...(Array.isArray(schema.allOf) ? schema.allOf : [])]) requireBeside(s);
     }
   }
 }
@@ -1184,8 +1175,8 @@ function resolveExampleRelationships(examplesData, expandRenames, examplesIndex,
     for (const { propertyName, expandedFieldName, resource, fields } of expandRenames) {
       if (!(propertyName in record)) continue;
 
+      // The FK stays beside the expanded record, as it does in the schema.
       const fkValue = record[propertyName];
-      delete record[propertyName];
 
       if (!fkValue) {
         record[expandedFieldName] = null;

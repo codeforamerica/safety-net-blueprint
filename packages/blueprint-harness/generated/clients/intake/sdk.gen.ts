@@ -270,7 +270,7 @@ export const updateApplicationMember = <ThrowOnError extends boolean = false>(op
 });
 
 /**
- * Submit application
+ * Submit
  *
  * Formally submits a draft application, starting the regulatory processing clock.
  */
@@ -283,7 +283,7 @@ export const submitApplication = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
- * Open application
+ * Open
  *
  * Moves a submitted application into active caseworker review.
  */
@@ -296,7 +296,7 @@ export const openApplication = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
- * Close application
+ * Close
  *
  * Closes the application once intake processing is complete.
  */
@@ -313,7 +313,7 @@ export const closeApplication = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * Withdraw application
+ * Withdraw
  *
  * Withdraws the application at the household's request.
  */
@@ -326,7 +326,7 @@ export const withdrawApplication = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * Start interview
+ * Start
  *
  * Starts the interview and puts its flags to the worker.
  */
@@ -339,7 +339,7 @@ export const startInterview = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Process suggestions interview
+ * Process suggestions
  *
  * Evaluates the flags again, proposing a suggestion for a newly flagged record and expiring one whose flag cleared — called when the household's incomes change.
  *
@@ -353,7 +353,7 @@ export const processSuggestionsInterview = <ThrowOnError extends boolean = false
 });
 
 /**
- * Complete interview
+ * Complete
  *
  * Finishes the interview and expires its suggestions still open.
  */

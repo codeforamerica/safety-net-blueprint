@@ -297,12 +297,18 @@ $defs:
                       transcript; validation refuses none or more than one.
         guards      — conditions that must pass before steps run.
         context     — data available to all steps; inherits machine context.
-        steps       — steps to execute.
+        steps       — steps to execute. A handler with a transition to a state
+                      may have none: moving the record is the reaction, as a
+                      session following what its adapter publishes.
     allOf:
       - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/EventRef'
       - type: object
-        required:
-          - steps
+        anyOf:
+          - required: [steps]
+          - required: [transition]
+            properties:
+              transition:
+                required: [to]
         properties:
           transition:
             $ref: "#/$defs/TransitionBlock"
@@ -730,16 +736,38 @@ $defs:
   # ---------------------------------------------------------------------------
   StepItem:
     description: >
-      A single step in a then: list. One of: SetStep, EmitStep, CallStep, EvaluateStep, IfStep, MatchStep, ForEachStep.
+      A single step in a then: list. One of: SetStep, EmitStep, CallStep, FailStep, EvaluateStep, IfStep, MatchStep, ForEachStep.
       All step types accept an optional description:.
     oneOf:
       - $ref: "#/$defs/SetStep"
       - $ref: "#/$defs/EmitStep"
       - $ref: "#/$defs/CallStep"
+      - $ref: "#/$defs/FailStep"
       - $ref: "#/$defs/EvaluateStep"
       - $ref: "#/$defs/IfStep"
       - $ref: "#/$defs/MatchStep"
       - $ref: "#/$defs/ForEachStep"
+
+  # fail: is Amazon States Language's Fail, which `catch` also comes from:
+  # stop here with an error. It reads as a call's failure does, the shared
+  # Error shape's code and message beside an HTTP status: an action answers
+  # with it, and a reaction fails with it, logged; either way nothing is
+  # saved. Test what's wrong with if: first.
+  FailStep:
+    type: object
+    description: Stop the action or reaction with an error; nothing it did is saved.
+    required: [fail]
+    additionalProperties: false
+    properties:
+      fail:
+        type: object
+        required: [status, code, message]
+        additionalProperties: false
+        properties:
+          status: {type: integer, minimum: 400, maximum: 599, description: "HTTP status an action answers with."}
+          code: {type: string, description: "The shared Error shape's code, such as CONFLICT."}
+          message: {type: string, description: "What's wrong, for the caller or the log."}
+      description: {type: string}
 
   SetStep:
     type: object
@@ -1123,7 +1151,7 @@ $defs:
 
       Two forms:
         Multi-step: use steps: [...] when more than one step or duplicate step types.
-        Single-step: place the step key (call:, set:, emit:, if:, match:, forEach:)
+        Single-step: place the step key (call:, set:, emit:, fail:, if:, match:, forEach:)
           directly on the procedure object; omit steps:.
     required:
       - id

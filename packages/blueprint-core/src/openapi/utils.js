@@ -82,8 +82,8 @@ export function inferTagFromPath(path) {
 
 /**
  * Build an OpenAPI path entry object for a generated endpoint.
- * Resolves path parameters against the provided index, infers a tag from
- * the path, and injects it into the operation.
+ * Resolves path parameters against the provided index, and tags the
+ * operation with the tags it was given, or else one inferred from the path.
  *
  * @param {string} path           - endpoint path, e.g. "/applications/{applicationId}/summary"
  * @param {string} method         - HTTP method, lowercase, e.g. "get" or "post"
@@ -101,8 +101,8 @@ export function buildPathEntry(path, method, operation, paramIndex = new Map(), 
       : { name, in: 'path', required: true, schema: { type: 'string' } };
   });
 
-  const tag = inferTagFromPath(path);
-  const op  = { ...operation, tags: [tag] };
+  // The tags it was given, such as its resource's, else one from the path.
+  const op  = { ...operation, tags: operation.tags?.length ? operation.tags : [inferTagFromPath(path)] };
   if (xRelationship) op['x-relationship'] = xRelationship;
 
   const entry = {};

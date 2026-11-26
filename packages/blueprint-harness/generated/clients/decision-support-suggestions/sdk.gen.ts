@@ -98,7 +98,7 @@ export const getSuggestion = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
- * Accept suggestion
+ * Accept
  *
  * Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
  *
@@ -117,7 +117,7 @@ export const acceptSuggestion = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * Dismiss suggestion
+ * Dismiss
  *
  * Say no, with a reason.
  */
@@ -134,7 +134,7 @@ export const dismissSuggestion = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
- * Expire suggestion
+ * Expire
  *
  * Close a suggestion that no longer applies, before anyone decided.
  */

@@ -34,7 +34,7 @@
 export const EXTENSION_LOCATIONS = {
   'x-domain': ['info', 'operation'],
   'x-enum-source': ['schema-property'],
-  'x-relationship': ['schema-property', 'operation'],
+  'x-relationship': ['root', 'schema-property', 'operation'],
   'x-sortable': ['operation'],
   'x-status': ['info', 'operation'],
   'x-visibility': ['info', 'operation'],

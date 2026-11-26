@@ -86,6 +86,18 @@ authorization:
     What authenticated users can do. Combines role-based access control (RBAC)
     with attribute-based rules (ABAC) for fine-grained permissions.
 
+  # Who may publish an event with publishEvent
+  event_publishing:
+    description: |
+      publishEvent takes every event type through one operation, so the checks
+      an operation would make for itself are made per event type. For each
+      type that something outside the server may publish, declare who may
+      publish it and for which subjects: the session's adapter, signed in as
+      the staff member, may publish that session's events and no one else's.
+      The server sets authtype and authid on the envelope from the caller's
+      token, ignoring what the publisher put there, and refuses a type with no
+      rule (403). See events.yaml, published_from_outside.
+
   # OAuth scopes (coarse-grained API access)
   scopes:
     description: OAuth scopes control broad API access categories

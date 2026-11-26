@@ -54,9 +54,11 @@ export function specNameOf(path) {
  * @param {{ node: Function, schema: Function }} [resolve] - Bound to this
  *   document and its set. Omitted for an already-flat document, in which case
  *   nothing needs following.
+ * @param {{ adapter?: boolean }} [about] - What core knows of the document:
+ *   whether it's an adapter's (doc.adapter), so every operation is external
  * @returns {Object} Metadata about the API
  */
-export function extractMetadata(spec, resourceName, resolve = null) {
+export function extractMetadata(spec, resourceName, resolve = null, { adapter = false } = {}) {
   // An already-flat document needs no resolution, so callers that have one —
   // the tests, and anything handed a dereferenced spec — can omit the resolver.
   const follow = resolve?.schema ?? ((schema) => schema);
@@ -150,8 +152,9 @@ export function extractMetadata(spec, resourceName, resolve = null) {
         operationId: operation.operationId,
         summary: operation.summary,
         // Answered by something outside the contracts, such as a state's
-        // adapter (x-relationship type external): the mock answers none itself.
-        external: operation['x-relationship']?.type === 'external',
+        // adapter (x-relationship type external, on the operation or on an
+        // adapter's whole document): the mock answers none itself.
+        external: adapter || operation['x-relationship']?.type === 'external',
         parameters: allParameters,
         // Sort configuration from the operation's x-sortable extension (if
         // declared). Undefined when the operation does not opt into sorting;
@@ -267,7 +270,7 @@ export function apiSpecsFromDocs(docs) {
       // it by; the spec's own name comes from its file and can differ.
       // `doc` is the document itself, so core's answer to what something
       // attaches to (`extract`'s `api`) finds the API loaded from it.
-      const metadata = extractMetadata(doc.content, name, resolve);
+      const metadata = extractMetadata(doc.content, name, resolve, { adapter: doc.adapter });
       const domain = doc.domain ?? null;
       markResources(metadata, doc, eventDomainOf({ ...metadata, domain }));
       loaded.push({ ...metadata, resolve, relativePath: doc.relativePath, domain, doc });
