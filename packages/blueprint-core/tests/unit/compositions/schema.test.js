@@ -203,7 +203,7 @@ test('compositions-schema include map', async (t) => {
             verifications: {
               resource: 'Verification',
               bind: 'applicationId',
-              filter: "category == 'identity'",
+              filter: "item.category == 'identity'",
             },
           },
         },
@@ -471,7 +471,7 @@ test('compositions-schema sectionView', async (t) => {
               verifications: {
                 resource: 'Verification',
                 bind: 'applicationId',
-                filter: "category == $section.name",
+                filter: "item.category == section.name",
               },
             },
           },
@@ -579,7 +579,7 @@ test('compositions-schema editable', async (t) => {
   });
 
   await t.test('filter and flatten are refused on an include', () => {
-    assert.ok(!validate(editable({}, { filter: "status == 'active'" })).valid);
+    assert.ok(!validate(editable({}, { filter: "item.status == 'active'" })).valid);
     assert.ok(!validate(editable({}, { flatten: true })).valid);
   });
 

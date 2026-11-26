@@ -1,15 +1,25 @@
 /**
  * Check the fields SLA type conditions and metric filters read against real
- * schemas.
+ * schemas, that composition filters read their records as `item`, and that
+ * an `x-derived` field reads its record as `object`.
  *
- * Both are CEL over a record's fields, named as they are: `status in
- * ["awaiting_client"]` reads the field `status`. Nothing stops one naming a
- * field that does not exist — the document is structurally valid and the
- * condition simply never matches at runtime, which is the worst way to find
- * out. An expression that does not parse is reported here too, for the same
- * reason.
+ * All three are CEL over one record, read through a variable as CEL's hosts
+ * read a record (Kubernetes' `object`): a metric filter reads each record it
+ * counts as `item`, as a `where:` reads its candidates (`item.status ==
+ * "pending"`), and so does a composition filter, beside the section it
+ * fills (`item.category == section.name`); an SLA condition reads the record its clock runs on as
+ * `object`, as a guard does (`object.status in ["awaiting_client"]`). A field
+ * the record doesn't have is missing, which CEL makes an error, so a
+ * condition that has to allow for one tests it with `has()`:
+ * `!has(item.assignedToId)`. A name read bare is refused, with the form to
+ * write.
  *
- * Only the names an expression starts from are checked. `slaInfo.exists(x,
+ * Nothing stops a condition naming a field that does not exist — the
+ * document is structurally valid and the condition simply never matches at
+ * runtime, which is the worst way to find out. An expression that does not
+ * parse is reported here too, for the same reason.
+ *
+ * Only the field a condition reads first is checked. `object.slaInfo.exists(x,
  * x.status == "breached")` is verified as far as `slaInfo` existing on the
  * resource; the nested shape is the schema's business, and resolving it
  * through composed and referenced schemas would report confident nonsense more
@@ -28,7 +38,7 @@ import { celSyntaxError } from '../cel.js';
  */
 const SLA_COLLECTION = 'tasks';
 
-/** The SLA type conditions, each a CEL expression over the resource's fields. */
+/** The SLA type conditions, each a CEL expression over the record as `object`. */
 const SLA_CONDITIONS = ['autoAssignWhen', 'startWhen', 'pauseWhen', 'resumeWhen', 'completedWhen', 'resetWhen'];
 
 /**
@@ -56,7 +66,7 @@ export function validateSlaTypeFields(doc, propertiesByCollection) {
   for (const slaType of doc.content?.slaTypes ?? []) {
     for (const key of SLA_CONDITIONS) {
       if (typeof slaType?.[key] !== 'string') continue;
-      errors.push(...checkExpression(slaType[key], properties, SLA_COLLECTION, `slaTypes[${slaType.id}].${key}`));
+      errors.push(...checkExpression(slaType[key], properties, SLA_COLLECTION, `slaTypes[${slaType.id}].${key}`, 'object'));
     }
   }
 
@@ -80,7 +90,7 @@ export function validateMetricFields(doc, propertiesByCollection) {
       // A collection the domain does not expose as an OpenAPI resource has no
       // schema to check against — a metric over the runtime event stream, say.
       const properties = propertiesByCollection.get(qualify(doc, clause.collection));
-      errors.push(...checkExpression(clause.filter, properties, clause.collection, `metrics[${metric.id}].${key}.filter`));
+      errors.push(...checkExpression(clause.filter, properties, clause.collection, `metrics[${metric.id}].${key}.filter`, 'item'));
     }
   }
 
@@ -88,46 +98,109 @@ export function validateMetricFields(doc, propertiesByCollection) {
 }
 
 /**
- * Whether an expression parses, and when there is a schema to check against,
- * whether every field it reads is one the resource has.
+ * @param {import('../../types.js').Doc} doc - A compositions document
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+export function validateCompositionFilters(doc) {
+  const errors = [];
+  // Every filter: a node's, an include's, a section index's and a view's.
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}[${i}]`)); return; }
+    if (!node || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'filter' && typeof value === 'string') {
+        errors.push(...checkExpression(value, undefined, null, `${at}.filter`, 'item', ['section']));
+      } else {
+        walk(value, at ? `${at}.${key}` : key);
+      }
+    }
+  };
+  walk(doc.content?.compositions, 'compositions');
+  return errors;
+}
+
+/**
+ * @param {import('../../types.js').Doc} doc - An OpenAPI document
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+export function validateDerivedFields(doc) {
+  const errors = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'x-derived' && typeof value === 'string') {
+        errors.push(...checkExpression(value, undefined, null, `${at}/x-derived`, 'object'));
+      } else {
+        walk(value, `${at}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`);
+      }
+    }
+  };
+  walk(doc.content?.components, '#/components');
+  return errors;
+}
+
+/**
+ * Whether an expression parses, reads the record only through its variable,
+ * and, when there is a schema to check against, reads only fields the
+ * resource has.
  *
  * @param {string} expression
  * @param {Set<string>|undefined} properties - The resource's fields, when known
  * @param {string} collection
  * @param {string} path
+ * @param {'item'|'object'} record - The variable the record is read through
+ * @param {string[]} [others] - Other names the expression may read, such as a composition's `section`
  * @returns {{ rule: string, message: string, path: string }[]}
  */
-function checkExpression(expression, properties, collection, path) {
+function checkExpression(expression, properties, collection, path, record, others = []) {
   const syntax = celSyntaxError(expression);
   if (syntax) return [{ rule: 'cel-syntax', message: `"${expression}" is not CEL: ${syntax}`, path }];
-  if (!properties) return [];
 
-  return [...namesRead(expression)]
+  const { fields, bare } = namesRead(expression, record, others);
+  const errors = [...bare].map((name) => ({
+    rule: 'bare-field-reference',
+    message: `"${expression}" reads "${name}" bare; the record is \`${record}\`. Write \`${record}.${name}\`, and \`has(${record}.${name})\` to test whether the record has it.`,
+    path,
+  }));
+  if (!properties) return errors;
+
+  return [...errors, ...[...fields]
     .filter((field) => !properties.has(field))
     .map((field) => ({
       rule: 'unknown-field-reference',
-      message: `"${expression}" reads "${field}", which is not a field of the ${collection} resource.`,
+      message: `"${expression}" reads "${record}.${field}", and ${field} is not a field of the ${collection} resource.`,
       path,
-    }));
+    }))];
 }
 
 /**
- * The names a CEL expression reads from outside itself: every identifier but
- * the variables `exists`, `all` and `filter` bind for each item.
+ * What a CEL expression reads from outside itself: the fields it reads from
+ * the record (`item.status` reads `status`), and any other name it reads
+ * bare. The variables `exists`, `all` and `filter` bind for each item are
+ * its own.
  *
  * @param {string} expression
- * @returns {Set<string>}
+ * @param {string} record - The record's variable
+ * @param {string[]} others - Other names it may read
+ * @returns {{ fields: Set<string>, bare: Set<string> }}
  */
-function namesRead(expression) {
-  const names = new Set();
+function namesRead(expression, record, others) {
+  const fields = new Set();
+  const bare = new Set();
   const walk = (expr, bound) => {
     if (!expr) return;
     const { case: kind, value } = expr.exprKind;
     switch (kind) {
       case 'identExpr':
-        if (!bound.has(value.name)) names.add(value.name);
+        if (!bound.has(value.name) && value.name !== record && !others.includes(value.name)) bare.add(value.name);
         break;
       case 'selectExpr':
+        // record.field, or has(record.field)
+        if (value.operand?.exprKind.case === 'identExpr' && value.operand.exprKind.value.name === record && !bound.has(record)) {
+          fields.add(value.field);
+          break;
+        }
         walk(value.operand, bound);
         break;
       case 'callExpr':
@@ -157,5 +230,5 @@ function namesRead(expression) {
     }
   };
   walk(parse(expression).expr, new Set());
-  return names;
+  return { fields, bare };
 }

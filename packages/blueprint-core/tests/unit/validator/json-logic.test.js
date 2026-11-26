@@ -30,7 +30,7 @@ test('a JSON Logic metric filter is refused, with the CEL to write', () => {
   }));
   assert.deepEqual(rest, []);
   assert.match(error.message, /^\/metrics\/0\/source\/filter is JSON Logic/);
-  assert.match(error.message, /Write `type == "workflow.task.released"`\./);
+  assert.match(error.message, /Write `item\.type == "workflow.task.released"`\. In a filter, `item` is each record counted\./);
   assert.equal(error.path, '/set/domains/workflow/workflow-metrics.yaml#/metrics/0/source/filter');
 });
 
@@ -51,7 +51,17 @@ test('the CEL shown covers and, in, some and nested fields', () => {
     }],
   }));
   assert.match(error.message,
-    /Write `status in \["pending", "in_progress"\] && slaInfo\.exists\(x, x\.status == "breached"\) && data\.reason != null`\./);
+    /Write `item\.status in \["pending", "in_progress"\] && item\.slaInfo\.exists\(x, x\.status == "breached"\) && \(has\(item\.data\.reason\) && item\.data\.reason != null\)`\./);
+});
+
+test('a comparison to null tests for the field first, as JSON Logic read a missing field as null', () => {
+  const [error] = refusals(doc('metrics', 'workflow-metrics.yaml', {
+    version: '1.0',
+    domain: 'workflow',
+    metrics: [{ id: 'unassigned', name: 'm', description: 'd', aggregate: 'count',
+      source: { collection: 'tasks', filter: { '==': [{ var: 'assignedToId' }, null] } } }],
+  }));
+  assert.match(error.message, /Write `!has\(item\.assignedToId\) \|\| item\.assignedToId == null`\./);
 });
 
 test('an `in` testing a string says contains() is the CEL for a substring', () => {
@@ -61,7 +71,7 @@ test('an `in` testing a string says contains() is the CEL for a substring', () =
     metrics: [{ id: 'm', name: 'm', description: 'd', aggregate: 'count',
       source: { collection: 'events', filter: { in: ['workflow.task.', { var: 'type' }] } } }],
   }));
-  assert.match(error.message, /Write `"workflow\.task\." in type`\..*write `text\.contains\(part\)`/);
+  assert.match(error.message, /Write `"workflow\.task\." in item\.type`\..*write `text\.contains\(part\)`/);
 });
 
 test('a JSON Logic SLA condition is refused, with the CEL to write', () => {
@@ -72,7 +82,7 @@ test('a JSON Logic SLA condition is refused, with the CEL to write', () => {
       pauseWhen: { in: [{ var: 'status' }, ['awaiting_client', 'awaiting_verification']] } }],
   }));
   assert.match(error.message, /^\/slaTypes\/0\/pauseWhen is JSON Logic/);
-  assert.match(error.message, /Write `status in \["awaiting_client", "awaiting_verification"\]`\./);
+  assert.match(error.message, /Write `object\.status in \["awaiting_client", "awaiting_verification"\]`\. In an SLA condition, `object` is the record\./);
 });
 
 const machine = (where, context) => doc('state-machine', 'workflow-state-machine.yaml', {
@@ -94,7 +104,7 @@ test('a JSON Logic forEach where: is refused, naming the candidate record item',
   const [error] = refusals(machine(where, [{ application: { from: 'intake/applications', where: { id: '$this.subject' } } }]));
   assert.match(error.message, /\/steps\/0\/forEach\/where is JSON Logic/);
   assert.match(error.message,
-    /Write `item\.applicationId == application\.id && item\.citizenshipStatus != "citizen"`\. In a where:, `item` is the candidate record\./);
+    /Write `item\.applicationId == application\.id && \(!has\(item\.citizenshipStatus\) \|\| item\.citizenshipStatus != "citizen"\)`\. In a where:, `item` is the candidate record\./);
 });
 
 test('a JSON Logic context binding where: is refused', () => {

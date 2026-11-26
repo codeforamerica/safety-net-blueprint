@@ -8,14 +8,14 @@ metrics:
     aggregate: count
     source:
       collection: events
-      filter: type == "eligibility.determination.complete"
+      filter: item.type == "eligibility.determination.complete"
   - id: expedited_rate
     name: Expedited Processing Rate
     description: Ratio of determinations flagged as expedited to total determinations.
     aggregate: ratio
     source:
       collection: determinations
-      filter: expedited == true
+      filter: item.expedited == true
     total:
       collection: determinations
     targets:
@@ -29,10 +29,10 @@ metrics:
     aggregate: duration
     from:
       collection: events
-      filter: type == "eligibility.determination.created"
+      filter: item.type == "eligibility.determination.created"
     to:
       collection: events
-      filter: type == "eligibility.determination.complete"
+      filter: item.type == "eligibility.determination.complete"
     pairBy: subject
     targets:
       - stat: p50

@@ -169,7 +169,7 @@ Runs as part of `npm run validate`. Each `schema:` key (e.g. `application.progra
 npm run validate:sla-metrics
 ```
 
-- SLA type conditions (`autoAssignWhen`, `pauseWhen` and the rest) and metric `filter` expressions are CEL that parses, and the fields they read exist on the target resource schema
+- SLA type conditions (`autoAssignWhen`, `pauseWhen` and the rest) and metric `filter` expressions are CEL that parses, read the record through its variable (`object` in an SLA condition, `item` in a filter), and read only fields that exist on the target resource schema
 - A JSON Logic expression in a metric filter, an SLA condition, or a `where:` is refused, with the CEL to write instead
 
 ---

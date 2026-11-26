@@ -70,7 +70,7 @@ const SIMPLE_COMPOSITION = {
         verifications: {
           resource: 'verifications',
           bind: 'applicationId',
-          filter: "category == 'identity'",
+          filter: "item.category == 'identity'",
         },
       },
     },
@@ -94,7 +94,7 @@ const SIMPLE_COMPOSITION = {
       verifications: {
         resource: 'verifications',
         bind: 'applicationId',
-        filter: "category == section.name",
+        filter: "item.category == section.name",
       },
     },
   },
@@ -199,7 +199,7 @@ const INDEX_VIEW_COMPOSITION = {
       resource: 'application-members',
       bind: 'applicationId',
       index: {
-        filter: "'primary_applicant' in roles",
+        filter: "'primary_applicant' in item.roles",
         fields: ['id', 'firstName', 'lastName'],
       },
     },

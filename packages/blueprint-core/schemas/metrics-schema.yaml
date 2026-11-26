@@ -113,11 +113,12 @@ $defs:
         type: string
         minLength: 1
         description: >
-          Optional CEL condition over each record's fields, named as they are
-          (e.g., `type == "workflow.task.created"`). When provided, only records
-          where the condition evaluates to true are included. A record without
-          a field the condition reads does not match; for a nested field, ask
-          with has() (e.g., `has(data.reason) && data.reason == "late"`).
+          Optional CEL condition that reads each record as `item` (e.g.,
+          `item.type == "workflow.task.created"`). When provided, only records
+          where the condition evaluates to true are included. Reading a field
+          the record doesn't have is an error, and the record does not match;
+          test for one with has() (e.g., `!has(item.assignedToId)` for an
+          unassigned task).
     additionalProperties: false
 
   MetricTarget:

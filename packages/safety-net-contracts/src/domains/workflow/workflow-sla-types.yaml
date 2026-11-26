@@ -8,25 +8,25 @@ slaTypes:
       amount: 7
       unit: days
     warningThresholdPercent: 75
-    pauseWhen: status in ["awaiting_client", "awaiting_verification"]
+    pauseWhen: object.status in ["awaiting_client", "awaiting_verification"]
   - id: snap_standard
     name: SNAP Standard
     duration:
       amount: 30
       unit: days
     warningThresholdPercent: 75
-    pauseWhen: status in ["awaiting_client", "awaiting_verification"]
+    pauseWhen: object.status in ["awaiting_client", "awaiting_verification"]
   - id: medicaid_standard
     name: Medicaid Standard
     duration:
       amount: 45
       unit: days
     warningThresholdPercent: 75
-    pauseWhen: status in ["awaiting_client", "awaiting_verification"]
+    pauseWhen: object.status in ["awaiting_client", "awaiting_verification"]
   - id: medicaid_disability
     name: Medicaid Disability
     duration:
       amount: 90
       unit: days
     warningThresholdPercent: 75
-    pauseWhen: status in ["awaiting_client", "awaiting_verification"]
+    pauseWhen: object.status in ["awaiting_client", "awaiting_verification"]
