@@ -112,10 +112,10 @@ Field names are validated against the source resource schema at resolve time. Ap
 
 ## Filters
 
-CEL expressions on `filter:` are evaluated per item at read time. Filters are read-only — they do not constrain writes or affect generated link URLs. Multiple filters compose: a node's `filter:` and a named view's `filter:` both apply (AND semantics).
+CEL expressions on `filter:` are evaluated per record at read time, reading the record as `item`, as a metric filter and a `where:` do. Reading a field the record doesn't have is an error, and the record isn't returned; test for one with `has(item.field)`. Filters are read-only — they do not constrain writes or affect generated link URLs. Multiple filters compose: a node's `filter:` and a named view's `filter:` both apply (AND semantics).
 
 ```yaml
-filter: "status == 'active' && roles.contains('primary_applicant')"
+filter: "item.status == 'active' && 'primary_applicant' in item.roles"
 ```
 
 The same resource can back multiple named compositions with different filters (e.g., `earned` and `unearned` both backed by `member-incomes`).
@@ -132,7 +132,7 @@ include:
   primaryAddress:
     resource: ApplicationAddress
     bind: applicationId
-    filter: "type == 'primary'"
+    filter: "item.type == 'primary'"
     flatten: true
     fields: [street, city, state, zip]
 ```
@@ -254,7 +254,7 @@ compositions:
         resource: ApplicationMember
         bind: applicationId
         index:
-          filter: "roles.contains('primary_applicant')"
+          filter: "'primary_applicant' in item.roles"
           fields: [name, dateOfBirth]
       household:
         resource: ApplicationHousehold
@@ -269,7 +269,7 @@ compositions:
         verifications:
           resource: Verification
           bind: applicationId
-          filter: "category == $section.name"
+          filter: "item.category == section.name"
 ```
 
 **Section index** (`GET /applications/{applicationId}/review`)
@@ -278,7 +278,7 @@ The index is a navigation surface — sections default to link-only (`{ name, hr
 
 **Panel** (`GET /applications/{applicationId}/review/{sectionName}`)
 
-Field and link defaults match views: all fields unless `fields:` is declared on the section, no links unless `links: true` is set. Path is derived: `{endpoint.path}/{$section.name}` — not declared separately. Assembles the matching section's resource plus everything in `panel.include:`. `$section.name` in filters resolves to the path parameter value. The section's `state:` fields are included automatically.
+Field and link defaults match views: all fields unless `fields:` is declared on the section, no links unless `links: true` is set. Path is derived: `{endpoint.path}/{$section.name}` — not declared separately. Assembles the matching section's resource plus everything in `panel.include:`. `section.name` in filters resolves to the path parameter value. The section's `state:` fields are included automatically.
 
 **Enum byproduct.** Section keys in `sections:` generate a named enum type at resolve time, emitted into the companion schemas file. The name is derived from the composition key: PascalCase + `Sections` suffix (`applicationReview` → `ApplicationReviewSections`). This eliminates manually maintained enums whose valid values are defined by the composition's section structure.
 

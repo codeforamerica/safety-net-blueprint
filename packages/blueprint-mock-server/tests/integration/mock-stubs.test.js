@@ -288,12 +288,14 @@ async function testTimerStubCausationid() {
   console.log('\n--- Timer callback carries causationid ---');
   await clearStubs();
 
+  // Named by its timerId: a stub fires the oldest matching timer already
+  // waiting, and an earlier test may have left one.
+  const subjectId = 'task-timer-causation-1';
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.task.creation_deadline' } }
+    body: { on: 'platform.timer.requested', match: { 'data.timerId': `workflow.creation_deadline.${subjectId}` } }
   });
 
-  const subjectId = 'task-timer-causation-1';
   const injectRes = await injectEvent(
     'platform.timer.requested',
     { timerId: `workflow.creation_deadline.${subjectId}`, callback: { event: 'workflow.task.creation_deadline', data: {} } },

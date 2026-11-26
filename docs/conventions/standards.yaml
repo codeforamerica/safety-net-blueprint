@@ -186,6 +186,20 @@ borrowed:
       changed with it, as one unit, all or nothing. Use the term when you
       describe what an editable composition holds.
 
+  - name: Transactional outbox
+    url: https://microservices.io/patterns/data/transactional-outbox.html
+    use: >
+      An action or a reaction and the calls it makes to its own domain are one
+      transaction, and their events are sent only when it succeeds. Say so
+      when you describe what a failed call undoes.
+
+  - name: Saga
+    url: https://microservices.io/patterns/data/saga.html
+    use: >
+      A call to another domain can't be rolled back. When a later failure has
+      to undo it, handle the failure with `catch` and call what undoes it: a
+      compensating action.
+
   - name: Amazon States Language
     url: https://states-language.net/spec.html
     use: When a step can fail, handle it with a `catch` on the step, as its Catch sits on a Task.

@@ -8,4 +8,4 @@ slaTypes:
       amount: 7
       unit: days
     warningThresholdPercent: 70
-    pauseWhen: status == "complete"
+    pauseWhen: object.status == "complete"
