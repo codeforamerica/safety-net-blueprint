@@ -202,4 +202,16 @@ describe('resolveActionTargets — add actions', () => {
     assert.deepEqual(targets, []);
     assert.match(warnings[0], /does not exist in specified file/);
   });
+
+  test('`$`, the whole document, is in every document', () => {
+    const intake = apiSpec('domains/intake/intake-openapi.yaml');
+
+    const { targets, warnings } = resolveActionTargets(
+      { target: '$', update: { webhooks: {} }, file: 'domains/intake/intake-openapi.yaml' },
+      [intake]
+    );
+
+    assert.deepEqual(targets, [intake]);
+    assert.deepEqual(warnings, []);
+  });
 });

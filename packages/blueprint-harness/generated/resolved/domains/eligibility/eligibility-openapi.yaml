@@ -428,3 +428,8 @@ components:
           minimum: 0
         hasNext:
           type: boolean
+  securitySchemes:
+    callerId:
+      $ref: ../../base/components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

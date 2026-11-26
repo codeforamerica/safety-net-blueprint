@@ -167,3 +167,8 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/RegistryEntry"
+  securitySchemes:
+    callerId:
+      $ref: ../../components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

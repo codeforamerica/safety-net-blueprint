@@ -33,15 +33,18 @@ sourceDescriptions:
   - name: intake
     url: ../domains/intake/intake-openapi.yaml
     type: openapi
+    x-internal: true
   - name: suggestions
     url: ../base/domains/decision-support/decision-support-suggestions-openapi.yaml
     type: openapi
   - name: events
     url: ../base/domains/platform/platform-events-openapi.yaml
     type: openapi
+    x-internal: true
   - name: transcripts
     url: ../base/domains/communication/communication-transcripts-openapi.yaml
     type: openapi
+    x-internal: true
 components:
   parameters:
     worker:

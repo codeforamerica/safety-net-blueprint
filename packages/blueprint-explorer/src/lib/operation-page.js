@@ -13,10 +13,15 @@ export const OPERATION_STYLE = `
   /* An operation's sections: plain headings and lists, one box only, the card. */
   /* Closed, an operation is one line tinted by its method, as Swagger lists
      them: method, path, name. Open, it's the two columns. */
-  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .op-path { font: 600 13px monospace; color: ${COLORS.text}; word-break: break-all; }
+  /* The request (method and path) on its own line, the card's full width;
+     the summary, operationId and links on the line below. */
+  .op-line { flex: 1 1 100%; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .op-meta { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding-left: 20px; }
+  /* The path keeps its room and breaks only after a slash; the operationId shrinks first. */
+  .op-path { font: 600 13px monospace; color: ${COLORS.text}; min-width: 0; overflow-wrap: anywhere; }
+  .op-path > span { white-space: nowrap; }
   .op-name { font-size: 13px; color: #555; }
-  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .op-id { font-size: 11px; color: #999; flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .content-item.op-get    { border-color: ${METHOD_STYLE.get.border} !important; }    .op-get > details > summary    { background: ${METHOD_STYLE.get.bg}66; }
   .content-item.op-post   { border-color: ${METHOD_STYLE.post.border} !important; }   .op-post > details > summary   { background: ${METHOD_STYLE.post.bg}88; }
   .content-item.op-patch, .content-item.op-put { border-color: ${METHOD_STYLE.patch.border} !important; } .op-patch > details > summary, .op-put > details > summary { background: ${METHOD_STYLE.patch.bg}88; }
@@ -108,9 +113,10 @@ export const MOUNT_SEND_PANELS = `<script src="../mock/mock.js" defer></script>
 <script src="../mock/contracts.js" defer></script>
 <script type="module">
 if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
-  BlueprintMock.mountSendPanels({
+  // In the environment the reader picked (try-it/environments.js).
+  BlueprintMock.mountSendPanels(BlueprintMock.inEnvironment({
     contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
-  });
+  }));
 }
 </script>`;
 

@@ -46,6 +46,7 @@ Each domain module provides:
 | SDK functions | `getTask`, `listTasks`, `createApplication`, etc. |
 | Types | `Task`, `Application`, `ApplicationMember`, etc. |
 | Client utilities | `createClient`, `createConfig` |
+| `Events` | The API's events, typed, when it sends any: [Typed events](#typed-events) |
 
 The root export also provides search utilities:
 
@@ -173,6 +174,31 @@ if (result.success) {
 // Strict parse (throws on failure)
 const task = zTask.parse(apiResponse);
 ```
+
+## Typed events
+
+An API that sends events has `Events` beside its SDK functions, generated from the events document resolve writes beside it (`*-events-asyncapi.yaml`): a type for each event with its exact `data`, `Events.is` to narrow an event by its type, and `Events.publish` to send one through the platform's `publishEvent`, when the contract set has the platform's events API.
+
+Follow a session's events, with `data` typed once the type is checked:
+
+```typescript
+import { communicationTranscriptionSessions as sessions } from './generated';
+
+if (sessions.Events.is(event, 'communication.transcription_session.line_finished')) {
+  showLine(event.data.key, event.data.text);   // data is the finished line's shape
+}
+```
+
+Publish one, as a session's adapter does, with its data checked against the event's schema:
+
+```typescript
+await sessions.Events.publish('communication.transcription_session.line_finished', {
+  transcriptId, key: 'c1.l3', text: 'My sister and her two kids.', speaker: 'unknown',
+  startedAt, endedAt,
+}, { subject: sessionId });
+```
+
+The subject is the record the event is about, and the partition key, which keeps one subject's events in order, defaults to it. Data missing a required field, or a type the API doesn't send, doesn't compile. Extra fields in `data` are allowed, so a newer publisher can add some without breaking an older reader.
 
 ## Search Query Syntax
 

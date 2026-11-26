@@ -1,0 +1,34 @@
+overlay: '1.0.0'
+info:
+  title: Safety Net sign-in
+  version: 1.0.0
+
+# How callers sign in to the safety net's APIs: a JWT from the state's identity
+# provider, enriched at sign-in with the user's id, roles and counties from
+# identity-access's GET /token/claims/{sub}. It replaces the framework's
+# X-Caller-Id header, so every domain API requires it, and guards read the
+# caller from its claims. See docs/architecture/cross-cutting/identity-access.md.
+
+actions:
+  - target: "$"
+    files: base/components/security-schemes.yaml
+    description: Callers sign in with the identity provider's JWT
+    update:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
+        description: >
+          A JWT from the identity provider, with the user's permissions embedded
+          at sign-in (identity-access-schema.yaml, JwtClaims).
+        # The claims that identify the caller: the id the records hold, not the
+        # identity provider's own subject.
+        x-caller:
+          id: userId
+          roles: roles
+          counties: counties
+
+  - target: "$.callerId"
+    files: base/components/security-schemes.yaml
+    description: Callers sign in instead of naming themselves
+    remove: true

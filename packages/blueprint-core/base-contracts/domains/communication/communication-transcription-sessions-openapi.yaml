@@ -19,20 +19,7 @@ info:
   x-visibility: internal
   description: |
     The transcription software's connection to its transcription service,
-    for one conversation in one app. It lasts as long as the connection;
-    what's kept lasts in the transcript it writes to.
-
-    Creating a session says which transcript it writes to: an existing one,
-    to carry on after a session failed, or what to start a new one with. A
-    new transcript is started when the session starts.
-
-    The session's actions are what the app does: start, pause, resume and
-    stop. Its adapter
-    (communication-transcription-sessions-adapter-openapi.yaml) streams the
-    audio to the transcription service and publishes the session's events —
-    connected, disconnected, failed, each line, ended — and the session
-    follows them. The app follows the session the same way, by its events:
-    lines to show as they come, and where the connection is.
+    for one conversation in one app.
 servers:
   - url: https://api.example.com/communication
     description: Production server
@@ -250,6 +237,15 @@ components:
                 source: states[].id
                 machine: TranscriptionSession
               description: Where the connection is; see the session's state machine.
+            startedById:
+              type: string
+              readOnly: true
+              description: |
+                The id of the caller who last started or resumed the session,
+                set by start and resume. Its adapter runs for that caller, so
+                the session and the transcript accept the adapter's events
+                only when that caller published them (their `authid`).
+                Absent when the session was started with no caller identified.
             createdAt:
               type: string
               format: date-time

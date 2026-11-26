@@ -208,6 +208,31 @@ x_extensions:
         type: string
         x-enum-source: domains
 
+  x-internal:
+    description: >
+      Marks an API that an Arazzo scenario uses only along the way, such as
+      one that sets up data or reads the event log, rather than one the
+      scenario shows how to use. The name and meaning follow the x-internal
+      that Redocly, Stoplight and Zuplo use to leave something out of
+      documentation; using it on a scenario's source is ours. Use true on
+      each such source, and leave it off the APIs the scenario is about. The
+      explorer links a scenario from the reference page of each API it lists
+      without x-internal, under "See it work". A walkthrough of the
+      framework's features, which isn't about any one API, marks all of its
+      sources. It is a documentation marker, not access control: what may be
+      called is the API's security.
+    location: Arazzo source description
+    type: boolean
+    example: |
+      sourceDescriptions:
+        - name: suggestions
+          url: ../base/domains/decision-support/decision-support-suggestions-openapi.yaml
+          type: openapi
+        - name: intake
+          url: ../domains/intake/intake-openapi.yaml
+          type: openapi
+          x-internal: true
+
   x-relationship:
     description: >
       Declares a relationship between a spec element and another contract artifact.
@@ -217,8 +242,8 @@ x_extensions:
       and on an operation something outside the contracts answers (type: external),
       such as a state's adapter's, which servers built from the contracts answer only
       with a stub or by routing it. At an OpenAPI or AsyncAPI document's root, type:
-      external makes the whole API answered outside the contracts: an adapter, or
-      the relay an adapter streams to. Every operation is external, and core's
+      external makes the whole API answered outside the contracts: an adapter.
+      Every operation is external, and core's
       doc.adapter is true.
       The type field controls which other fields are required and how tooling interprets
       the annotation. Omitting type is equivalent to type: fk for backward compatibility.
@@ -229,7 +254,7 @@ x_extensions:
     location: >
       Schema property level (FK fields); operation level (generated endpoints injected
       by the resolve pipeline, or one external operation); or the document root, with
-      type external only, for an adapter or a relay.
+      type external only, for an adapter.
     type: object
     fields:
       type: >

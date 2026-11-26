@@ -31,15 +31,43 @@ do_not_use_when:
 rules:
   - >-
     Keep where things run out of the contracts: no hosts, no "runs in the
-    browser" in a contract. It's per-environment configuration.
+    browser" in a contract. It's per-environment configuration: a contract
+    says what an API is; routing says where it's answered.
+  - >-
+    For the blueprint's own runtime — the mock server, the explorer, an app
+    running the mock in its page — write routing as a routing file
+    (blueprint-core's schemas/routing-schema.yaml), and check it with
+    `blueprint validate --routing=<file>`, which the runtime and the explorer's
+    build also run. A state's own services route with their own
+    infrastructure — an API gateway, a load balancer, a service mesh —
+    following these same rules; don't adopt the file for that.
+  - >-
+    When code answers a route, write `handler:` with the path of a JavaScript
+    module that exports a handler for each operation it answers, by
+    operationId. A handler gets the request and `{ params, publish, call }`:
+    publish sends an event the contracts declare, through publishEvent; call
+    makes another call by operationId, through routing.
+  - >-
+    When several implementations answer the same API, such as one session
+    adapter per transcription service, give each entry a `match`: dot paths
+    into the request body, each with the value it must equal, as a stub's
+    match is written. The first entry whose match the request meets answers
+    it, and a later request about the same resource that names none of the
+    fields goes to the same entry. Match on a field the contract declares,
+    with a value it allows.
   - >-
     Call another domain's operation by operationId, so routing follows the
     call when that domain runs elsewhere; a call by method and path stays where
     the caller is.
   - >-
-    Route a whole domain where you can, with exceptions for what runs
-    elsewhere. Routing single operations splits a domain's data between two
-    places, so a record one creates is missing from the other's reads.
+    Route a whole domain or API where you can, with exceptions for what runs
+    elsewhere. Route a single operation only when something outside the
+    contracts answers it (an adapter's), when several implementations answer
+    it chosen by match, or when it keeps no data of its own (a credentials
+    request, a ruleset evaluation). Never route a single operation that reads
+    or writes a resource whose other operations run elsewhere: a record one
+    place creates is missing from the other's reads. Validation warns about
+    one routed apart from the rest of its API.
   - >-
     Route a domain's events with it: what its state machines react to is
     delivered to wherever it runs.
@@ -65,4 +93,4 @@ example: >
   with no backend routes nothing: the session, its adapter and the transcript
   all run in the page, and the events never leave it.
 
-rationale: docs/architecture/domains/communication-transcripts.md
+rationale: docs/architecture/cross-cutting/routing.md

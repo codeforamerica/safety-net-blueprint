@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-explorer",
   "version": "0.3.1",
-  "description": "Static documentation generator for Blueprint framework projects — contract reference, state machine diagrams, event catalog, and data dictionaries",
+  "description": "Static documentation generator for Blueprint framework projects \u2014 contract reference, state machine diagrams, event catalog, and data dictionaries",
   "type": "module",
   "exports": {
     ".": "./src/index.js"
@@ -37,11 +37,11 @@
     "@codeforamerica/blueprint-core": "^0.5.0",
     "@codeforamerica/blueprint-rules-engine": "^0.2.1",
     "ajv": "^8.17.1",
+    "esbuild": "^0.28.2",
     "js-yaml": "^4.1.0",
     "marked": "^18.2.1"
   },
   "devDependencies": {
-    "@codeforamerica/blueprint-mock-server": "^0.5.0",
-    "esbuild": "^0.28.2"
+    "@codeforamerica/blueprint-mock-server": "^0.5.0"
   }
 }

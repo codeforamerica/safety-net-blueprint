@@ -38,8 +38,8 @@ const TREE = {
   'domains/communication/communication-transcripts-events-asyncapi.yaml': {
     asyncapi: '3.0.0', info: { title: 'Transcript events', version: '1.0.0', 'x-domain': 'communication', 'x-capability': 'transcripts' }, channels: {},
   },
-  'domains/communication/communication-transcripts-relay-asyncapi.yaml': {
-    asyncapi: '3.0.0', info: { title: 'Relay', version: '1.0.0', 'x-domain': 'communication', 'x-capability': 'transcripts' },
+  'domains/communication/communication-transcripts-socket-asyncapi.yaml': {
+    asyncapi: '3.0.0', info: { title: 'Socket', version: '1.0.0', 'x-domain': 'communication', 'x-capability': 'transcripts' },
     servers: { local: { host: 'localhost:1080', protocol: 'ws' } }, channels: {},
   },
   'domains/communication/communication-transcripts-state-machine.yaml': {
@@ -70,7 +70,7 @@ describe('selectDocs', () => {
     assert.deepEqual(paths(selectDocs(docs, { capabilities: ['transcripts'] })), [
       'domains/communication/communication-transcripts-events-asyncapi.yaml',
       'domains/communication/communication-transcripts-openapi.yaml',
-      'domains/communication/communication-transcripts-relay-asyncapi.yaml',
+      'domains/communication/communication-transcripts-socket-asyncapi.yaml',
       'domains/communication/communication-transcripts-state-machine.yaml',
       'domains/platform/platform-events-openapi.yaml',
       'domains/platform/platform-timers-asyncapi.yaml',

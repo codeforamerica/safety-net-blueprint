@@ -15,12 +15,12 @@ import { deliverEvent } from './routing.js';
 import { arrivedThrough } from './routed-events.js';
 import { theSystem } from './auth-context.js';
 import { busyWith, takeTurn } from './record-turns.js';
-import { executeTransition, performerFor, makePathCalls } from './state-machine-runner.js';
+import { executeTransition, performerFor, makePathCalls, checkGuardClauses } from './state-machine-runner.js';
 import { openTransaction } from './transaction.js';
 import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
-import { storageName, collectionNamed, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
+import { storageName, collectionNamed, buildInlineRules } from './collection-utils.js';
 import { referencesByTarget } from './references.js';
 
 /**
@@ -357,15 +357,14 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       // left out (step-calls.js, schemasFor).
       const context = { ...baseContext, entities, schemas: stepCalls?.schemasFor?.(smEntry.machine), instance };
 
-      // Evaluate guards if defined on this onEvent entry
-      const guardConditions = entry.guards?.conditions || [];
-      if (guardConditions.length > 0) {
-        const guardsMap = Object.fromEntries(
-          mergeByPrecedence(smEntry.stateMachine?.guards || [], smEntry.machine?.guards || [])
-            .map(g => [g.id, g])
-        );
-        const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
-        if (!guardResult.pass) return;
+      // The reaction's guards are clauses, as an action's are: it runs when
+      // any clause passes, and the event is ignored otherwise.
+      if (entry.guards?.length) {
+        const refused = checkGuardClauses({
+          guardItems: entry.guards, stateMachine: smEntry.stateMachine ?? {}, machine: smEntry.machine,
+          callerRoles: caller.roles, resource, context, label: `handle ${entry.type}`,
+        });
+        if (refused) return;
       }
 
       transaction = openTransaction({ store, instance, domain: smEntry.domain, cause: event.id });

@@ -76,10 +76,15 @@
   /* An operation's sections: plain headings and lists, one box only, the card. */
   /* Closed, an operation is one line tinted by its method, as Swagger lists
      them: method, path, name. Open, it's the two columns. */
-  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  /* The request (method and path) on its own line, the card's full width;
+     the summary, operationId and links on the line below. */
+  .op-line { flex: 1 1 100%; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .op-meta { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding-left: 20px; }
+  /* The path keeps its room and breaks only after a slash; the operationId shrinks first. */
+  .op-path { font: 600 13px monospace; color: #1a1a1a; min-width: 0; overflow-wrap: anywhere; }
+  .op-path > span { white-space: nowrap; }
   .op-name { font-size: 13px; color: #555; }
-  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .op-id { font-size: 11px; color: #999; flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
   .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
   .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
@@ -305,18 +310,20 @@
       </div>
       <div id="op-get-applications" class="content-item op-get" data-try-op="listApplications" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications</code>
-        <span class="op-name">List applications</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span></code>
       </span>
-      <code class="op-id" title="operationId">listApplications</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List applications</span>
+        <code class="op-id" title="operationId">listApplications</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1874,18 +1881,20 @@
   </details>
 </div><div id="op-post-applications" class="content-item op-post" data-try-op="createApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications</code>
-        <span class="op-name">Create an application</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span></code>
       </span>
-      <code class="op-id" title="operationId">createApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Create an application</span>
+        <code class="op-id" title="operationId">createApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-applications" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -3608,18 +3617,20 @@
   </details>
 </div><div id="op-get-applications-applicationId" class="content-item op-get" data-try-op="getApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}</code>
-        <span class="op-name">Get an application</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get an application</span>
+        <code class="op-id" title="operationId">getApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -5081,18 +5092,20 @@
   </details>
 </div><div id="op-patch-applications-applicationId" class="content-item op-patch" data-try-op="updateApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/applications/{applicationId}</code>
-        <span class="op-name">Update an application</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span></code>
       </span>
-      <code class="op-id" title="operationId">updateApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Update an application</span>
+        <code class="op-id" title="operationId">updateApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-patch-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -6818,18 +6831,20 @@
   </details>
 </div><div id="op-delete-applications-applicationId" class="content-item op-delete" data-try-op="deleteApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
-        <code class="op-path">/applications/{applicationId}</code>
-        <span class="op-name">Delete a draft application</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span></code>
       </span>
-      <code class="op-id" title="operationId">deleteApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Delete a draft application</span>
+        <code class="op-id" title="operationId">deleteApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-delete-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-delete-applications-applicationId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -6953,18 +6968,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-income-verifications" class="content-item op-get" data-try-op="listIncomeVerifications" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/income-verifications</code>
-        <span class="op-name">List an application's income verifications</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>income-verifications</span></code>
       </span>
-      <code class="op-id" title="operationId">listIncomeVerifications</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List an application's income verifications</span>
+        <code class="op-id" title="operationId">listIncomeVerifications</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-income-verifications" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-income-verifications" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -7255,18 +7272,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-income-verifications" class="content-item op-post" data-try-op="createIncomeVerification" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/income-verifications</code>
-        <span class="op-name">Record an income verification</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>income-verifications</span></code>
       </span>
-      <code class="op-id" title="operationId">createIncomeVerification</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Record an income verification</span>
+        <code class="op-id" title="operationId">createIncomeVerification</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-applications-applicationId-income-verifications" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-income-verifications" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -7638,18 +7657,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-income-verifications-incomeVerificationId" class="content-item op-get" data-try-op="getIncomeVerification" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/income-verifications/{incomeVerificationId}</code>
-        <span class="op-name">Get an income verification</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>income-verifications</span>/<wbr><span>{incomeVerificationId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getIncomeVerification</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get an income verification</span>
+        <code class="op-id" title="operationId">getIncomeVerification</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-income-verifications-incomeVerificationId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-income-verifications-incomeVerificationId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -7868,18 +7889,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-incomes" class="content-item op-get" data-try-op="listApplicationIncomes" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/incomes</code>
-        <span class="op-name">List an application's incomes</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>incomes</span></code>
       </span>
-      <code class="op-id" title="operationId">listApplicationIncomes</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List an application's incomes</span>
+        <code class="op-id" title="operationId">listApplicationIncomes</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-incomes" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-incomes" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -8194,18 +8217,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-incomes" class="content-item op-post" data-try-op="createApplicationIncome" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/incomes</code>
-        <span class="op-name">Report an income</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>incomes</span></code>
       </span>
-      <code class="op-id" title="operationId">createApplicationIncome</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Report an income</span>
+        <code class="op-id" title="operationId">createApplicationIncome</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-applications-applicationId-incomes" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-incomes" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -8625,18 +8650,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-incomes-incomeId" class="content-item op-get" data-try-op="getApplicationIncome" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/incomes/{incomeId}</code>
-        <span class="op-name">Get an income</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>incomes</span>/<wbr><span>{incomeId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationIncome</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get an income</span>
+        <code class="op-id" title="operationId">getApplicationIncome</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-incomes-incomeId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-incomes-incomeId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -8879,18 +8906,20 @@
   </details>
 </div><div id="op-patch-applications-applicationId-incomes-incomeId" class="content-item op-patch" data-try-op="updateApplicationIncome" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/applications/{applicationId}/incomes/{incomeId}</code>
-        <span class="op-name">Update an income</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>incomes</span>/<wbr><span>{incomeId}</span></code>
       </span>
-      <code class="op-id" title="operationId">updateApplicationIncome</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Update an income</span>
+        <code class="op-id" title="operationId">updateApplicationIncome</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-patch-applications-applicationId-incomes-incomeId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-applications-applicationId-incomes-incomeId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -9280,18 +9309,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-interviews" class="content-item op-get" data-try-op="listApplicationInterviews" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/interviews</code>
-        <span class="op-name">List an application's interviews</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interviews</span></code>
       </span>
-      <code class="op-id" title="operationId">listApplicationInterviews</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List an application's interviews</span>
+        <code class="op-id" title="operationId">listApplicationInterviews</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-interviews" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-interviews" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -9563,18 +9594,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-interviews" class="content-item op-post" data-try-op="createApplicationInterview" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/interviews</code>
-        <span class="op-name">Schedule an interview</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interviews</span></code>
       </span>
-      <code class="op-id" title="operationId">createApplicationInterview</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Schedule an interview</span>
+        <code class="op-id" title="operationId">createApplicationInterview</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-applications-applicationId-interviews" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-interviews" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -9881,18 +9914,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-interviews-interviewId" class="content-item op-get" data-try-op="getApplicationInterview" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/interviews/{interviewId}</code>
-        <span class="op-name">Get an interview</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interviews</span>/<wbr><span>{interviewId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationInterview</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get an interview</span>
+        <code class="op-id" title="operationId">getApplicationInterview</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-interviews-interviewId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-interviews-interviewId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -10092,18 +10127,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-submit" class="content-item op-post" data-try-op="submitApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/submit</code>
-        <span class="op-name">Submit</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>submit</span></code>
       </span>
-      <code class="op-id" title="operationId">submitApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Submit</span>
+        <code class="op-id" title="operationId">submitApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/intake.html#action-application-submit" title="State machine action: submit" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-applications-applicationId-submit" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-submit" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -11655,18 +11692,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-open" class="content-item op-post" data-try-op="openApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/open</code>
-        <span class="op-name">Open</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>open</span></code>
       </span>
-      <code class="op-id" title="operationId">openApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Open</span>
+        <code class="op-id" title="operationId">openApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/intake.html#action-application-open" title="State machine action: open" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-applications-applicationId-open" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-open" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -13218,18 +13257,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-close" class="content-item op-post" data-try-op="closeApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/close</code>
-        <span class="op-name">Close</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>close</span></code>
       </span>
-      <code class="op-id" title="operationId">closeApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Close</span>
+        <code class="op-id" title="operationId">closeApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/intake.html#action-application-close" title="State machine action: close" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-applications-applicationId-close" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-close" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -14837,18 +14878,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-withdraw" class="content-item op-post" data-try-op="withdrawApplication" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/withdraw</code>
-        <span class="op-name">Withdraw</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>withdraw</span></code>
       </span>
-      <code class="op-id" title="operationId">withdrawApplication</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Withdraw</span>
+        <code class="op-id" title="operationId">withdrawApplication</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/intake.html#action-application-withdraw" title="State machine action: withdraw" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-applications-applicationId-withdraw" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-withdraw" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -16400,18 +16443,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-interviews-interviewId-start" class="content-item op-post" data-try-op="startInterview" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/interviews/{interviewId}/start</code>
-        <span class="op-name">Start</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interviews</span>/<wbr><span>{interviewId}</span>/<wbr><span>start</span></code>
       </span>
-      <code class="op-id" title="operationId">startInterview</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Start</span>
+        <code class="op-id" title="operationId">startInterview</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/intake.html#action-interview-start" title="State machine action: start" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-applications-applicationId-interviews-interviewId-start" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-interviews-interviewId-start" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -16701,18 +16746,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-interviews-interviewId-process-suggestions" class="content-item op-post" data-try-op="processSuggestionsInterview" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/interviews/{interviewId}/process-suggestions</code>
-        <span class="op-name">Process suggestions</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interviews</span>/<wbr><span>{interviewId}</span>/<wbr><span>process-suggestions</span></code>
       </span>
-      <code class="op-id" title="operationId">processSuggestionsInterview</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Process suggestions</span>
+        <code class="op-id" title="operationId">processSuggestionsInterview</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/intake.html#action-interview-process-suggestions" title="State machine action: process-suggestions" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-applications-applicationId-interviews-interviewId-process-suggestions" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-interviews-interviewId-process-suggestions" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -17002,18 +17049,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-interviews-interviewId-complete" class="content-item op-post" data-try-op="completeInterview" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/interviews/{interviewId}/complete</code>
-        <span class="op-name">Complete</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interviews</span>/<wbr><span>{interviewId}</span>/<wbr><span>complete</span></code>
       </span>
-      <code class="op-id" title="operationId">completeInterview</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Complete</span>
+        <code class="op-id" title="operationId">completeInterview</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/intake.html#action-interview-complete" title="State machine action: complete" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-applications-applicationId-interviews-interviewId-complete" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-interviews-interviewId-complete" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -17303,18 +17352,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-summary" class="content-item op-get" data-try-op="getApplicationSummary" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/summary</code>
-        <span class="op-name">Get applicationSummary</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>summary</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationSummary</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Get applicationSummary</span>
+        <code class="op-id" title="operationId">getApplicationSummary</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0fdf4;border-color:#bbf7d0;color:#15803d;" title="Composition: applicationSummary">Composition</span>
-        <a href="#op-get-applications-applicationId-summary" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-summary" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -17408,18 +17459,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-interview-flags-inputs" class="content-item op-get" data-try-op="getInterviewFlagsInputs" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/interview-flags-inputs</code>
-        <span class="op-name">Get interviewFlagsInputs</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interview-flags-inputs</span></code>
       </span>
-      <code class="op-id" title="operationId">getInterviewFlagsInputs</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Get interviewFlagsInputs</span>
+        <code class="op-id" title="operationId">getInterviewFlagsInputs</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0fdf4;border-color:#bbf7d0;color:#15803d;" title="Composition: interviewFlagsInputs">Composition</span>
-        <a href="#op-get-applications-applicationId-interview-flags-inputs" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-interview-flags-inputs" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -17513,18 +17566,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-review" class="content-item op-get" data-try-op="getApplicationReview" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/review</code>
-        <span class="op-name">Get applicationReview</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationReview</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Get applicationReview</span>
+        <code class="op-id" title="operationId">getApplicationReview</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0fdf4;border-color:#bbf7d0;color:#15803d;" title="Composition: applicationReview">Composition</span>
-        <a href="#op-get-applications-applicationId-review" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-review" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -17618,18 +17673,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-details" class="content-item op-get" data-try-op="getApplicationDetails" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/details</code>
-        <span class="op-name">Get applicationDetails</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>details</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationDetails</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Get applicationDetails</span>
+        <code class="op-id" title="operationId">getApplicationDetails</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0fdf4;border-color:#bbf7d0;color:#15803d;" title="Composition: applicationDetails">Composition</span>
-        <a href="#op-get-applications-applicationId-details" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-details" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -19776,18 +19833,20 @@
   </details>
 </div><div id="op-patch-applications-applicationId-details" class="content-item op-patch" data-try-op="updateApplicationDetails" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/applications/{applicationId}/details</code>
-        <span class="op-name">Change applicationDetails</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>details</span></code>
       </span>
-      <code class="op-id" title="operationId">updateApplicationDetails</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Change applicationDetails</span>
+        <code class="op-id" title="operationId">updateApplicationDetails</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0fdf4;border-color:#bbf7d0;color:#15803d;" title="Composition: applicationDetails">Composition</span>
-        <a href="#op-patch-applications-applicationId-details" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-applications-applicationId-details" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -22083,18 +22142,20 @@
       </div>
       <div id="op-get-applications-applicationId-members" class="content-item op-get" data-try-op="listApplicationMembers" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/members</code>
-        <span class="op-name">List household members</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>members</span></code>
       </span>
-      <code class="op-id" title="operationId">listApplicationMembers</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List household members</span>
+        <code class="op-id" title="operationId">listApplicationMembers</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-members" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-members" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -22758,18 +22819,20 @@
   </details>
 </div><div id="op-post-applications-applicationId-members" class="content-item op-post" data-try-op="createApplicationMember" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/applications/{applicationId}/members</code>
-        <span class="op-name">Add a household member</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>members</span></code>
       </span>
-      <code class="op-id" title="operationId">createApplicationMember</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Add a household member</span>
+        <code class="op-id" title="operationId">createApplicationMember</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-applications-applicationId-members" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-applications-applicationId-members" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -23842,18 +23905,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-members-memberId" class="content-item op-get" data-try-op="getApplicationMember" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/members/{memberId}</code>
-        <span class="op-name">Get a household member</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>members</span>/<wbr><span>{memberId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationMember</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a household member</span>
+        <code class="op-id" title="operationId">getApplicationMember</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -24436,18 +24501,20 @@
   </details>
 </div><div id="op-patch-applications-applicationId-members-memberId" class="content-item op-patch" data-try-op="updateApplicationMember" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/applications/{applicationId}/members/{memberId}</code>
-        <span class="op-name">Update a household member</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>members</span>/<wbr><span>{memberId}</span></code>
       </span>
-      <code class="op-id" title="operationId">updateApplicationMember</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Update a household member</span>
+        <code class="op-id" title="operationId">updateApplicationMember</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-patch-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -25490,18 +25557,20 @@
   </details>
 </div><div id="op-delete-applications-applicationId-members-memberId" class="content-item op-delete" data-try-op="deleteApplicationMember" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
-        <code class="op-path">/applications/{applicationId}/members/{memberId}</code>
-        <span class="op-name">Remove a household member</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>members</span>/<wbr><span>{memberId}</span></code>
       </span>
-      <code class="op-id" title="operationId">deleteApplicationMember</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Remove a household member</span>
+        <code class="op-id" title="operationId">deleteApplicationMember</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-delete-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-delete-applications-applicationId-members-memberId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -25640,18 +25709,20 @@
       </div>
       <div id="op-get-applications-applicationId-review-demographics" class="content-item op-get" data-try-op="getApplicationReviewDemographicsSection" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/review/demographics</code>
-        <span class="op-name">Get applicationReview demographics section panel</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review</span>/<wbr><span>demographics</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationReviewDemographicsSection</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get applicationReview demographics section panel</span>
+        <code class="op-id" title="operationId">getApplicationReviewDemographicsSection</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-review-demographics" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-review-demographics" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -25784,18 +25855,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-review-contact" class="content-item op-get" data-try-op="getApplicationReviewContactSection" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/review/contact</code>
-        <span class="op-name">Get applicationReview contact section panel</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review</span>/<wbr><span>contact</span></code>
       </span>
-      <code class="op-id" title="operationId">getApplicationReviewContactSection</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get applicationReview contact section panel</span>
+        <code class="op-id" title="operationId">getApplicationReviewContactSection</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-review-contact" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-review-contact" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -25934,18 +26007,20 @@
       </div>
       <div id="op-get-applications-applicationId-review-progress-section" class="content-item op-get" data-try-op="listReviewProgressBySection" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/review-progress/{section}</code>
-        <span class="op-name">List ReviewProgress state records for a section</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review-progress</span>/<wbr><span>{section}</span></code>
       </span>
-      <code class="op-id" title="operationId">listReviewProgressBySection</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List ReviewProgress state records for a section</span>
+        <code class="op-id" title="operationId">listReviewProgressBySection</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -26192,18 +26267,20 @@
   </details>
 </div><div id="op-put-applications-applicationId-review-progress-section" class="content-item op-put" data-try-op="replaceReviewProgressBySection" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PUT</span>
-        <code class="op-path">/applications/{applicationId}/review-progress/{section}</code>
-        <span class="op-name">Replace ReviewProgress state for a section</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review-progress</span>/<wbr><span>{section}</span></code>
       </span>
-      <code class="op-id" title="operationId">replaceReviewProgressBySection</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Replace ReviewProgress state for a section</span>
+        <code class="op-id" title="operationId">replaceReviewProgressBySection</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-put-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-put-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -26437,18 +26514,20 @@
   </details>
 </div><div id="op-patch-applications-applicationId-review-progress-section" class="content-item op-patch" data-try-op="updateReviewProgressBySection" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/applications/{applicationId}/review-progress/{section}</code>
-        <span class="op-name">Update ReviewProgress state for a section</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review-progress</span>/<wbr><span>{section}</span></code>
       </span>
-      <code class="op-id" title="operationId">updateReviewProgressBySection</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Update ReviewProgress state for a section</span>
+        <code class="op-id" title="operationId">updateReviewProgressBySection</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-patch-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-applications-applicationId-review-progress-section" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -26682,18 +26761,20 @@
   </details>
 </div><div id="op-get-applications-applicationId-review-progress-section-itemId" class="content-item op-get" data-try-op="getReviewProgressByItem" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
-        <span class="op-name">Get ReviewProgress state for a collection item</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review-progress</span>/<wbr><span>{section}</span>/<wbr><span>{itemId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getReviewProgressByItem</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get ReviewProgress state for a collection item</span>
+        <code class="op-id" title="operationId">getReviewProgressByItem</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -26859,18 +26940,20 @@
   </details>
 </div><div id="op-put-applications-applicationId-review-progress-section-itemId" class="content-item op-put" data-try-op="replaceReviewProgressByItem" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PUT</span>
-        <code class="op-path">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
-        <span class="op-name">Replace ReviewProgress state for a collection item</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review-progress</span>/<wbr><span>{section}</span>/<wbr><span>{itemId}</span></code>
       </span>
-      <code class="op-id" title="operationId">replaceReviewProgressByItem</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Replace ReviewProgress state for a collection item</span>
+        <code class="op-id" title="operationId">replaceReviewProgressByItem</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-put-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-put-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -27113,18 +27196,20 @@
   </details>
 </div><div id="op-patch-applications-applicationId-review-progress-section-itemId" class="content-item op-patch" data-try-op="updateReviewProgressByItem" data-try-file="domains/intake/intake-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
-        <span class="op-name">Update ReviewProgress state for a collection item</span>
+        <code class="op-path"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review-progress</span>/<wbr><span>{section}</span>/<wbr><span>{itemId}</span></code>
       </span>
-      <code class="op-id" title="operationId">updateReviewProgressByItem</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Update ReviewProgress state for a collection item</span>
+        <code class="op-id" title="operationId">updateReviewProgressByItem</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-patch-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-applications-applicationId-review-progress-section-itemId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -27574,9 +27659,10 @@
 <script src="../mock/contracts.js" defer></script>
 <script type="module">
 if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
-  BlueprintMock.mountSendPanels({
+  // In the environment the reader picked (try-it/environments.js).
+  BlueprintMock.mountSendPanels(BlueprintMock.inEnvironment({
     contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
-  });
+  }));
 }
 </script>
 <!-- the mock: control panel -->
@@ -27584,12 +27670,22 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -27636,19 +27732,29 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>
+<!-- the site's routing -->
+<script src="../site-routing.js"></script>
 </body>
 </html>

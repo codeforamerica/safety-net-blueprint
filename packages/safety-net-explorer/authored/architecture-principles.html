@@ -369,12 +369,22 @@
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();

@@ -59,6 +59,8 @@ function checkTargetFor(action) {
  * @returns {import('../../types.js').Doc[]}
  */
 function docsContaining(docs, checkTarget) {
+  // `$` is the whole document, which every document has.
+  if (parsePath(checkTarget).length === 0) return docs.filter((doc) => doc.content && typeof doc.content === 'object' && !Array.isArray(doc.content));
   return docs.filter((doc) => checkPathExists(doc.content, checkTarget).fullPathExists);
 }
 

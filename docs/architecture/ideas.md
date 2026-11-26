@@ -8,6 +8,7 @@ Possibilities for the mock server and the explorer that nobody is working on. Th
 
 - **Save and load records.** Download what the mock holds as a file, and load one back, including a mock-data YAML file. Useful for demos: set up a state once and start from it later. The event log would come along as history, without the events happening again; event stubs wouldn't. With it, a `--seed=<dir>` option on `blueprint-build-explorer` could build a set of records into the site, as the mock server's `--seed` does.
 - **A minimal body for creates,** with only the required fields. Today the Example list offers each sample record, trimmed to what the request accepts.
+- **Links to the scenarios an API is used in.** An operation's page would list the scenarios with a step that calls it or sends or receives its events, found from the scenarios rather than written in, each linking to the Scenarios page (`#tour=<path>`). Try it stays free to call anything in any order, and the scenario shows the order things go in, such as starting a transcription session, its adapter publishing `connected`, then its lines, then `ended`.
 
 ### Beyond Try it
 

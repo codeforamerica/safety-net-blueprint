@@ -1,0 +1,37 @@
+overlay: '1.0.0'
+info:
+  title: Real sign-in
+  version: 1.0.0
+
+# How callers sign in in production, beside production.env's values: OAuth
+# 2.0, at ${SIGN_IN_URL}. In the harness that's a stand-in page that signs in
+# anyone, so signing in can be tried with nothing running; a state names its
+# identity provider, by its OAuth 2.0 flows or openIdConnectUrl. It replaces
+# the framework's X-Caller-Id header, so every domain API requires it. Mock
+# keeps that header: nothing there needs signing in. One overlay per
+# environment, applied last with its values, as Helm takes a values file and
+# Kustomize an overlay per environment.
+
+actions:
+  - target: "$"
+    files: base/components/security-schemes.yaml
+    description: Sign in through the environment's sign-in page
+    update:
+      bearerAuth:
+        type: oauth2
+        description: >
+          The signed-in caller's token, from the environment's sign-in page.
+        flows:
+          implicit:
+            # Relative: the explorer resolves it against the site it's in.
+            authorizationUrl: ${SIGN_IN_URL}
+            scopes: {}
+        # The token's claims that identify the caller.
+        x-caller:
+          id: sub
+          roles: roles
+
+  - target: "$.callerId"
+    files: base/components/security-schemes.yaml
+    description: Callers sign in instead of naming themselves
+    remove: true

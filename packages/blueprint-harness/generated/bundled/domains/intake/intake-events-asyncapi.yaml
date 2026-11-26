@@ -121,6 +121,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -403,6 +406,7 @@ channels:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source: states[].id
                             submittedAt:
                               type:
                                 - string
@@ -424,6 +428,7 @@ channels:
                               enum:
                                 - snap_standard
                                 - medicaid_standard
+                              x-enum-source: slaTypes[].id
                             slaInfo:
                               type: array
                               readOnly: true
@@ -445,6 +450,7 @@ channels:
                                     enum:
                                       - snap_standard
                                       - medicaid_standard
+                                    x-enum-source: slaTypes[].id
                                   status:
                                     type: string
                                     enum:
@@ -725,6 +731,7 @@ channels:
                                               - scheduled
                                               - in_progress
                                               - completed
+                                            x-enum-source: states[].id
                                           programsAppliedFor:
                                             type: array
                                             items:
@@ -1027,6 +1034,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -1195,6 +1205,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -1334,6 +1347,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -1544,6 +1560,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -1770,6 +1789,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -1938,6 +1960,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -1979,6 +2004,9 @@ channels:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source:
+                                source: states[].id
+                                machine: Interview
                             startedAt:
                               type: string
                               format: date-time
@@ -2138,6 +2166,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -2396,6 +2427,7 @@ channels:
                                     - scheduled
                                     - in_progress
                                     - completed
+                                  x-enum-source: states[].id
                                 programsAppliedFor:
                                   type: array
                                   items:
@@ -2556,6 +2588,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -2724,6 +2759,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -2863,6 +2901,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -3008,6 +3049,8 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -3139,6 +3182,8 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -3270,6 +3315,8 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -3403,6 +3450,9 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -3557,6 +3607,8 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -3688,6 +3740,8 @@ channels:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -3822,6 +3876,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -4104,6 +4161,7 @@ operations:
                                   - scheduled
                                   - in_progress
                                   - completed
+                                x-enum-source: states[].id
                               submittedAt:
                                 type:
                                   - string
@@ -4125,6 +4183,7 @@ operations:
                                 enum:
                                   - snap_standard
                                   - medicaid_standard
+                                x-enum-source: slaTypes[].id
                               slaInfo:
                                 type: array
                                 readOnly: true
@@ -4146,6 +4205,7 @@ operations:
                                       enum:
                                         - snap_standard
                                         - medicaid_standard
+                                      x-enum-source: slaTypes[].id
                                     status:
                                       type: string
                                       enum:
@@ -4426,6 +4486,7 @@ operations:
                                                 - scheduled
                                                 - in_progress
                                                 - completed
+                                              x-enum-source: states[].id
                                             programsAppliedFor:
                                               type: array
                                               items:
@@ -4725,6 +4786,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -5007,6 +5071,7 @@ operations:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source: states[].id
                             submittedAt:
                               type:
                                 - string
@@ -5028,6 +5093,7 @@ operations:
                               enum:
                                 - snap_standard
                                 - medicaid_standard
+                              x-enum-source: slaTypes[].id
                             slaInfo:
                               type: array
                               readOnly: true
@@ -5049,6 +5115,7 @@ operations:
                                     enum:
                                       - snap_standard
                                       - medicaid_standard
+                                    x-enum-source: slaTypes[].id
                                   status:
                                     type: string
                                     enum:
@@ -5329,6 +5396,7 @@ operations:
                                               - scheduled
                                               - in_progress
                                               - completed
+                                            x-enum-source: states[].id
                                           programsAppliedFor:
                                             type: array
                                             items:
@@ -5633,6 +5701,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -5798,6 +5869,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -5968,6 +6042,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -6104,6 +6181,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -6245,6 +6325,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -6452,6 +6535,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -6664,6 +6750,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -6887,6 +6976,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -7115,6 +7207,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -7280,6 +7375,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -7450,6 +7548,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -7491,6 +7592,9 @@ operations:
                                   - scheduled
                                   - in_progress
                                   - completed
+                                x-enum-source:
+                                  source: states[].id
+                                  machine: Interview
                               startedAt:
                                 type: string
                                 format: date-time
@@ -7647,6 +7751,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -7688,6 +7795,9 @@ operations:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source:
+                                source: states[].id
+                                machine: Interview
                             startedAt:
                               type: string
                               format: date-time
@@ -7849,6 +7959,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -8107,6 +8220,7 @@ operations:
                                       - scheduled
                                       - in_progress
                                       - completed
+                                    x-enum-source: states[].id
                                   programsAppliedFor:
                                     type: array
                                     items:
@@ -8264,6 +8378,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -8522,6 +8639,7 @@ operations:
                                     - scheduled
                                     - in_progress
                                     - completed
+                                  x-enum-source: states[].id
                                 programsAppliedFor:
                                   type: array
                                   items:
@@ -8684,6 +8802,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -8849,6 +8970,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -9019,6 +9143,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -9155,6 +9282,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -9296,6 +9426,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -9438,6 +9571,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -9585,6 +9721,8 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
                     properties:
                       type:
                         type: string
@@ -9713,6 +9851,8 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -9846,6 +9986,8 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
                     properties:
                       type:
                         type: string
@@ -9974,6 +10116,8 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -10107,6 +10251,8 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
                     properties:
                       type:
                         type: string
@@ -10235,6 +10381,8 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -10368,6 +10516,8 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
                     properties:
                       type:
                         type: string
@@ -10496,6 +10646,8 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -10629,6 +10781,8 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
                     properties:
                       type:
                         type: string
@@ -10757,6 +10911,8 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
@@ -10892,6 +11048,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -11045,6 +11204,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -11201,6 +11363,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -11424,6 +11589,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -11652,6 +11820,9 @@ operations:
                             type: object
                             description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                   - type: object
+                    required:
+                      - type
+                      - data
                     properties:
                       type:
                         type: string
@@ -11817,6 +11988,9 @@ operations:
                           type: object
                           description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
                 - type: object
+                  required:
+                    - type
+                    - data
                   properties:
                     type:
                       type: string
@@ -11984,6 +12158,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -12266,6 +12443,7 @@ components:
                               - scheduled
                               - in_progress
                               - completed
+                            x-enum-source: states[].id
                           submittedAt:
                             type:
                               - string
@@ -12287,6 +12465,7 @@ components:
                             enum:
                               - snap_standard
                               - medicaid_standard
+                            x-enum-source: slaTypes[].id
                           slaInfo:
                             type: array
                             readOnly: true
@@ -12308,6 +12487,7 @@ components:
                                   enum:
                                     - snap_standard
                                     - medicaid_standard
+                                  x-enum-source: slaTypes[].id
                                 status:
                                   type: string
                                   enum:
@@ -12588,6 +12768,7 @@ components:
                                             - scheduled
                                             - in_progress
                                             - completed
+                                          x-enum-source: states[].id
                                         programsAppliedFor:
                                           type: array
                                           items:
@@ -12887,6 +13068,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -13052,6 +13236,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -13188,6 +13375,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -13395,6 +13585,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -13618,6 +13811,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -13783,6 +13979,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -13824,6 +14023,9 @@ components:
                               - scheduled
                               - in_progress
                               - completed
+                            x-enum-source:
+                              source: states[].id
+                              machine: Interview
                           startedAt:
                             type: string
                             format: date-time
@@ -13980,6 +14182,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -14238,6 +14443,7 @@ components:
                                   - scheduled
                                   - in_progress
                                   - completed
+                                x-enum-source: states[].id
                               programsAppliedFor:
                                 type: array
                                 items:
@@ -14395,6 +14601,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -14560,6 +14769,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -14696,6 +14908,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -14838,6 +15053,8 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
                 properties:
                   type:
                     type: string
@@ -14966,6 +15183,8 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
                 properties:
                   type:
                     type: string
@@ -15094,6 +15313,8 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
                 properties:
                   type:
                     type: string
@@ -15224,6 +15445,9 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
+                  - data
                 properties:
                   type:
                     type: string
@@ -15375,6 +15599,8 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
                 properties:
                   type:
                     type: string
@@ -15503,6 +15729,8 @@ components:
                         type: object
                         description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
               - type: object
+                required:
+                  - type
                 properties:
                   type:
                     type: string
@@ -15627,6 +15855,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -15909,6 +16140,7 @@ components:
                           - scheduled
                           - in_progress
                           - completed
+                        x-enum-source: states[].id
                       submittedAt:
                         type:
                           - string
@@ -15930,6 +16162,7 @@ components:
                         enum:
                           - snap_standard
                           - medicaid_standard
+                        x-enum-source: slaTypes[].id
                       slaInfo:
                         type: array
                         readOnly: true
@@ -15951,6 +16184,7 @@ components:
                               enum:
                                 - snap_standard
                                 - medicaid_standard
+                              x-enum-source: slaTypes[].id
                             status:
                               type: string
                               enum:
@@ -16231,6 +16465,7 @@ components:
                                         - scheduled
                                         - in_progress
                                         - completed
+                                      x-enum-source: states[].id
                                     programsAppliedFor:
                                       type: array
                                       items:
@@ -16506,6 +16741,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -16650,6 +16888,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -16769,6 +17010,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -16951,6 +17195,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -17148,6 +17395,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -17292,6 +17542,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -17333,6 +17586,9 @@ components:
                           - scheduled
                           - in_progress
                           - completed
+                        x-enum-source:
+                          source: states[].id
+                          machine: Interview
                       startedAt:
                         type: string
                         format: date-time
@@ -17466,6 +17722,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -17724,6 +17983,7 @@ components:
                               - scheduled
                               - in_progress
                               - completed
+                            x-enum-source: states[].id
                           programsAppliedFor:
                             type: array
                             items:
@@ -17857,6 +18117,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -18001,6 +18264,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -18120,6 +18386,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -18243,6 +18512,8 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -18355,6 +18626,8 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -18467,6 +18740,8 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -18579,6 +18854,9 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -18712,6 +18990,8 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -18824,6 +19104,8 @@ components:
                     type: object
                     description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string

@@ -10,7 +10,7 @@ import assert from 'node:assert';
 import { fitToSchema, acceptsNull } from '../../src/payload-fit.js';
 import { resolveBodyValue, resolveValue, lookupValue, applySteps } from '../../src/state-machine-engine.js';
 
-const context = { entities: { connection: { url: 'wss://x', subprotocol: null, settings: { note: null } } } };
+const context = { entities: { connection: { url: 'wss://x', transport: null, settings: { note: null } } } };
 
 describe('filling in a body', () => {
   test('leaves out a field an expression finds nothing for', () => {
@@ -18,7 +18,7 @@ describe('filling in a body', () => {
   });
 
   test('keeps a null an expression finds, and a literal null', () => {
-    assert.deepStrictEqual(resolveBodyValue({ subprotocol: '$connection.subprotocol', endedAt: null }, context), { subprotocol: null, endedAt: null });
+    assert.deepStrictEqual(resolveBodyValue({ transport: '$connection.transport', endedAt: null }, context), { transport: null, endedAt: null });
   });
 
   test('leaves out what finds nothing in a nested object; makes it null in a list', () => {
@@ -52,14 +52,14 @@ describe('a null and the schema it goes into', () => {
   const SCHEMA = {
     type: 'object',
     properties: {
-      subprotocol: { type: 'string' },
+      transport: { type: 'string' },
       endedAt: { type: ['string', 'null'] },
       settings: { type: 'object', properties: { note: { type: ['string', 'null'] }, region: { type: 'string' } } },
     },
   };
 
   test('is kept where the property accepts it, and left out where it doesn\'t', () => {
-    assert.deepStrictEqual(fitToSchema({ subprotocol: null, endedAt: null }, SCHEMA), { endedAt: null });
+    assert.deepStrictEqual(fitToSchema({ transport: null, endedAt: null }, SCHEMA), { endedAt: null });
   });
 
   test('is judged by a nested object\'s own properties', () => {
@@ -68,19 +68,19 @@ describe('a null and the schema it goes into', () => {
 
   test('is kept where nothing declares the property, or there is no schema', () => {
     assert.deepStrictEqual(fitToSchema({ other: null }, SCHEMA), { other: null });
-    assert.deepStrictEqual(fitToSchema({ subprotocol: null }, null), { subprotocol: null });
+    assert.deepStrictEqual(fitToSchema({ transport: null }, null), { transport: null });
   });
 
   test('reads properties declared across allOf and refs', () => {
-    const defs = { Fields: { type: 'object', properties: { subprotocol: { type: 'string' } } } };
+    const defs = { Fields: { type: 'object', properties: { transport: { type: 'string' } } } };
     const follow = (s) => (s?.$ref ? defs[s.$ref.split('/').pop()] : s);
-    assert.deepStrictEqual(fitToSchema({ subprotocol: null }, { allOf: [{ $ref: '#/$defs/Fields' }] }, follow), {});
+    assert.deepStrictEqual(fitToSchema({ transport: null }, { allOf: [{ $ref: '#/$defs/Fields' }] }, follow), {});
   });
 });
 
 describe('looking a value up, for a guard or a where:', () => {
   test('lookupValue tells a null from nothing', () => {
-    assert.strictEqual(lookupValue('$connection.subprotocol', context), null);
+    assert.strictEqual(lookupValue('$connection.transport', context), null);
     assert.strictEqual(lookupValue('$connection.missing', context), undefined);
   });
 

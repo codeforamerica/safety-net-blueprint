@@ -26,6 +26,7 @@ export const evaluateInterviewFlags = <ThrowOnError extends boolean = false>(opt
     requestValidator: async (data) => await zEvaluateInterviewFlagsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zEvaluateInterviewFlagsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/evaluate-interview-flags',
     ...options,
     headers: {

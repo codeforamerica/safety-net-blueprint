@@ -15,8 +15,7 @@
  * example; who publishes them and who subscribes, from the state machines. Only
  * the documents reached over no protocol of their own are: an events document
  * declares no servers, since the event bus carries it. One reached over a
- * protocol, such as the transcript relay's WebSocket, is an API, and its
- * messages belong to one connection, not the bus.
+ * protocol of its own isn't events, and isn't listed.
  */
 
 import { readdirSync, writeFileSync, mkdirSync, rmSync } from 'fs';
@@ -81,7 +80,26 @@ const allStateMachines = discover(resolvedDir, 'state-machine')
   .map(loadDoc)
   .filter((doc) => doc.content?.domain && Array.isArray(doc.content.machines));
 const eventIndex = buildEventIndex(allStateMachines);
-const events = eventsOf(discover(resolvedDir, 'asyncapi').map(loadDoc));
+const asyncapis = discover(resolvedDir, 'asyncapi').map(loadDoc);
+const events = eventsOf(asyncapis);
+
+/**
+ * The events something outside the contracts sends, such as a running
+ * adapter: an AsyncAPI document marked external whose send operations name
+ * another document's event channels. Event type → the sender's title.
+ */
+const externalSenders = new Map();
+for (const doc of asyncapis) {
+  const content = doc.content ?? {};
+  if (content['x-relationship']?.type !== 'external') continue;
+  for (const operation of Object.values(content.operations ?? {})) {
+    if (operation?.action !== 'send') continue;
+    const key = String(operation.channel?.$ref ?? '').split('/').pop();
+    const ref = String(content.channels?.[key]?.$ref ?? '');
+    const type = ref.includes('#/channels/') ? ref.slice(ref.indexOf('#/channels/') + '#/channels/'.length).replace(/~1/g, '/').replace(/~0/g, '~') : null;
+    if (type) externalSenders.set(type, { title: content.info?.title ?? doc.relativePath, file: doc.relativePath });
+  }
+}
 
 const senderOf = eventSenders(eventIndex, discover(resolvedDir, 'openapi').map(loadDoc));
 
@@ -89,6 +107,10 @@ const tryThere = '<p class="how">To see it published, try that call: what happen
 
 /** Who publishes an event, linked to the action or endpoint that publishes it, and how to cause it. */
 const publishedBy = (type) => {
+  const external = externalSenders.get(type);
+  if (external) {
+    return `${h(external.title)}, which sends it to report what it did (<code>${h(external.file.split('/').pop())}</code>).`;
+  }
   const sender = senderOf(type);
   if (sender?.kind === 'timer') return sender.label;
   if (sender) return labeled(sender.kind, link(sender.href, sender.label)) + tryThere;

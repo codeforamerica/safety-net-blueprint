@@ -47,6 +47,7 @@ export const zTranscriptionSessionList = z.object({
             'closed',
             'failed'
         ]),
+        startedById: z.optional(z.string().readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
     }))),
@@ -83,6 +84,7 @@ export const zTranscriptionSession = z.object({
         'closed',
         'failed'
     ]),
+    startedById: z.optional(z.string().readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -211,6 +213,7 @@ export const zListTranscriptionSessionsResponse = z.object({
             'closed',
             'failed'
         ]),
+        startedById: z.optional(z.string().readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
     }))),
@@ -267,6 +270,7 @@ export const zCreateTranscriptionSessionResponse = z.object({
         'closed',
         'failed'
     ]),
+    startedById: z.optional(z.string().readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -306,6 +310,7 @@ export const zGetTranscriptionSessionResponse = z.object({
         'closed',
         'failed'
     ]),
+    startedById: z.optional(z.string().readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -345,6 +350,7 @@ export const zStartTranscriptionSessionResponse = z.object({
         'closed',
         'failed'
     ]),
+    startedById: z.optional(z.string().readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -386,6 +392,7 @@ export const zPauseTranscriptionSessionResponse = z.object({
         'closed',
         'failed'
     ]),
+    startedById: z.optional(z.string().readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -427,6 +434,7 @@ export const zResumeTranscriptionSessionResponse = z.object({
         'closed',
         'failed'
     ]),
+    startedById: z.optional(z.string().readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -468,6 +476,7 @@ export const zStopTranscriptionSessionResponse = z.object({
         'closed',
         'failed'
     ]),
+    startedById: z.optional(z.string().readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));

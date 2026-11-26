@@ -359,8 +359,7 @@ export function apiNameOf(relativePath) {
  *
  * An events AsyncAPI document declares no servers, so it has none: the
  * deployment's event bus carries its messages. That is what tells an event
- * document from one an API is reached over, such as the transcript relay's
- * WebSocket (`['ws']`). A document whose servers speak more than one protocol
+ * document from one an API is reached over, such as a WebSocket (`['ws']`). A document whose servers speak more than one protocol
  * lists each; AsyncAPI lets each channel name the servers it uses.
  *
  * The one place that works it out, read as `doc.protocols` everywhere else.

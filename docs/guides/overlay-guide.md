@@ -475,6 +475,24 @@ Targets use JSONPath-like syntax. Where a schema lives determines its path prefi
 - **Schemas in API spec files** (e.g., `workflow-openapi.yaml`) — nested under `components/schemas`, so the target starts with `$.components.schemas.`
 - **Schemas in shared component files** (e.g., `components/common.yaml`) — top-level in the file, so the target starts with `$.`
 
+### The Whole Document
+
+`$` targets the whole document, as the OpenAPI Overlay specification defines it. An `update` on it merges its keys in, which is how an overlay adds a new top-level key, such as a second sign-in scheme:
+
+```yaml
+- target: "$"
+  files: base/components/security-schemes.yaml
+  description: Callers sign in with OpenID Connect
+  update:
+    bearerAuth:
+      type: openIdConnect
+      openIdConnectUrl: ${SIGN_IN_URL}
+```
+
+### Environment Overlays
+
+An overlay given with `blueprint-resolve --env-overlay`, rather than `--overlay`, applies to one environment only, after everything else, with that environment's `--env-variables`. Use one for what differs in shape between environments, such as how callers sign in; use the environment's `.env` file for values. See [API security declarations](../architecture/cross-cutting/identity-access.md#api-security-declarations).
+
 ### File Disambiguation
 
 When the same schema name appears in multiple files, use `file:` to specify which one. Without it, the resolver warns and skips ambiguous matches.

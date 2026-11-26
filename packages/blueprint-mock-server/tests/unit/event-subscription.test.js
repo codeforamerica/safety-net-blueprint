@@ -54,7 +54,7 @@ test('machine onEvent — runs when guards pass', (t, done) => {
     on: [{
       type: 'intake.application.submitted',
       transition: { from: 'submitted' },
-      guards: { conditions: ['isUrgent'] },
+      guards: [{ conditions: ['isUrgent'] }],
       steps: [{ set: { field: 'priority', value: 'high' } }]
     }]
   };
@@ -92,7 +92,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
     on: [{
       type: 'intake.application.submitted',
       transition: { from: 'submitted' },
-      guards: { conditions: ['isUrgent'] },
+      guards: [{ conditions: ['isUrgent'] }],
       steps: [{ set: { field: 'priority', value: 'high' } }]
     }]
   };

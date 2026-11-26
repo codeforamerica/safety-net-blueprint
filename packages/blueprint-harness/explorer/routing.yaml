@@ -1,0 +1,7 @@
+$schema: https://blueprint.codeforamerica.org/schemas/routing-schema.yaml
+# Mock's routing: sessions under the whisper profile transcribe in the page,
+# with Whisper (adapters/whisper.js).
+routing:
+  - api: communication-transcription-sessions-adapter
+    match: { provider: whisper }
+    handler: ./adapters/whisper.js

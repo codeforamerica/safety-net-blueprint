@@ -42,3 +42,26 @@ events:
     publisher: eligibility
     status: implemented
     subscribers: []
+
+# The environments the site switches between, as a developer portal does,
+# the first the default: each one's config and overlays (../environments/),
+# routing and sign-in. The site is built from the contracts resolved without
+# an environment, and the page applies the one picked.
+environments:
+  # The sandbox: everything in the page, and nobody signs in. Sessions under
+  # the whisper profile transcribe in it.
+  - name: Mock
+    variables: ../environments/local.env
+    routing: routing.yaml
+  # A stand-in for a deployment that requires signing in: the contracts
+  # require it (production.overlay.yaml), through the stand-in sign-in page in
+  # pages/. Sessions under fake-secured go to a fake service whose
+  # credentials need it.
+  - name: Real
+    variables: ../environments/production.env
+    overlays: [../environments/production.overlay.yaml]
+    routing: routing-production.yaml
+    sign_in:
+      client_id: blueprint-harness
+
+pages: pages

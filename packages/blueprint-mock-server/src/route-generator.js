@@ -43,7 +43,7 @@ import { operationsOf } from './operation-calls.js';
 import { storageName, eventDomainOf, extractPrimaryParam } from './collection-utils.js';
 import { editableResources, assembleEditable, createEditablePatchHandler, registerEditableOperation } from './editable-composition.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf, callerOf } from './auth-context.js';
 
 /**
  * SLA types declared for one domain.
@@ -384,7 +384,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             verb: 'create',
             params: ctx.params,
             body: sent,
-            caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+            caller: callerOf(request),
             store,
             instance,
             checkBody: checkCreateBody(sent),
@@ -476,7 +476,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             verb: 'create',
             params: ctx.params,
             body,
-            caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+            caller: callerOf(request),
             store,
             instance,
             checkBody: checkCreateBody(sent),
@@ -511,7 +511,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             verb: 'update',
             params: ctx.params,
             body: change,
-            caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+            caller: callerOf(request),
             store,
             instance,
             checkBody: checkUpdateBody(change),

@@ -209,7 +209,7 @@ components:
             datacontenttype: application/json
     CommunicationTranscriptionSessionConnected:
       name: communication.transcription_session.connected
-      summary: Published by the adapter. The connection to the service is open. A stretch with nothing captured before it, after a reconnect or when carrying on a transcript, is its gap; the transcript records it.
+      summary: The connection to the service is open. A stretch with nothing captured before it, after a reconnect or when carrying on a transcript, is its gap; the transcript records it.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -229,7 +229,7 @@ components:
               transcriptId: 00000000-0000-4000-8000-000000000001
     CommunicationTranscriptionSessionDisconnected:
       name: communication.transcription_session.disconnected
-      summary: Published by the adapter. The connection dropped; it's trying again.
+      summary: The connection dropped; it's trying again.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -249,7 +249,7 @@ components:
               transcriptId: 00000000-0000-4000-8000-000000000001
     CommunicationTranscriptionSessionFailed:
       name: communication.transcription_session.failed
-      summary: Published by the adapter. It gave up connecting or reconnecting. The transcript is still open.
+      summary: It gave up connecting or reconnecting. The transcript is still open.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -269,7 +269,7 @@ components:
               transcriptId: 00000000-0000-4000-8000-000000000001
     CommunicationTranscriptionSessionLineUpdated:
       name: communication.transcription_session.line_updated
-      summary: Published by the adapter. A line in progress, to show. Not kept.
+      summary: A line in progress, to show. Not kept.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -292,7 +292,7 @@ components:
               startedAt: "2024-01-01T00:00:00Z"
     CommunicationTranscriptionSessionLineFinished:
       name: communication.transcription_session.line_finished
-      summary: Published by the adapter. A finished line. The transcript keeps it, once for its key, and its entry's created event names this event as its cause, in causationid, so a consumer can tell which entry a line became; one the transcript refuses, closed say, isn't kept.
+      summary: A finished line. The transcript keeps it, once for its key, and its entry's created event names this event as its cause, in causationid, so a consumer can tell which entry a line became; one the transcript refuses, closed say, isn't kept.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -317,7 +317,7 @@ components:
               speaker: example
     CommunicationTranscriptionSessionEnded:
       name: communication.transcription_session.ended
-      summary: Published by the adapter after the session stopped it. The last line is published and the connection closed.
+      summary: The session stopped the adapter, and it's done. The last line is published and the connection closed.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -397,6 +397,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -409,6 +412,8 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -419,6 +424,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -455,6 +463,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -482,6 +493,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -508,6 +522,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -546,6 +563,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -601,6 +621,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -629,6 +652,8 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -639,6 +664,8 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -649,6 +676,8 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string

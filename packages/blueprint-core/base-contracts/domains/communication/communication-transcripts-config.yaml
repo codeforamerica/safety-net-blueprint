@@ -12,16 +12,10 @@ profiles:
   resource: TranscriptionProfile
   entries:
     - id: 7a1e0c2d-0000-4000-8000-0000000000b1
-      name: english
-      description: An interview in English.
-      provider: aws-transcribe
+      name: whisper
+      description: An interview in English, transcribed by Whisper, which a state runs itself, or a page runs with no service or account.
+      provider: whisper
       languages: [en-US]
-      idleTimeout: PT30M
-    - id: 7a1e0c2d-0000-4000-8000-0000000000b2
-      name: english-or-spanish
-      description: An interview in English, Spanish, or both — the service tells which is being spoken.
-      provider: aws-transcribe
-      languages: [en-US, es-US]
       idleTimeout: PT30M
     - id: 7a1e0c2d-0000-4000-8000-0000000000b3
       name: typed

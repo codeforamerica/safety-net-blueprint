@@ -10,7 +10,10 @@
  *   node scripts/build-explorer.js --spec=<path> --out=<path> --config=<config-dir>
  *   node scripts/build-explorer.js --spec=<path> --out=<path> --only=rules-docs
  *
- *   --spec      Path to resolved contracts directory (output of blueprint-resolve)
+ *   --spec      Path to resolved contracts directory (output of blueprint-resolve).
+ *               When config.yaml lists environments, the contracts resolved
+ *               without one: the reference pages show the first environment's
+ *               release, and each page applies the one the reader picks.
  *   --out       Path to the output directory — receives all generated HTML files
  *   --config    Path to the authored configuration directory — contains config.yaml,
  *               and context-map/config/. Defaults to --out.
@@ -22,8 +25,8 @@
  *               state-machine-docs, rules-docs, event-catalog, api-reference, scenarios
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync } from 'fs';
-import { resolve, join, dirname } from 'path';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'fs';
+import { resolve, join, dirname, basename } from 'path';
 import yaml from 'js-yaml';
 import {
   buildAnnotationsExplorer,
@@ -35,6 +38,8 @@ import {
   buildApiReference,
   buildTryIt,
   buildHub,
+  bundleSiteRouting,
+  releaseEnvironment,
 } from '@codeforamerica/blueprint-explorer';
 
 const args        = process.argv.slice(2);
@@ -79,7 +84,19 @@ if (configDir !== outDir) {
 }
 
 const contentDir  = outDir;
-const resolvedDir = specDir;
+// A site that lists environments is built from contracts resolved without one
+// (the build, in the Twelve-Factor App's terms): the pages show the first
+// environment's release, written beside the output and removed after; the
+// mock and the site's routing take the build, for the page to release.
+const builtDir    = specDir;
+let resolvedDir   = specDir;
+const releaseDir  = join(dirname(outDir), `.${basename(outDir)}-release`);
+const released    = releaseEnvironment(builtDir, configDir, releaseDir);
+if (released) {
+  resolvedDir = releaseDir;
+  console.log(`Environments: the pages show ${released.name}`);
+  if (released.unresolved.length) console.warn(`  Warning: ${released.name} gives no value for ${released.unresolved.map((n) => '${' + n + '}').join(', ')}`);
+}
 const doBuild = tool => !only || only === tool;
 
 if (doBuild('annotations-explorer')) buildAnnotationsExplorer({ contentDir, resolvedDir });
@@ -89,7 +106,16 @@ if (doBuild('state-machine-docs')) buildStateMachineDocs({ contentDir, resolvedD
 if (doBuild('rules-docs'))        buildRulesDocs({ contentDir, resolvedDir });
 if (doBuild('event-catalog'))     buildEventCatalog({ contentDir, resolvedDir });
 if (doBuild('api-reference'))     await buildApiReference({ contentDir, resolvedDir });
-if (doBuild('scenarios'))         buildTryIt({ contentDir, resolvedDir });
+if (doBuild('scenarios'))         buildTryIt({ contentDir, resolvedDir: builtDir });
+
+// The site's routing, checked against the contracts and bundled with its modules.
+try {
+  await bundleSiteRouting({ configDir, outDir, resolvedDir: builtDir });
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 
 // Hub is always rebuilt last so it can scan all tool output directories
 buildHub({ contentDir, authoredDir });
+if (released) rmSync(releaseDir, { recursive: true, force: true });

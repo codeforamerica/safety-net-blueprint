@@ -4,6 +4,9 @@
  *   extract(docs, type)      read out a fact the documents already state
  *   extract(artifact, 'docs') rebuild a contract set from a bundled artifact
  *   generate(docs, type)     derive an artifact from them
+ *   applyEnvironment(docs, environment)  apply one environment to a set
+ *                            resolved without it, as the explorer does when a
+ *                            reader picks one
  *
  * `extract(artifact, 'docs')` is how a page gets documents at all: the caller
  * fetches and parses the file, this turns that data back into the same `Doc`
@@ -37,3 +40,5 @@
 
 export { extract } from './extract.js';
 export { generate } from './generate.js';
+export { validateRouting } from './routing.js';
+export { applyEnvironment } from './resolve/apply-environment.js';

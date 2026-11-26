@@ -22,6 +22,7 @@ import { esc } from './lib/html.js';
 import { build as buildAuthored } from './authored.js';
 import { addControlPanel } from './lib/control-panel.js';
 import { addSiteScript } from './lib/site-script.js';
+import { addSiteRouting } from './lib/site-routing.js';
 import { buildSitePages } from './lib/site-pages.js';
 import { inlineMd } from './lib/markdown.js';
 
@@ -659,6 +660,7 @@ console.log(`  wrote ${join(contentDir, 'index.html')}`);
 // too, and the site's own script, if config.yaml names one.
 addControlPanel(contentDir);
 addSiteScript(contentDir);
+addSiteRouting(contentDir);
 } // end build()
 
 // CLI entry point

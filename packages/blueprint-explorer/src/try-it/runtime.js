@@ -19,3 +19,5 @@ export { awayFrom } from './routing.js';
 export { mountSendPanels } from './send-panel.js';
 export { setTryIt, hostMock, mockChanged } from './control-panel.js';
 export { logRequest } from './activity.js';
+export { inEnvironment, chooseEnvironment, environments } from './environments.js';
+export { signInFromHeader, canSignIn } from './sign-in.js';

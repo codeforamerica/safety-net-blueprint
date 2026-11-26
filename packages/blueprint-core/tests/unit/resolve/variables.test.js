@@ -13,6 +13,12 @@ import { substituteVariables, substituteConfig } from '../../../src/resolve/vari
 import { doc, only } from '../../helpers/docs.js';
 
 describe('substituteVariables', () => {
+  test('replaces ${VAR} in a key as well as a value', () => {
+    // An annotations file's events are keyed by event type, and the prefix is in it.
+    const result = substituteVariables([doc({ events: { '${EVENT_PREFIX}intake.application.submitted': { note: 'x' } } })], { EVENT_PREFIX: 'ca.' });
+    assert.deepEqual(Object.keys(only(result).events), ['ca.intake.application.submitted']);
+  });
+
   test('replaces ${VAR} from the supplied values', () => {
     const result = substituteVariables(
       [doc({ servers: [{ url: '${API_URL}/v1' }] })],

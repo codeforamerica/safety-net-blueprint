@@ -12,6 +12,7 @@ transcriptionSession.links: { type: object }
 transcriptionSession.links.transcript: { type: string }
 transcriptionSession.links.profile: { type: string }
 transcriptionSession.status: { type: enum, values: [created, connecting, connected, disconnected, paused, stopping, closed, failed] }
+transcriptionSession.startedById: { type: string }
 
 # ── Transcript ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ transcript.entries[].links.transcript: { type: string }
 profile.id: { type: uuid }
 profile.name: { type: string }
 profile.description: { type: string }
-profile.provider: { type: enum, values: [assemblyai, aws-transcribe, azure-speech, deepgram, elevenlabs-scribe, fake-transcription, gladia, google-cloud-speech, google-gemini-live, none, openai-realtime, soniox, speechmatics, whisper] }
+profile.provider: { type: enum, values: [assemblyai, aws-transcribe, azure-speech, deepgram, elevenlabs-scribe, fake-secured, gladia, google-cloud-speech, google-gemini-live, none, openai-realtime, soniox, speechmatics, whisper] }
 profile.languages[]: { type: string }
 profile.idleTimeout: { type: string }
 profile.source: { type: enum, values: [system, user] }

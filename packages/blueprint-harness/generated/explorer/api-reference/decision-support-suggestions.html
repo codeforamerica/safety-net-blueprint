@@ -76,10 +76,15 @@
   /* An operation's sections: plain headings and lists, one box only, the card. */
   /* Closed, an operation is one line tinted by its method, as Swagger lists
      them: method, path, name. Open, it's the two columns. */
-  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  /* The request (method and path) on its own line, the card's full width;
+     the summary, operationId and links on the line below. */
+  .op-line { flex: 1 1 100%; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .op-meta { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding-left: 20px; }
+  /* The path keeps its room and breaks only after a slash; the operationId shrinks first. */
+  .op-path { font: 600 13px monospace; color: #1a1a1a; min-width: 0; overflow-wrap: anywhere; }
+  .op-path > span { white-space: nowrap; }
   .op-name { font-size: 13px; color: #555; }
-  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .op-id { font-size: 11px; color: #999; flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
   .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
   .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
@@ -182,7 +187,8 @@
     </nav>
     <main id="content">
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Suggestions put in front of a person, and their decisions on them. A suggestion can come from an assistant, a rule or another person.</p><p style="margin:0 0 6px;">An <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">operation</code> suggestion proposes a call to an operation the contracts declare; accepting it makes the call, as the person accepting. An <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">informing</code> suggestion points something out about a record, in a category the contract set declares; accepting it means the person took it up.</p><p style="margin:0 0 6px;">Evidence refers to where a suggestion came from — a transcript's lines, a document — without quoting it, so the source's own access rules apply when it is shown.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Suggestions put in front of a person, and their decisions on them. A suggestion can come from an assistant, a rule or another person.</p></div></div>
+      <p style="margin:.5rem 0 0;font-size:14px;">See it work: <a href="../scenarios/index.html#tour=scenarios%2Fsuggestion-lifecycle.arazzo.yaml">A suggestion, from proposal to decision</a></p>
       
     </div><section id="section-suggestions" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
@@ -191,18 +197,20 @@
       </div>
       <div id="op-get-suggestions" class="content-item op-get" data-try-op="listSuggestions" data-try-file="base/domains/decision-support/decision-support-suggestions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/suggestions</code>
-        <span class="op-name">List suggestions</span>
+        <code class="op-path"><span></span>/<wbr><span>suggestions</span></code>
       </span>
-      <code class="op-id" title="operationId">listSuggestions</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List suggestions</span>
+        <code class="op-id" title="operationId">listSuggestions</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-suggestions" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-suggestions" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -997,18 +1005,20 @@ fingerprint. Ids of existing records are kept.
   </details>
 </div><div id="op-post-suggestions" class="content-item op-post" data-try-op="createSuggestion" data-try-file="base/domains/decision-support/decision-support-suggestions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/suggestions</code>
-        <span class="op-name">Propose a suggestion</span>
+        <code class="op-path"><span></span>/<wbr><span>suggestions</span></code>
       </span>
-      <code class="op-id" title="operationId">createSuggestion</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Propose a suggestion</span>
+        <code class="op-id" title="operationId">createSuggestion</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-suggestions" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-suggestions" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2164,18 +2174,20 @@ fingerprint. Ids of existing records are kept.
   </details>
 </div><div id="op-get-suggestions-suggestionId" class="content-item op-get" data-try-op="getSuggestion" data-try-file="base/domains/decision-support/decision-support-suggestions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/suggestions/{suggestionId}</code>
-        <span class="op-name">Get a suggestion</span>
+        <code class="op-path"><span></span>/<wbr><span>suggestions</span>/<wbr><span>{suggestionId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getSuggestion</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a suggestion</span>
+        <code class="op-id" title="operationId">getSuggestion</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-suggestions-suggestionId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-suggestions-suggestionId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2892,18 +2904,20 @@ fingerprint. Ids of existing records are kept.
   </details>
 </div><div id="op-post-suggestions-suggestionId-accept" class="content-item op-post" data-try-op="acceptSuggestion" data-try-file="base/domains/decision-support/decision-support-suggestions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/suggestions/{suggestionId}/accept</code>
-        <span class="op-name">Accept</span>
+        <code class="op-path"><span></span>/<wbr><span>suggestions</span>/<wbr><span>{suggestionId}</span>/<wbr><span>accept</span></code>
       </span>
-      <code class="op-id" title="operationId">acceptSuggestion</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Accept</span>
+        <code class="op-id" title="operationId">acceptSuggestion</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/decision-support.html#action-suggestion-accept" title="State machine action: accept" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-suggestions-suggestionId-accept" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-suggestions-suggestionId-accept" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -3853,18 +3867,20 @@ fingerprint. Ids of existing records are kept.
   </details>
 </div><div id="op-post-suggestions-suggestionId-dismiss" class="content-item op-post" data-try-op="dismissSuggestion" data-try-file="base/domains/decision-support/decision-support-suggestions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/suggestions/{suggestionId}/dismiss</code>
-        <span class="op-name">Dismiss</span>
+        <code class="op-path"><span></span>/<wbr><span>suggestions</span>/<wbr><span>{suggestionId}</span>/<wbr><span>dismiss</span></code>
       </span>
-      <code class="op-id" title="operationId">dismissSuggestion</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Dismiss</span>
+        <code class="op-id" title="operationId">dismissSuggestion</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/decision-support.html#action-suggestion-dismiss" title="State machine action: dismiss" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-suggestions-suggestionId-dismiss" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-suggestions-suggestionId-dismiss" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -4718,18 +4734,20 @@ fingerprint. Ids of existing records are kept.
   </details>
 </div><div id="op-post-suggestions-suggestionId-expire" class="content-item op-post" data-try-op="expireSuggestion" data-try-file="base/domains/decision-support/decision-support-suggestions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/suggestions/{suggestionId}/expire</code>
-        <span class="op-name">Expire</span>
+        <code class="op-path"><span></span>/<wbr><span>suggestions</span>/<wbr><span>{suggestionId}</span>/<wbr><span>expire</span></code>
       </span>
-      <code class="op-id" title="operationId">expireSuggestion</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Expire</span>
+        <code class="op-id" title="operationId">expireSuggestion</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/decision-support.html#action-suggestion-expire" title="State machine action: expire" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-suggestions-suggestionId-expire" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-suggestions-suggestionId-expire" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -5743,9 +5761,10 @@ fingerprint. Ids of existing records are kept.
 <script src="../mock/contracts.js" defer></script>
 <script type="module">
 if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
-  BlueprintMock.mountSendPanels({
+  // In the environment the reader picked (try-it/environments.js).
+  BlueprintMock.mountSendPanels(BlueprintMock.inEnvironment({
     contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
-  });
+  }));
 }
 </script>
 <!-- the mock: control panel -->
@@ -5753,12 +5772,22 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -5805,19 +5834,29 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>
+<!-- the site's routing -->
+<script src="../site-routing.js"></script>
 </body>
 </html>

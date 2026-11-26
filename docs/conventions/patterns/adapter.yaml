@@ -63,8 +63,10 @@ rules:
     For a running adapter, the resource calls the adapter's operations —
     start, pause, stop — and the adapter reports only by publishing the
     resource's own events with publishEvent, declared under the resource's
-    emits and described as published by the adapter. The resource follows them
-    under on:. Give the adapter no operations on the resource's API: that API
+    emits. List what it sends in the adapter's own AsyncAPI document,
+    <api>-adapter-asyncapi.yaml, marked x-relationship external, with a send
+    operation per event whose channel is a $ref to the resource's generated
+    channel. The resource follows them under on:. Give the adapter no operations on the resource's API: that API
     is what the resource's consumers call, and a report from the adapter is
     something that happened, not a request.
   - >-
@@ -85,7 +87,8 @@ rules:
     with a routing handler. For a running adapter, stub its operations (202)
     and play the adapter by publishing the resource's events, as the
     transcription scenarios do; or answer its operations in the page with a
-    reference adapter, as the explorer's Whisper does.
+    reference adapter routed as a handler module, as the harness site's
+    Whisper adapter is (packages/blueprint-harness/explorer/adapters/whisper.js).
   - >-
     Name a running adapter's operations for what the resource asks of it, a
     verb and the work: startStream, pauseStream, stopStream

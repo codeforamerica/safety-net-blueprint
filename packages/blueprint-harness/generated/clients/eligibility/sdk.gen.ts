@@ -26,6 +26,7 @@ export const listDeterminations = <ThrowOnError extends boolean = false>(options
     requestValidator: async (data) => await zListDeterminationsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListDeterminationsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations',
     ...options
 });
@@ -37,6 +38,7 @@ export const createDetermination = <ThrowOnError extends boolean = false>(option
     requestValidator: async (data) => await zCreateDeterminationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateDeterminationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations',
     ...options,
     headers: {
@@ -52,6 +54,7 @@ export const getDetermination = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zGetDeterminationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetDeterminationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations/{determinationId}',
     ...options
 });
@@ -63,6 +66,7 @@ export const updateDetermination = <ThrowOnError extends boolean = false>(option
     requestValidator: async (data) => await zUpdateDeterminationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateDeterminationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations/{determinationId}',
     ...options,
     headers: {
@@ -78,6 +82,7 @@ export const listDecisions = <ThrowOnError extends boolean = false>(options: Opt
     requestValidator: async (data) => await zListDecisionsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListDecisionsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations/{determinationId}/decisions',
     ...options
 });
@@ -89,6 +94,7 @@ export const getDecision = <ThrowOnError extends boolean = false>(options: Optio
     requestValidator: async (data) => await zGetDecisionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetDecisionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations/{determinationId}/decisions/{decisionId}',
     ...options
 });
@@ -102,6 +108,7 @@ export const completeDetermination = <ThrowOnError extends boolean = false>(opti
     requestValidator: async (data) => await zCompleteDeterminationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCompleteDeterminationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations/{determinationId}/complete',
     ...options
 });

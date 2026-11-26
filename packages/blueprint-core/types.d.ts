@@ -115,8 +115,7 @@ export interface Doc {
   /**
    * Whether the document is an adapter's: an OpenAPI or AsyncAPI document
    * whose root has `x-relationship: { type: external }`, so something outside
-   * the contract set, such as a state's service or the relay an adapter
-   * streams to, answers every operation. False for every other document. A single operation can be external too, in an API that
+   * the contract set, such as a state's service, answers every operation. False for every other document. A single operation can be external too, in an API that
    * isn't: its own `x-relationship` says so.
    */
   adapter: boolean;
@@ -265,7 +264,7 @@ export interface ResolveOptions {
    * from the contracts as these overlays leave them.
    */
   overlays?: Overlay[];
-  /** Keep only nodes whose `x-environments` lists this, and strip the marker. */
+  /** Keep only nodes whose `x-environments` lists this; the marker stays. */
   envTarget?: string | null;
   /** Values for `${VAR}` placeholders. Unresolved ones are left literal. */
   envVariables?: Record<string, string>;
@@ -288,6 +287,12 @@ export interface ResolveOptions {
    * is cut to the entries about these.
    */
   apis?: string[];
+  /**
+   * The environment's own overlays, for what differs in shape between
+   * environments, such as how callers sign in. Applied after everything else,
+   * with the environment's `envVariables`, as `applyEnvironment` does.
+   */
+  envOverlays?: Overlay[];
 }
 
 export interface ResolveResult {
@@ -449,6 +454,66 @@ export interface RulesEntry {
   /** `/{domain}` and the ruleset's endpoint path, or `/{domain}/rules/{ruleset-name}` when it declares none. Rulesets with `endpoint: false` are absent. */
   rulesets: Array<{ name: string; path: string }>;
 }
+
+/** One route: a domain, API or operation, and who answers it (schemas/routing-schema.yaml). */
+export interface Route {
+  domain?: string;
+  api?: string;
+  operation?: string;
+  /** Only the requests whose JSON body has these values, by dot path: one of several implementations, chosen per request. */
+  match?: Record<string, string | number | boolean>;
+  except?: Array<{ api: string } | { operation: string }>;
+  to?: string;
+  /**
+   * Code that answers: in a file, a module's path; in code, a function
+   * answering every operation the route covers, or a module of them by operationId.
+   */
+  handler?: string | RouteHandler | Record<string, RouteHandler>;
+  includeHeaders?: string[];
+  timeoutMs?: number;
+}
+
+/** A routed handler: the request, its path parameters, and the means to publish an event or make another call. */
+export type RouteHandler = (
+  request: Request,
+  context: {
+    params: Record<string, string>;
+    publish: (event: string, data?: object, options?: { subject?: string; partitionkey?: string }) => Promise<{ status: number; body: unknown }>;
+    call: (operationId: string, options?: { params?: Record<string, string>; query?: Record<string, string>; body?: unknown; headers?: Record<string, string> }) => Promise<{ status: number; body: unknown }>;
+  },
+) => Response | Promise<Response>;
+
+/**
+ * Check routing against its schema and against the contracts it routes:
+ * every domain, API, operation and except it names exists, each field a match
+ * names is in a request it routes with a value that field allows, and each
+ * route has one answer. Warns when a single operation is routed apart from
+ * its resource's other operations. Runs in a browser too.
+ */
+export function validateRouting(
+  document: { routing: Route[] },
+  docs: Doc[],
+): { errors: string[]; warnings: string[] };
+
+/**
+ * Apply one environment to contracts `resolve` built without one: the release
+ * step of the Twelve-Factor App's build, release, run, as Helm fills in a
+ * chart from an environment's values. Applies the environment's overlays,
+ * keeps the nodes its `x-environments` lists, fills in its `${VAR}` values,
+ * and makes every domain API require the sign-in it has left — what `resolve`
+ * does last for an environment it's given. Runs in a browser too.
+ */
+export function applyEnvironment(
+  docs: Doc[],
+  environment?: {
+    /** Its overlays, for what differs in shape. */
+    overlays?: Overlay[];
+    /** The name `x-environments` lists it by. */
+    envTarget?: string | null;
+    /** Its config: the values of the `${VAR}` placeholders. */
+    envVariables?: Record<string, string>;
+  },
+): { docs: Doc[]; warnings: string[]; applied: string[]; unresolved: string[] };
 
 /**
  * Read out a fact the documents already state.

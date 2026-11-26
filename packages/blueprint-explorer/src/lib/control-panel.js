@@ -6,34 +6,49 @@
  * loads the mock, if the page hasn't, and docks the control panel beside the
  * page (try-it/control-panel.js).
  *
- * The authored pages, written for state leadership rather than developers,
- * have no switch. Every page, those too, starts the mock's records over when
- * it is reloaded, as a page running the mock does (try-it/records.js): a
- * reload anywhere starts again from the sample records.
+ * Only API reference pages with operations get the switch: they're where you
+ * send something. The Scenarios page runs a mock of its own. Every page
+ * starts the mock's records over when it's reloaded, as a page running the
+ * mock does (try-it/records.js): a reload anywhere starts again from the
+ * sample records.
  */
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, relative, sep } from 'path';
+import { loadConfig } from './config.js';
 
 const MARK = '<!-- the mock: control panel -->';
 
 /**
  * Forgetting what pages left for the next, on a reload: the keys records.js
  * keeps the mock's records, stubs and each page's results under, and
- * routing.js the routing switched to the page and the server chosen in it,
- * and activity.js the requests Try it sent.
+ * routing.js the server chosen in the page,
+ * sign-in.js who is signed in,
+ * and activity.js the requests Try it sent, for every environment
+ * (try-it/environments.js). Switching environments reloads the page too, so it
+ * says so first, and nothing is forgotten then.
  */
 const resetOnReload = (root) => `
 <script>
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('${root}mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === \`\${kind}:\${scope}\` || key.startsWith(\`\${kind}:\${scope}#\`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([\`blueprint-mock-records:\${scope}\`, \`blueprint-mock-stubs:\${scope}\`, \`blueprint-mock-routing:\${scope}\`, \`blueprint-mock-server:\${scope}\`, \`blueprint-mock-activity:\${scope}\`].includes(key)
-        || key.startsWith(\`blueprint-try-results:\${scope}:\`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(\`blueprint-try-results:\${scope}\`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -45,8 +60,8 @@ const resetOnReload = (root) => `
  *
  * Like a browser's developer tools: off, the page is the reference alone;
  * on, the control panel docks beside it (try-it/control-panel.js), and the
- * page narrows to make room. The choice holds for the browser tab, every
- * page of it, and is set on the page before it's drawn, so it doesn't jump.
+ * page narrows to make room. The choice is stored in sessionStorage, so it
+ * holds for every page in the browser tab.
  */
 const launcher = (root) => `
 <style>
@@ -91,18 +106,26 @@ const launcher = (root) => `
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>`;
 
@@ -113,22 +136,49 @@ const pagesUnder = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e
   return entry.name.endsWith('.html') ? [path] : [];
 });
 
+/** A page that asks to be left as it is, such as a stand-in sign-in page a site adds. */
+const OPT_OUT = /<meta\s+name="blueprint-try-it"\s+content="off"/;
+
+/** A page with something to send: an operation (api-reference.js). */
+const INTERACTIVE = /id="op-/;
+
+/** The page the sign-in popup returns to: it hands what it was given to the page that opened it. */
+export const SIGN_IN_RETURN = 'sign-in-return.html';
+const signInReturn = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="blueprint-try-it" content="off"><title>Signing in</title></head>
+<body><p>Signing in…</p>
+<script>
+// The provider sent the visitor here, with a token or a code after # or ?.
+// The page that opened this window finishes signing in (try-it/sign-in.js).
+if (window.opener) window.opener.postMessage({ blueprintSignIn: { hash: location.hash.slice(1), search: location.search.slice(1) } }, '*');
+window.close();
+</script>
+</body></html>
+`;
+
 /**
  * Put the Try it switch on the pages of a built explorer, and
  * starting over on a reload on every page, where they haven't them yet.
- * Nothing to do when the explorer was built without the mock.
+ * With sign_in in config.yaml, each page also carries it, for signing in
+ * where a call needs it, and the site gets the page the sign-in popup
+ * returns to. Nothing to do when the explorer was built without the mock.
  *
  * @param {string} contentDir - The built explorer
  */
 export function addControlPanel(contentDir) {
   if (!existsSync(join(contentDir, 'mock', 'mock.js'))) return;
+  const { sign_in: signIn, environments = [] } = loadConfig(contentDir);
+
+  // As data on the page, not code: the Try it scripts read it (try-it/sign-in.js).
+  const signInData = signIn ? `\n<script type="application/json" id="blueprint-sign-in">${JSON.stringify(signIn).replace(/</g, '\\u003c')}</script>` : '';
   for (const page of pagesUnder(contentDir)) {
     const html = readFileSync(page, 'utf8');
-    if (html.includes(MARK) || !html.includes('</body>')) continue;
+    if (html.includes(MARK) || !html.includes('</body>') || OPT_OUT.test(html)) continue;
     const parts = relative(contentDir, page).split(sep);
     const root = '../'.repeat(parts.length - 1);
-    const added = MARK + resetOnReload(root) + (parts[0] === 'authored' ? '' : launcher(root));
+    const added = MARK + signInData + resetOnReload(root) + (INTERACTIVE.test(html) ? launcher(root) : '');
     const at = html.lastIndexOf('</body>');
     writeFileSync(page, `${html.slice(0, at)}${added}\n${html.slice(at)}`);
   }
+  if (signIn || environments.some((environment) => environment.sign_in)) writeFileSync(join(contentDir, SIGN_IN_RETURN), signInReturn);
 }

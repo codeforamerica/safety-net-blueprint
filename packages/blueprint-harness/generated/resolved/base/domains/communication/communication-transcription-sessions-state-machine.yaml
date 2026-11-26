@@ -40,11 +40,14 @@ machines:
       - id: hasTranscript
         description: the session has a transcript to carry on
         condition: has(object.transcriptId)
+      - id: publishedByStarter
+        description: the event was published by the caller who started the session, or the session was started with no caller identified
+        condition: "!has(object.startedById) || (has(this.authid) && this.authid == object.startedById)"
     emits:
       - id: connecting
         description: The session started or resumed; its adapter is getting a credential and opening the connection.
       - id: connected
-        description: Published by the adapter. The connection to the service is open. A stretch with nothing captured before it, after a reconnect or when carrying on a transcript, is its gap; the transcript records it.
+        description: The connection to the service is open. A stretch with nothing captured before it, after a reconnect or when carrying on a transcript, is its gap; the transcript records it.
         schema:
           type: object
           required:
@@ -72,7 +75,7 @@ machines:
                   type: string
                   format: date-time
       - id: disconnected
-        description: Published by the adapter. The connection dropped; it's trying again.
+        description: The connection dropped; it's trying again.
         schema:
           type: object
           required:
@@ -91,7 +94,7 @@ machines:
               description: When it dropped
               by the client's clock.: null
       - id: failed
-        description: Published by the adapter. It gave up connecting or reconnecting. The transcript is still open.
+        description: It gave up connecting or reconnecting. The transcript is still open.
         schema:
           type: object
           required:
@@ -109,7 +112,7 @@ machines:
               description: Why
               for people.: null
       - id: line_updated
-        description: Published by the adapter. A line in progress, to show. Not kept.
+        description: A line in progress, to show. Not kept.
         schema:
           type: object
           required:
@@ -139,7 +142,7 @@ machines:
               format: date-time
               description: When it began, by the client's clock.
       - id: line_finished
-        description: Published by the adapter. A finished line. The transcript keeps it, once for its key, and its entry's created event names this event as its cause, in causationid, so a consumer can tell which entry a line became; one the transcript refuses, closed say, isn't kept.
+        description: A finished line. The transcript keeps it, once for its key, and its entry's created event names this event as its cause, in causationid, so a consumer can tell which entry a line became; one the transcript refuses, closed say, isn't kept.
         schema:
           type: object
           required:
@@ -186,7 +189,7 @@ machines:
               type: string
               description: The line's language, as a BCP 47 tag the Language enum lists.
       - id: ended
-        description: Published by the adapter after the session stopped it. The last line is published and the connection closed.
+        description: The session stopped the adapter, and it's done. The last line is published and the connection closed.
         schema:
           type: object
           required:
@@ -218,6 +221,9 @@ machines:
           from: created
           to: connecting
         steps:
+          - set:
+              field: startedById
+              value: $caller.id
           - if: has(object.transcriptId)
             then:
               - call:
@@ -327,6 +333,9 @@ machines:
           - conditions:
               - hasTranscript
         steps:
+          - set:
+              field: startedById
+              value: $caller.id
           - call:
               operationId: resumeTranscript
               parameters:
@@ -397,11 +406,17 @@ machines:
             - connecting
             - disconnected
           to: connected
+        guards:
+          - conditions:
+              - publishedByStarter
       - type: communication.transcription_session.disconnected
         description: Follow the adapter's connection dropping.
         transition:
           from: connected
           to: disconnected
+        guards:
+          - conditions:
+              - publishedByStarter
       - type: communication.transcription_session.failed
         description: Follow the adapter giving up.
         transition:
@@ -409,11 +424,17 @@ machines:
             - connecting
             - disconnected
           to: failed
+        guards:
+          - conditions:
+              - publishedByStarter
       - type: communication.transcription_session.ended
         description: The last line is in; close the transcript.
         transition:
           from: stopping
           to: closed
+        guards:
+          - conditions:
+              - publishedByStarter
         steps:
           - call:
               operationId: closeTranscript

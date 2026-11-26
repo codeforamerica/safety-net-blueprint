@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetCredentialKeysData, GetCredentialKeysErrors, GetCredentialKeysResponses, PauseStreamData, PauseStreamErrors, PauseStreamResponses, RequestCredentialsData, RequestCredentialsErrors, RequestCredentialsResponses, StartStreamData, StartStreamErrors, StartStreamResponses, StopStreamData, StopStreamErrors, StopStreamResponses } from './types.gen';
-import { zGetCredentialKeysData, zGetCredentialKeysResponse, zPauseStreamData, zPauseStreamResponse, zRequestCredentialsData, zRequestCredentialsResponse, zStartStreamData, zStartStreamResponse, zStopStreamData, zStopStreamResponse } from './zod.gen';
+import type { PauseStreamData, PauseStreamErrors, PauseStreamResponses, RequestCredentialsData, RequestCredentialsErrors, RequestCredentialsResponses, StartStreamData, StartStreamErrors, StartStreamResponses, StopStreamData, StopStreamErrors, StopStreamResponses } from './types.gen';
+import { zPauseStreamData, zPauseStreamResponse, zRequestCredentialsData, zRequestCredentialsResponse, zStartStreamData, zStartStreamResponse, zStopStreamData, zStopStreamResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -24,10 +24,12 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  *
  * Called by the session when it starts, and again when it resumes.
  * Answers at once; the work goes on after it. The adapter gets a
- * credential from requestCredentials, connects to the service, streams
- * the audio, and publishes the session's events as things happen, each
- * with the session's id as its subject and partition key, so one
- * session's events stay in order:
+ * credential from requestCredentials when its service takes one,
+ * connects to the service, streams the audio, and publishes the
+ * session's events as things happen, each with the session's id as its
+ * subject and partition key, so one session's events stay in order.
+ * What it sends is
+ * communication-transcription-sessions-adapter-asyncapi.yaml:
  *
  * - `connected` when the connection opens, with the stretch nothing
  * was captured in as `gap`: after a reconnect, from when it dropped;
@@ -106,9 +108,8 @@ export const stopStream = <ThrowOnError extends boolean = false>(options: Option
  * Answers with where the streaming part connects and a credential
  * that starts one connection, for the service the request names. Every
  * service fits the one answer: a URL that may carry the credential, as
- * Amazon Transcribe's presigned URL does; a token, as ElevenLabs,
- * Deepgram and AssemblyAI issue; or, for a service behind a relay, the
- * relay's URL, its subprotocol and a JWT the adapter signs for it.
+ * Amazon Transcribe's presigned URL does, or a token, as ElevenLabs,
+ * Deepgram and AssemblyAI issue.
  *
  * Called by the streaming part. Asked again, it issues a fresh
  * credential: that is how the streaming part renews one, and how it
@@ -120,31 +121,11 @@ export const requestCredentials = <ThrowOnError extends boolean = false>(options
     requestValidator: async (data) => await zRequestCredentialsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zRequestCredentialsResponse.parseAsync(data),
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/credentials',
     ...options,
     headers: {
         'Content-Type': 'application/json',
         ...options.headers
     }
-});
-
-/**
- * The public keys a relay checks tokens with
- *
- * The public keys of the tokens the adapter signs for a relay, as a JSON
- * Web Key Set (RFC 7517). A relay reads them to check a token's
- * signature, choosing the key by the token's `kid`, and may cache them.
- * To change keys, publish the new one before signing with it, and keep
- * the old one until the tokens it signed have expired. An adapter that
- * signs no tokens, because no service it issues for sits behind a
- * relay, answers 404.
- *
- */
-export const getCredentialKeys = <ThrowOnError extends boolean = false>(options?: Options<GetCredentialKeysData, ThrowOnError>) => (options?.client ?? client).get<GetCredentialKeysResponses, GetCredentialKeysErrors, ThrowOnError>({
-    requestValidator: async (data) => await zGetCredentialKeysData.parseAsync(data),
-    responseType: 'json',
-    responseValidator: async (data) => await zGetCredentialKeysResponse.parseAsync(data),
-    url: '/.well-known/jwks.json',
-    ...options
 });

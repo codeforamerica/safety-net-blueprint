@@ -16,6 +16,10 @@
  *     x-enum-source: { registry: "transcription-services" }
  *     x-enum-source: domains
  *
+ * The values are written as the field's `enum`, and the annotation stays
+ * beside them, so the resolved set still says where they come from: two
+ * fields drawing on the same registry draw on the same list.
+ *
  * The object form picks one machine's states; the string form takes every
  * machine's states in the document. The registry form takes the entry ids of
  * every registry of that type in the set, so a list several files contribute
@@ -169,7 +173,9 @@ function transform(node, path, handlers) {
   if (values === null) return { ...children, [ANNOTATION]: annotation };
 
   handlers.onInjected();
-  return { ...children, enum: values };
+  // The annotation stays beside the values, so a reader of the resolved set
+  // can still tell two fields draw on the same source.
+  return { ...children, enum: values, [ANNOTATION]: annotation };
 }
 
 /**

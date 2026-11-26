@@ -24,25 +24,33 @@ info:
     - id: developer
       name: The developer
       description: Runs the demo or test, and uses the mock server's own routes to set things up, like standing in for a scheduler.
+# This walks through the framework, not these APIs, so each is x-internal: the
+# explorer doesn't link the walkthrough from their pages.
 sourceDescriptions:
   - name: intake
     url: ../domains/intake/intake-openapi.yaml
     type: openapi
+    x-internal: true
   - name: intakeRules
     url: ../domains/intake/intake-rules-openapi.yaml
     type: openapi
+    x-internal: true
   - name: documents
     url: ../domains/document-management/document-management-openapi.yaml
     type: openapi
+    x-internal: true
   - name: eligibilityRules
     url: ../domains/eligibility/eligibility-rules-openapi.yaml
     type: openapi
+    x-internal: true
   - name: events
     url: ../base/domains/platform/platform-events-openapi.yaml
     type: openapi
+    x-internal: true
   - name: mock
     url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
     type: openapi
+    x-internal: true
 components:
   parameters:
     caller:

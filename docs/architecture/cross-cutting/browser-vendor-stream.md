@@ -13,13 +13,14 @@ Use it when all of these hold:
 
 - **The browser and a vendor exchange a live, continuous stream** — audio,
   video, a real-time conversation — where delay matters.
-- **The raw stream shouldn't pass through the server.** Relaying it adds delay
-  and cost, and the blueprint would have to hold something it doesn't need.
+- **The raw stream shouldn't pass through the server.** Passing it through
+  adds delay and cost, and the blueprint would have to hold something it
+  doesn't need.
 - **What's kept is a result derived from the stream,** such as text, not the
   stream itself.
 - **The connection belongs to one browser tab** and doesn't need to outlive it.
-- **The vendor issues browsers short-lived credentials,** or a relay the state
-  runs can stand in for one that doesn't.
+- **The vendor issues browsers short-lived credentials,** or the state runs a
+  server the browser can reach in front of one that doesn't.
 
 ## When it doesn't
 
@@ -30,9 +31,7 @@ Use it when all of these hold:
 | The raw stream has to be kept or audited | Stream through the state's own server and keep it there |
 | The connection has to outlive the tab, or continue with no page open | A session on the server |
 
-Each part below can also be left out where it isn't needed: a vendor every
-browser can reach needs no relay, and a stream with no notion of "off the
-record" needs no pause.
+A stream with no notion of "off the record" can leave out pausing.
 
 ## The parts
 
@@ -43,7 +42,6 @@ record" needs no pause.
 | Session adapter, streaming part | Browser | The blueprint's contract; the app or the state implements it for one vendor | Streams to the vendor and publishes the session's events: connected, each draft and finished result, ended |
 | The record | Server | The blueprint: OpenAPI and a state machine | Keeps the finished results, which it follows, and its rules |
 | Session adapter, credentials part | Beside the server | The blueprint's contract; the state implements it | Holds the vendor's secret and issues a short-lived credential |
-| Relay | The state's server, optional | The blueprint's relay contract, in AsyncAPI; the state implements it | Stands in for a vendor a browser can't reach |
 
 ## Why each rule
 
@@ -86,19 +84,20 @@ browsers connecting directly, with short-lived credentials, but issuing one
 takes the vendor's secret, which can't be in a page. The credentials part holds it
 and answers in one shape for every vendor, named as OAuth names a token
 response. The streaming part asks for one when it starts, and again to renew it or
-reconnect.
+reconnect. A vendor that takes no credential, such as a model running in the
+page, needs no credentials part.
 
 **Only the adapter says the connection opened.** The blueprint never touches
 the stream, so only the adapter knows whether the connection opened, and it
 publishes `connected` when it does. Between start and that, the session is
 `connecting`, so a connection that fails to open has somewhere to land.
 
-**A relay contract, for vendors a browser can't reach.** Some vendors take only
-gRPC, and a model a state runs itself has no browser credentials. A relay the
-state runs stands in for them, implementing a contract the blueprint defines,
-so one adapter works with any relay. It's one contract for the whole
-connection — the stream in and the result back — because they travel over one
-connection with one lifecycle.
+**A vendor a browser can't reach is the adapter's business.** Some vendors
+take only gRPC, and a model a state runs itself has no browser credentials.
+The state runs a server in front of one, and that vendor's adapter streams to
+it. How the adapter and that server talk is theirs to choose: the session sees
+the same calls and events either way, so the blueprint defines no contract
+for it.
 
 **States come from a standard, and an action, its state and its event share one
 word.** W3C WebRTC names a connection's states, and a developer already knows
@@ -114,5 +113,5 @@ every vendor; keeping a quiet connection open is done differently by each.
 ## Where it's used
 
 - **Transcription**, in the communication domain: the transcription session,
-  the transcript, the transcription session adapter and the relay contract. Its decisions
+  the transcript and the transcription session adapter. Its decisions
   are [Decisions 3 and 11 to 17](../domains/communication-transcripts.md#key-design-decisions).

@@ -76,10 +76,15 @@
   /* An operation's sections: plain headings and lists, one box only, the card. */
   /* Closed, an operation is one line tinted by its method, as Swagger lists
      them: method, path, name. Open, it's the two columns. */
-  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  /* The request (method and path) on its own line, the card's full width;
+     the summary, operationId and links on the line below. */
+  .op-line { flex: 1 1 100%; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .op-meta { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding-left: 20px; }
+  /* The path keeps its room and breaks only after a slash; the operationId shrinks first. */
+  .op-path { font: 600 13px monospace; color: #1a1a1a; min-width: 0; overflow-wrap: anywhere; }
+  .op-path > span { white-space: nowrap; }
   .op-name { font-size: 13px; color: #555; }
-  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .op-id { font-size: 11px; color: #999; flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
   .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
   .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
@@ -185,7 +190,8 @@
     </nav>
     <main id="content">
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The transcription software's connection to its transcription service, for one conversation in one app. It lasts as long as the connection; what's kept lasts in the transcript it writes to.</p><p style="margin:0 0 6px;">Creating a session says which transcript it writes to: an existing one, to carry on after a session failed, or what to start a new one with. A new transcript is started when the session starts.</p><p style="margin:0 0 6px;">The session's actions are what the app does: start, pause, resume and stop. Its adapter (communication-transcription-sessions-adapter-openapi.yaml) streams the audio to the transcription service and publishes the session's events — connected, disconnected, failed, each line, ended — and the session follows them. The app follows the session the same way, by its events: lines to show as they come, and where the connection is.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The transcription software's connection to its transcription service, for one conversation in one app.</p></div></div>
+      <p style="margin:.5rem 0 0;font-size:14px;">See it work: <a href="../scenarios/index.html#tour=scenarios%2Ftranscription.arazzo.yaml">Transcribing a spoken conversation</a></p>
       
     </div><section id="section-transcription-sessions" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
@@ -194,18 +200,20 @@
       </div>
       <div id="op-get-transcription-sessions" class="content-item op-get" data-try-op="listTranscriptionSessions" data-try-file="base/domains/communication/communication-transcription-sessions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/transcription-sessions</code>
-        <span class="op-name">List transcription sessions</span>
+        <code class="op-path"><span></span>/<wbr><span>transcription-sessions</span></code>
       </span>
-      <code class="op-id" title="operationId">listTranscriptionSessions</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List transcription sessions</span>
+        <code class="op-id" title="operationId">listTranscriptionSessions</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-transcription-sessions" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-transcription-sessions" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -266,7 +274,7 @@
               <span class="chevron">&#x25B6;</span>
               <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
               <span class="ftype">array[TranscriptionSession]</span>
-              <span class="fpreview">{ client, createdAt, id, +9 }</span>
+              <span class="fpreview">{ client, createdAt, id, +10 }</span>
               <span class="freq">required</span>
               
             </span>
@@ -398,6 +406,20 @@ subject can't be found that way.
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
     </div><div class="field">
       <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span class="ftype">string · date-time</span>
         
@@ -519,18 +541,20 @@ subject can't be found that way.
   </details>
 </div><div id="op-post-transcription-sessions" class="content-item op-post" data-try-op="createTranscriptionSession" data-try-file="base/domains/communication/communication-transcription-sessions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/transcription-sessions</code>
-        <span class="op-name">Start a transcription session</span>
+        <code class="op-path"><span></span>/<wbr><span>transcription-sessions</span></code>
       </span>
-      <code class="op-id" title="operationId">createTranscriptionSession</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Start a transcription session</span>
+        <code class="op-id" title="operationId">createTranscriptionSession</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-transcription-sessions" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-transcription-sessions" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -794,6 +818,20 @@ subject can't be found that way.
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
     </div><div class="field">
       <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span class="ftype">string · date-time</span>
         
@@ -939,18 +977,20 @@ or gives neither a transcript nor what to start one with.
   </details>
 </div><div id="op-get-transcription-sessions-transcriptionSessionId" class="content-item op-get" data-try-op="getTranscriptionSession" data-try-file="base/domains/communication/communication-transcription-sessions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/transcription-sessions/{transcriptionSessionId}</code>
-        <span class="op-name">Get a transcription session</span>
+        <code class="op-path"><span></span>/<wbr><span>transcription-sessions</span>/<wbr><span>{transcriptionSessionId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getTranscriptionSession</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a transcription session</span>
+        <code class="op-id" title="operationId">getTranscriptionSession</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-transcription-sessions-transcriptionSessionId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-transcription-sessions-transcriptionSessionId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1103,6 +1143,20 @@ subject can't be found that way.
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
     </div><div class="field">
       <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span class="ftype">string · date-time</span>
         
@@ -1186,18 +1240,20 @@ subject can't be found that way.
   </details>
 </div><div id="op-post-transcription-sessions-transcriptionSessionId-start" class="content-item op-post" data-try-op="startTranscriptionSession" data-try-file="base/domains/communication/communication-transcription-sessions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/transcription-sessions/{transcriptionSessionId}/start</code>
-        <span class="op-name">Start</span>
+        <code class="op-path"><span></span>/<wbr><span>transcription-sessions</span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>start</span></code>
       </span>
-      <code class="op-id" title="operationId">startTranscriptionSession</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Start</span>
+        <code class="op-id" title="operationId">startTranscriptionSession</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/communication.html#action-transcriptionsession-start" title="State machine action: start" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-transcription-sessions-transcriptionSessionId-start" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-transcription-sessions-transcriptionSessionId-start" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1348,6 +1404,20 @@ subject can't be found that way.
       </div>
       <div class="fdesc">Where the connection is; see the session's state machine.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
@@ -1553,18 +1623,20 @@ subject can't be found that way.
   </details>
 </div><div id="op-post-transcription-sessions-transcriptionSessionId-pause" class="content-item op-post" data-try-op="pauseTranscriptionSession" data-try-file="base/domains/communication/communication-transcription-sessions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/transcription-sessions/{transcriptionSessionId}/pause</code>
-        <span class="op-name">Pause</span>
+        <code class="op-path"><span></span>/<wbr><span>transcription-sessions</span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>pause</span></code>
       </span>
-      <code class="op-id" title="operationId">pauseTranscriptionSession</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Pause</span>
+        <code class="op-id" title="operationId">pauseTranscriptionSession</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/communication.html#action-transcriptionsession-pause" title="State machine action: pause" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-transcription-sessions-transcriptionSessionId-pause" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-transcription-sessions-transcriptionSessionId-pause" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1732,6 +1804,20 @@ subject can't be found that way.
       </div>
       <div class="fdesc">Where the connection is; see the session's state machine.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
@@ -1937,18 +2023,20 @@ subject can't be found that way.
   </details>
 </div><div id="op-post-transcription-sessions-transcriptionSessionId-resume" class="content-item op-post" data-try-op="resumeTranscriptionSession" data-try-file="base/domains/communication/communication-transcription-sessions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/transcription-sessions/{transcriptionSessionId}/resume</code>
-        <span class="op-name">Resume</span>
+        <code class="op-path"><span></span>/<wbr><span>transcription-sessions</span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>resume</span></code>
       </span>
-      <code class="op-id" title="operationId">resumeTranscriptionSession</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Resume</span>
+        <code class="op-id" title="operationId">resumeTranscriptionSession</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/communication.html#action-transcriptionsession-resume" title="State machine action: resume" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-transcription-sessions-transcriptionSessionId-resume" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-transcription-sessions-transcriptionSessionId-resume" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2116,6 +2204,20 @@ subject can't be found that way.
       </div>
       <div class="fdesc">Where the connection is; see the session's state machine.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
@@ -2321,18 +2423,20 @@ subject can't be found that way.
   </details>
 </div><div id="op-post-transcription-sessions-transcriptionSessionId-stop" class="content-item op-post" data-try-op="stopTranscriptionSession" data-try-file="base/domains/communication/communication-transcription-sessions-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/transcription-sessions/{transcriptionSessionId}/stop</code>
-        <span class="op-name">Stop</span>
+        <code class="op-path"><span></span>/<wbr><span>transcription-sessions</span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>stop</span></code>
       </span>
-      <code class="op-id" title="operationId">stopTranscriptionSession</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Stop</span>
+        <code class="op-id" title="operationId">stopTranscriptionSession</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/communication.html#action-transcriptionsession-stop" title="State machine action: stop" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-transcription-sessions-transcriptionSessionId-stop" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-transcription-sessions-transcriptionSessionId-stop" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2500,6 +2604,20 @@ subject can't be found that way.
       </div>
       <div class="fdesc">Where the connection is; see the session's state machine.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
@@ -2912,9 +3030,10 @@ subject can't be found that way.
 <script src="../mock/contracts.js" defer></script>
 <script type="module">
 if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
-  BlueprintMock.mountSendPanels({
+  // In the environment the reader picked (try-it/environments.js).
+  BlueprintMock.mountSendPanels(BlueprintMock.inEnvironment({
     contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
-  });
+  }));
 }
 </script>
 <!-- the mock: control panel -->
@@ -2922,12 +3041,22 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -2974,19 +3103,29 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>
+<!-- the site's routing -->
+<script src="../site-routing.js"></script>
 </body>
 </html>

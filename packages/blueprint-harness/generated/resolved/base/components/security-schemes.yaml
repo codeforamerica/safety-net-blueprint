@@ -1,6 +1,8 @@
-bearerAuth:
-  type: http
-  scheme: bearer
-  bearerFormat: JWT
+callerId:
+  type: apiKey
+  in: header
+  name: X-Caller-Id
   description: |
-    The signed-in caller's token, a JWT from the state's identity provider. An operation that requires it answers 401 without a valid one.
+    Who's calling, by the id the records hold, with their roles in X-Caller-Roles. It identifies the caller without proving anything, as the mock does; a deployment overlays it with a scheme that does.
+  x-caller:
+    roles: X-Caller-Roles

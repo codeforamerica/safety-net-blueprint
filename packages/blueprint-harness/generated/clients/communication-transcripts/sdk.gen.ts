@@ -30,6 +30,7 @@ export const listTranscripts = <ThrowOnError extends boolean = false>(options?: 
     requestValidator: async (data) => await zListTranscriptsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListTranscriptsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts',
     ...options
 });
@@ -46,6 +47,7 @@ export const createTranscript = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zCreateTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateTranscriptResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts',
     ...options,
     headers: {
@@ -64,6 +66,7 @@ export const createTranscript = <ThrowOnError extends boolean = false>(options: 
 export const deleteTranscript = <ThrowOnError extends boolean = false>(options: Options<DeleteTranscriptData, ThrowOnError>) => (options.client ?? client).delete<DeleteTranscriptResponses, DeleteTranscriptErrors, ThrowOnError>({
     requestValidator: async (data) => await zDeleteTranscriptData.parseAsync(data),
     responseValidator: async (data) => await zDeleteTranscriptResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}',
     ...options
 });
@@ -77,6 +80,7 @@ export const getTranscript = <ThrowOnError extends boolean = false>(options: Opt
     requestValidator: async (data) => await zGetTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetTranscriptResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}',
     ...options
 });
@@ -93,6 +97,7 @@ export const updateTranscript = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zUpdateTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateTranscriptResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}',
     ...options,
     headers: {
@@ -118,6 +123,7 @@ export const listTranscriptEntries = <ThrowOnError extends boolean = false>(opti
     requestValidator: async (data) => await zListTranscriptEntriesData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListTranscriptEntriesResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}/entries',
     ...options
 });
@@ -138,6 +144,7 @@ export const addTranscriptEntry = <ThrowOnError extends boolean = false>(options
     requestValidator: async (data) => await zAddTranscriptEntryData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zAddTranscriptEntryResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}/entries',
     ...options,
     headers: {
@@ -155,6 +162,7 @@ export const getTranscriptEntry = <ThrowOnError extends boolean = false>(options
     requestValidator: async (data) => await zGetTranscriptEntryData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetTranscriptEntryResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}/entries/{entryId}',
     ...options
 });
@@ -171,6 +179,7 @@ export const updateTranscriptEntry = <ThrowOnError extends boolean = false>(opti
     requestValidator: async (data) => await zUpdateTranscriptEntryData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateTranscriptEntryResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}/entries/{entryId}',
     ...options,
     headers: {
@@ -188,6 +197,7 @@ export const listTranscriptionProfiles = <ThrowOnError extends boolean = false>(
     requestValidator: async (data) => await zListTranscriptionProfilesData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListTranscriptionProfilesResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/profiles',
     ...options
 });
@@ -203,6 +213,7 @@ export const createTranscriptionProfile = <ThrowOnError extends boolean = false>
     requestValidator: async (data) => await zCreateTranscriptionProfileData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateTranscriptionProfileResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/profiles',
     ...options,
     headers: {
@@ -220,6 +231,7 @@ export const getTranscriptionProfile = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zGetTranscriptionProfileData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetTranscriptionProfileResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/profiles/{profileId}',
     ...options
 });
@@ -237,6 +249,7 @@ export const updateTranscriptionProfile = <ThrowOnError extends boolean = false>
     requestValidator: async (data) => await zUpdateTranscriptionProfileData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateTranscriptionProfileResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/profiles/{profileId}',
     ...options,
     headers: {
@@ -256,6 +269,7 @@ export const pauseTranscript = <ThrowOnError extends boolean = false>(options: O
     requestValidator: async (data) => await zPauseTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zPauseTranscriptResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}/pause',
     ...options,
     headers: {
@@ -275,6 +289,7 @@ export const resumeTranscript = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zResumeTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zResumeTranscriptResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}/resume',
     ...options,
     headers: {
@@ -294,6 +309,7 @@ export const closeTranscript = <ThrowOnError extends boolean = false>(options: O
     requestValidator: async (data) => await zCloseTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCloseTranscriptResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/transcripts/{transcriptId}/close',
     ...options,
     headers: {

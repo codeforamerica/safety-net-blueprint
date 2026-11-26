@@ -128,6 +128,15 @@ export type TranscriptionSessionList = {
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
         /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
+        /**
          * When the session was started.
          */
         readonly createdAt: string;
@@ -217,6 +226,15 @@ export type TranscriptionSession = {
      * Where the connection is; see the session's state machine.
      */
     status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
+    /**
+     * The id of the caller who last started or resumed the session,
+     * set by start and resume. Its adapter runs for that caller, so
+     * the session and the transcript accept the adapter's events
+     * only when that caller published them (their `authid`).
+     * Absent when the session was started with no caller identified.
+     *
+     */
+    readonly startedById?: string;
     /**
      * When the session was started.
      */
@@ -741,6 +759,15 @@ export type ListTranscriptionSessionsResponses = {
              */
             status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
             /**
+             * The id of the caller who last started or resumed the session,
+             * set by start and resume. Its adapter runs for that caller, so
+             * the session and the transcript accept the adapter's events
+             * only when that caller published them (their `authid`).
+             * Absent when the session was started with no caller identified.
+             *
+             */
+            readonly startedById?: string;
+            /**
              * When the session was started.
              */
             readonly createdAt: string;
@@ -983,6 +1010,15 @@ export type CreateTranscriptionSessionResponses = {
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
         /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
+        /**
          * When the session was started.
          */
         readonly createdAt: string;
@@ -1114,6 +1150,15 @@ export type GetTranscriptionSessionResponses = {
          * Where the connection is; see the session's state machine.
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
+        /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
         /**
          * When the session was started.
          */
@@ -1322,6 +1367,15 @@ export type StartTranscriptionSessionResponses = {
          * Where the connection is; see the session's state machine.
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
+        /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
         /**
          * When the session was started.
          */
@@ -1536,6 +1590,15 @@ export type PauseTranscriptionSessionResponses = {
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
         /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
+        /**
          * When the session was started.
          */
         readonly createdAt: string;
@@ -1749,6 +1812,15 @@ export type ResumeTranscriptionSessionResponses = {
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
         /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
+        /**
          * When the session was started.
          */
         readonly createdAt: string;
@@ -1961,6 +2033,15 @@ export type StopTranscriptionSessionResponses = {
          * Where the connection is; see the session's state machine.
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
+        /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
         /**
          * When the session was started.
          */

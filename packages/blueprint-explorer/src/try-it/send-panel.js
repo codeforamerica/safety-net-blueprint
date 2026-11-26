@@ -22,9 +22,13 @@ import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { loadResults, saveResults } from './records.js';
 import { startMock } from './start-mock.js';
 import { logRequest } from './activity.js';
-import { hostMock, mockChanged } from './control-panel.js';
+import { tryView } from './try-view.js';
+import { hostMock, mockChanged, showInActivity } from './control-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
 import { routingInUse, entryFor, destinationOf } from './routing.js';
+import { inSandbox } from './environments.js';
+import { signInPrompt, ADAPTER_STYLE } from './adapter-panel.js';
+import { signIn, schemeFor, signedIn } from './sign-in.js';
 
 const ORIGIN = 'http://mock.invalid';
 const MANAGED = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
@@ -221,12 +225,18 @@ const followed = (doc, node, docs) => {
 const local = (doc, node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
   ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], doc.content) : node);
 
-/** The operation an element names, with its document, method and served path. */
-const operationFor = (docs, file, operationId) => {
+/**
+ * The operation an element names, with its document, method and served path;
+ * or, given `at`, the one at that method and served path.
+ */
+const operationFor = (docs, file, operationId, at = null) => {
   const doc = docs.find((d) => d.type === 'openapi' && d.relativePath === file);
   for (const [path, item] of Object.entries(doc?.content?.paths ?? {})) {
     for (const method of ['get', 'put', 'post', 'patch', 'delete']) {
-      if (item?.[method]?.operationId === operationId) {
+      const found = at
+        ? item?.[method] && method.toUpperCase() === at.method && basePathOf(doc) + path === at.path
+        : item?.[method]?.operationId === operationId;
+      if (found) {
         return { doc, method: method.toUpperCase(), path: basePathOf(doc) + path, operation: item[method], item };
       }
     }
@@ -338,6 +348,7 @@ const STYLE = `
   .try-code .foot { gap: 8px; align-items: center; }
   .try-code .real { font: 600 11px system-ui, sans-serif; color: #fff; background: #b45309; padding: 2px 8px; border-radius: 3px; }
   .resp-tab.sent { font-family: sans-serif; }
+  .resp-panel .sent-activity { margin: 2px 0 6px; font-size: 12px; color: #555; } .resp-panel .sent-activity a { color: #5650BE; }
   .resp-panel .sent-status { font-weight: 700; } .resp-panel .sent-status.ok { color: #15803d; } .resp-panel .sent-status.bad { color: #b42318; }
   .resp-panel .sent-headers { margin: 4px 0 0; font: 11px monospace; color: #555; }
   .resp-panel .sent-headers div { white-space: pre-wrap; word-break: break-all; }
@@ -359,7 +370,7 @@ const STYLE = `
 export async function mountSendPanels({ contracts, version, scope }) {
   const holders = [...document.querySelectorAll('[data-try-op]')];
   if (!holders.length) return;
-  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE }));
+  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE + ADAPTER_STYLE }));
   // An operation's responses as its view has them: what was sent, in the Try
   // it view; the documented ones, in the doc view.
   const showAnswers = (holder) => {
@@ -385,6 +396,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
   }
   const records = { scope, version };
+  // A call that needs the visitor signed in waits on the same panel while they sign in.
+  let askHere = null;
+  const ask = (call) => new Promise((resolve) => (askHere ? askHere(call, resolve) : resolve(null)));
   // What each operation last sent and got back, as this page was left.
   const results = loadResults(records);
   const roles = docs.find((d) => Array.isArray(d.content?.$defs?.RoleType?.enum))?.content.$defs.RoleType.enum ?? [];
@@ -437,11 +451,11 @@ export async function mountSendPanels({ contracts, version, scope }) {
     for (const { tag, op } of realTags) {
       const entry = entryFor(routing, { operationId: op.operation.operationId, api: op.doc.api, domain: op.doc.domain });
       tag.hidden = !entry;
-      if (entry) tag.title = `Sent to ${destinationOf(entry)}, not answered by the mock in this page.`;
+      if (!tag.hidden) tag.title = `Sent to ${destinationOf(entry)}, not answered by the mock in this page.`;
     }
   };
   const start = async ({ seed, restore }) => {
-    session = await startMock({ contracts, ...records, seed, restore });
+    session = await startMock({ contracts, ...records, seed, restore, standIn: inSandbox(), ask });
     mock = session.mock;
     markReal();
     await refreshPickers();
@@ -487,7 +501,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     return `created ${today ? date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : date.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
   };
   const withPicker = (row, box, choicesOf) => {
-    const { setChoices } = combobox(box, { none: 'none held' });
+    const { setChoices } = combobox(box, { none: 'No records yet. Create one first.' });
     comboboxes.push(async () => setChoices(await choicesOf()));
   };
 
@@ -520,16 +534,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     };
     if (!op || !body) continue;
     // With Try it on, the Try it view, its docs folded under the description.
-    holder.classList.add('trying');
-    const fold = Object.assign(el('button', '▸ Docs', 'try-docs'), { type: 'button' });
-    fold.setAttribute('aria-expanded', 'false');
-    fold.onclick = () => {
-      const open = holder.classList.toggle('docs-open');
-      fold.textContent = open ? '▾ Docs' : '▸ Docs';
-      fold.setAttribute('aria-expanded', String(open));
-    };
-    const description = holder.querySelector('.op-docs > .op-desc');
-    if (description) description.after(fold); else holder.querySelector('.op-docs')?.prepend(fold);
+    tryView(holder);
 
 
     // The parameters whose values the client exports as a constant.
@@ -707,6 +712,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     holder.addEventListener('change', refresh);
     refreshers.push(refresh);
     place(code);
+    // Where a call that needs the visitor signed in asks them to.
+    const askBox = el('div');
+    place(askBox);
 
     // Send, inside the code block, and what came back as the first of the
     // response tabs, beside the documented ones: one tab for what was sent,
@@ -741,12 +749,19 @@ export async function mountSendPanels({ contracts, version, scope }) {
       for (const other of tabs.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
       for (const other of section.querySelectorAll('.resp-panel')) other.hidden = other !== panel;
     };
-    // A response, as Send shows it. What the call set off is in the control panel's activity log.
-    const showResult = ({ status, statusText, ok, ms, headers, shown, streaming }) => {
+    // A response, as Send shows it. What the call set off is in the control
+    // panel's activity log; a link under the response opens it at this send.
+    const showResult = ({ status, statusText, ok, ms, headers, shown, streaming, events, since }) => {
       const headerList = el('div', '', 'sent-headers');
       for (const [name, value] of headers) headerList.append(el('div', `${name}: ${value}`));
+      const count = events?.length ?? 0;
+      const activity = el('p', count ? `Set off ${count} event${count === 1 ? '' : 's'} · ` : '', 'sent-activity');
+      const link = Object.assign(el('a', 'see in Activity'), { href: '#' });
+      link.onclick = (event) => { event.preventDefault(); showInActivity(since); };
+      activity.append(link);
       showSent(String(status), ok, [
         el('div', `${status}${statusText ? ` ${statusText}` : ''} · ${ms} ms`, `sent-status ${ok ? 'ok' : 'bad'}`),
+        ...(since ? [activity] : []),
         headerList,
         el('pre', streaming ? `${shown || '(nothing yet)'}\n\n(a stream: shown for its first ${STREAM_MS / 1000} seconds, then closed)` : (shown || '(no body)'), 'sent-body'),
       ]);
@@ -770,6 +785,12 @@ export async function mountSendPanels({ contracts, version, scope }) {
       }
       if (!mock) return;
       button.disabled = true;
+      askBox.replaceChildren();
+      askHere = (call, done) => askBox.append(signInPrompt({
+        call,
+        signIn: () => signIn(call.scheme, records),
+        done: (token) => { mockChanged(); done(token); },
+      }));
       try {
         const request = requestFor();
         const path = op.path.replace(/\{([^}]+)\}/g, (_, n) => encodeURIComponent(request.path[n] ?? ''));

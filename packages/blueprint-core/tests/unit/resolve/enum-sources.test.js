@@ -37,14 +37,14 @@ const specWith = (annotation) => spec({
 });
 
 describe('injectEnumSources', () => {
-  test('injects sla type ids and removes the annotation', () => {
+  test('injects sla type ids and keeps the annotation beside them', () => {
     const result = injectEnumSources([
       slaTypes([{ id: 'snap_standard' }, { id: 'medicaid_standard' }]),
       specWith('slaTypes[].id'),
     ]);
 
     assert.deepEqual(field(result).enum, ['snap_standard', 'medicaid_standard']);
-    assert.equal('x-enum-source' in field(result), false);
+    assert.equal(field(result)['x-enum-source'], 'slaTypes[].id');
     assert.equal(field(result).type, 'string');
   });
 
@@ -252,7 +252,7 @@ describe('injectEnumSources — the domains the set defines', () => {
     ]);
 
     assert.deepEqual(domainEnum(result).enum, ['intake', 'screening', 'workflow']);
-    assert.equal('x-enum-source' in domainEnum(result), false);
+    assert.equal(domainEnum(result)['x-enum-source'], 'domains');
   });
 
   test('a document that only attaches to a domain adds none', () => {
@@ -332,7 +332,7 @@ describe('injectEnumSources — registry source', () => {
     ]);
 
     assert.deepEqual(providers(result).enum, ['aws-transcribe', 'elevenlabs-scribe', 'state-vendor']);
-    assert.equal('x-enum-source' in providers(result), false);
+    assert.deepEqual(providers(result)['x-enum-source'], { registry: 'transcription-services' });
   });
 
   test('takes only the named type', () => {

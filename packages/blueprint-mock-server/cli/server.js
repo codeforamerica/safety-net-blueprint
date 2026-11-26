@@ -8,12 +8,13 @@ import http from 'http';
 import { execSync, spawn } from 'child_process';
 import { realpathSync, openSync, statSync, readFileSync } from 'fs';
 import { load as loadYaml } from 'js-yaml';
-import { resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { resolve, dirname } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { performSetup } from '../src/setup.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { createDispatcher } from '../src/http/route-table.js';
+import { tokenVerifier } from '../src/http/verify-token.js';
 import { routingFromDocument } from '../src/routing.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
@@ -49,8 +50,9 @@ Options:
                     gives a background server whose data disappears with it.
                     Override with MOCK_STORE env var
   --routing=<file>  YAML or JSON listing domains, APIs and operations a real
-                    service answers instead of the mock, and the events its
-                    state machines receive. See schemas/routing-schema.json
+                    service, or a module of handlers, answers instead of
+                    the mock, and the events its state machines receive. See
+                    blueprint-core's schemas/routing-schema.yaml
   --detach          Start server in the background (logs to mock-server.log)
   --log=<path>      Log file or directory for --detach output (default: spec dir)
   --stop            Stop the running mock server
@@ -123,7 +125,10 @@ function parseSpecDirs() {
       process.exit(1);
     }
     try {
-      routing = routingFromDocument(parsed);
+      // A handler's module is named relative to the file; it's imported when the server starts.
+      routing = routingFromDocument(parsed).map((entry) => (typeof entry.handler === 'string'
+        ? { ...entry, handler: resolve(dirname(routingPath), entry.handler) }
+        : entry));
     } catch (err) {
       console.error(`Error: --routing=${routingPath} is not valid:\n${err.message}`);
       process.exit(1);
@@ -187,6 +192,25 @@ function docsFromArtifactFile(path) {
  * @param {'sqlite'|'memory'|null} storeKind - Where resources are held. Defaults to
  *   --store / MOCK_STORE, and to sqlite when neither is given.
  */
+/**
+ * Routing with each handler module a file names imported, so a route gets
+ * its handlers from it. A module that can't be imported stops the server,
+ * naming it.
+ *
+ * @param {Array|null} routing
+ */
+async function withModules(routing) {
+  if (!routing) return routing;
+  return Promise.all(routing.map(async (entry) => {
+    if (typeof entry.handler !== 'string') return entry;
+    try {
+      return { ...entry, handler: await import(pathToFileURL(entry.handler).href) };
+    } catch (err) {
+      throw new Error(`Routing names handler ${entry.handler}, which could not be imported: ${err.message}`);
+    }
+  }));
+}
+
 async function startMockServer(specDirs = null, seedDir = null, storeKind = null, routing = null) {
   console.log('='.repeat(70));
   console.log('🚀 Starting Mock API Server');
@@ -200,6 +224,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       seedDir = seedDir ?? parsed.seedDir;
       storeKind = storeKind ?? parsed.storeKind;
       routing = routing ?? parsed.routing;
+      routing = await withModules(routing);
     }
 
     // Resolved here as well as in parseSpecDirs, because a caller that passes
@@ -274,7 +299,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       console.error(`Error: ${err.message}`);
       process.exit(1);
     }
-    const { routes, endpoints: allEndpoints, rpcEndpoints, overridden, routed, receives } = assembled;
+    const { routes, identifying, schemes, endpoints: allEndpoints, rpcEndpoints, overridden, routed, receives } = assembled;
     for (const key of overridden.applied) console.log(`  ${key} - contract route, custom handler`);
     if (overridden.unmatched.length > 0) {
       console.warn(`  Note: no contract route declares ${overridden.unmatched.join(', ')} — not overridden`);
@@ -284,10 +309,17 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.
-    const server = createNodeServer(createDispatcher(routes), { sockets: instance.ws });
-    for (const { paths } of instance.ws.sockets().values()) {
-      for (const path of paths) console.log(`  WS     ${path} - WebSocket`);
-    }
+    // As a server, a token the caller sends is checked against the
+    // environment's OpenID Connect provider, and a bad one refused (verify-token.js).
+    const dispatch = identifying(createDispatcher(routes));
+    const verify = tokenVerifier(schemes);
+    const server = createNodeServer(verify ? async (request) => {
+      const why = await verify(request).catch((error) => `the sign-in provider couldn't be reached: ${error.message}`);
+      if (!why) return dispatch(request);
+      return Response.json({ code: 'UNAUTHORIZED', message: `Not signed in: ${why}.` }, {
+        status: 401, headers: { 'WWW-Authenticate': 'Bearer error="invalid_token"' },
+      });
+    } : dispatch);
 
     // Start the server — if the port is in use, kill the existing process and retry once.
     await new Promise((resolve, reject) => {

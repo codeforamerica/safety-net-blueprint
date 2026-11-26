@@ -11,19 +11,26 @@
  * This previously spawned five validator subprocesses, each re-reading and
  * re-parsing the entire directory.
  *
- * Usage: node scripts/validate.js --resolved=<generated-contracts-dir>
+ * With --routing, also checks a routing file against its schema and against
+ * these contracts (core's validateRouting): routing is configuration, not part
+ * of the contract set, so it's named separately.
+ *
+ * Usage: node scripts/validate.js --resolved=<generated-contracts-dir> [--routing=<file>]
  */
 
-import { resolve } from 'path';
-import { discover, load, validate } from '@codeforamerica/blueprint-core';
+import { resolve, dirname } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import yaml from 'js-yaml';
+import { discover, load, validate, validateRouting } from '@codeforamerica/blueprint-core';
 
 function parseArgs() {
-  const options = { resolvedDir: null, help: false, brief: false };
+  const options = { resolvedDir: null, routing: null, help: false, brief: false };
 
   for (const arg of process.argv.slice(2)) {
     if (arg === '--help' || arg === '-h') options.help = true;
     else if (arg === '--brief' || arg === '-b') options.brief = true;
     else if (arg.startsWith('--resolved=')) options.resolvedDir = arg.split('=')[1];
+    else if (arg.startsWith('--routing=')) options.routing = arg.split('=')[1];
     else { console.error(`Error: Unknown argument: ${arg}`); process.exit(1); }
   }
 
@@ -38,6 +45,7 @@ function main() {
     console.log('Usage: node scripts/validate.js --resolved=<dir>\n');
     console.log('Options:');
     console.log('  --resolved=<dir>  Path to resolved contracts directory (required)');
+    console.log('  --routing=<file>  A routing file to check against them too');
     console.log('  -b, --brief       Print counts only, not each finding');
     process.exit(0);
   }
@@ -71,8 +79,30 @@ function main() {
     console.log(report);
   }
 
-  console.log(ok ? '\n✓ All validations passed\n' : '\n✗ Validation failed\n');
-  process.exit(ok ? 0 : 1);
+  const routingOk = options.routing ? checkRouting(resolve(options.routing), docs) : true;
+  const passed = ok && routingOk;
+  console.log(passed ? '\n✓ All validations passed\n' : '\n✗ Validation failed\n');
+  process.exit(passed ? 0 : 1);
+}
+
+/**
+ * Check a routing file against the contracts, and that each handler module it
+ * names exists, beside the file. Prints what's wrong; true when nothing is.
+ */
+function checkRouting(file, docs) {
+  console.log(`\n  Routing: ${file}\n`);
+  const text = readFileSync(file, 'utf8');
+  const document = file.endsWith('.json') ? JSON.parse(text) : yaml.load(text);
+  const { errors, warnings } = validateRouting(document, docs);
+  for (const entry of Array.isArray(document?.routing) ? document.routing : []) {
+    if (typeof entry?.handler === 'string' && !existsSync(resolve(dirname(file), entry.handler))) {
+      errors.push(`Routing names handler ${entry.handler}, which doesn't exist beside ${file}`);
+    }
+  }
+  for (const error of errors) console.log(`    error   ${error}`);
+  for (const warning of warnings) console.log(`    warning ${warning}`);
+  if (!errors.length && !warnings.length) console.log('    ✓ routing checks out');
+  return errors.length === 0;
 }
 
 try {

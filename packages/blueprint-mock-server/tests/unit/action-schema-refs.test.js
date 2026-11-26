@@ -49,7 +49,7 @@ const send = async (method, path, body) => {
 
 const CALL = {
   operationId: 'getTranscriptionProfile',
-  parameters: [{ name: 'profileId', in: 'path', value: '7a1e0c2d-0000-4000-8000-0000000000f1' }],
+  parameters: [{ name: 'profileId', in: 'path', value: '7a1e0c2d-0000-4000-8000-0000000000b1' }],
 };
 
 test('an action\'s request is checked against a schema in another file', async () => {

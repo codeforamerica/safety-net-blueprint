@@ -13,6 +13,7 @@
  */
 
 import { withoutEngineFields } from '../sla-engine.js';
+import { sameSender } from '../auth-context.js';
 
 /**
  * The key a route is stored under.
@@ -299,7 +300,8 @@ function withPathname(request, pathname) {
     init.body = request.body;
     init.duplex = 'half';
   }
-  return new Request(url, init);
+  // Who sent it, as the mock identified them, goes with it (auth-context.js).
+  return sameSender(request, new Request(url, init));
 }
 
 /**

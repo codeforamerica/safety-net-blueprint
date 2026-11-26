@@ -377,6 +377,19 @@ function prepareSchemaForValidation(schema) {
 }
 
 /**
+ * What's wrong, for the end of an error's message: each field and what's
+ * wrong with it, so a reader sees it without opening the details. Empty when
+ * nothing is listed.
+ *
+ * @param {Array<{ field?: string, message?: string }>} errors
+ * @returns {string} Such as ": at is required; reason must be string."
+ */
+export function whatsWrong(errors) {
+  const listed = (errors ?? []).map((e) => [e.field, e.message].filter(Boolean).join(' ')).filter(Boolean);
+  return listed.length ? `: ${listed.join('; ')}.` : '';
+}
+
+/**
  * Create error response for validation failures
  * @param {Array} errors - Array of validation errors
  * @param {number} statusCode - HTTP status code (400 or 422)
@@ -384,9 +397,9 @@ function prepareSchemaForValidation(schema) {
  */
 export function createErrorResponse(errors, statusCode = 422) {
   const code = statusCode === 400 ? 'BAD_REQUEST' : 'VALIDATION_ERROR';
-  const message = statusCode === 400 
+  const message = `${statusCode === 400
     ? 'The request is malformed or contains invalid parameters'
-    : 'The request contains invalid data';
+    : 'The request contains invalid data'}${whatsWrong(errors)}`;
   
   return {
     code,

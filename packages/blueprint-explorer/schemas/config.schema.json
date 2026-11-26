@@ -28,17 +28,27 @@
     "organization": {
       "description": "Who publishes the site, named in the footer. Defaults to Code for America.",
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
-        "url": { "type": "string", "format": "uri" }
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
       }
     },
     "annotations": {
       "description": "Allowlist of annotation field types to display across all explorer views (data dictionary, annotations explorer, etc.). If absent, all annotation fields are shown. Use this to suppress internal or structural annotation types that are not meaningful to your audience.",
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 1
     },
     "repo": {
@@ -70,6 +80,104 @@
       "type": "string",
       "pattern": "^(?!/)(?!.*\\.\\.).+\\.js$"
     },
+    "routing": {
+      "description": "A routing file of the site's own, relative to config.yaml (e.g. routing.yaml), in blueprint-core's routing format: which operations a service at a URL, or a module of the site's, answers instead of the mock in the page, such as a transcription session adapter for one service. The build checks it against the contracts, bundles it with the modules it names, and loads it on every page, after the site's script.",
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.).+\\.(ya?ml|json)$"
+    },
+    "sign_in": {
+      "description": "How the explorer signs in where a call needs it, as Swagger UI's initOAuth does: the client it signs in as. The provider and the flow come from the contracts' security scheme (OAuth 2.0 flows, or OpenID Connect's discovery URL); a call that needs one and leaves the mock, such as an adapter's, waits for the visitor to sign in, in a popup.",
+      "type": "object",
+      "required": [
+        "client_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The client id the provider knows the site by."
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The scopes to ask for; with OpenID Connect, openid is always asked for."
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "More query parameters for the provider's sign-in page, such as an audience."
+        }
+      }
+    },
+    "environments": {
+      "description": "The environments the site switches between, as a developer portal does, the first the default: each one's config (its ${VAR} values), overlays, routing and sign-in. With environments, the build takes the contracts resolved without one (blueprint-resolve with no --env-variables or --env-overlay) and applies each, as resolve's last step does: the release step of the Twelve-Factor App's build, release, run. The reference pages show the first; the page applies the one picked. Without environments, the build takes contracts already resolved, and routing and sign_in above apply.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What the header's switch shows, and what x-environments lists the environment by."
+          },
+          "variables": {
+            "type": "string",
+            "description": "Its config: a file of NAME=value lines, as blueprint-resolve's --env-variables takes, relative to config.yaml."
+          },
+          "overlays": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its own overlays, for what differs in shape, such as how callers sign in, as blueprint-resolve's --env-overlay takes, relative to config.yaml."
+          },
+          "routing": {
+            "description": "Its routing file, as routing above, for this environment: where its calls go, such as to its real adapters.",
+            "type": "string",
+            "pattern": "^(?!/)(?!.*\\.\\.).+\\.(ya?ml|json)$"
+          },
+          "sign_in": {
+            "description": "Its sign-in client, as sign_in above, for this environment.",
+            "type": "object",
+            "required": [
+              "client_id"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "client_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The client id the provider knows the site by."
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The scopes to ask for; with OpenID Connect, openid is always asked for."
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "More query parameters for the provider's sign-in page, such as an audience."
+              }
+            }
+          }
+        }
+      }
+    },
     "pages": {
       "description": "A folder of the site's own pages, relative to config.yaml (e.g. pages). Each Markdown page is rendered in the explorer's layout as an HTML page of the same name, titled by its first heading; anything else is copied as it is. Link a page from featured_links (e.g. pages/getting-started.html).",
       "type": "string",
@@ -88,11 +196,18 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["label", "href"],
+        "required": [
+          "label",
+          "href"
+        ],
         "additionalProperties": false,
         "properties": {
-          "label": { "type": "string" },
-          "href": { "type": "string" }
+          "label": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string"
+          }
         }
       }
     },
@@ -104,14 +219,20 @@
     "cross_cutting": {
       "description": "Cross-cutting concerns shown as a banner on the context-map overview.",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "domains": {
       "description": "Bounded contexts in the system.",
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "label", "status"],
+        "required": [
+          "id",
+          "label",
+          "status"
+        ],
         "additionalProperties": false,
         "properties": {
           "id": {
@@ -126,7 +247,11 @@
           "status": {
             "description": "Design completion status. Domains with 'not-started' are shown in the overview but are not clickable and do not generate a detail page.",
             "type": "string",
-            "enum": ["partial", "not-started", "design-complete"]
+            "enum": [
+              "partial",
+              "not-started",
+              "design-complete"
+            ]
           },
           "description": {
             "description": "One-line description of the domain's responsibility.",
@@ -135,7 +260,9 @@
           "entities": {
             "description": "Key entities owned by this domain, shown as a subtitle in the diagram.",
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           }
         }
       }
@@ -145,7 +272,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "publisher", "status", "subscribers"],
+        "required": [
+          "name",
+          "publisher",
+          "status",
+          "subscribers"
+        ],
         "additionalProperties": false,
         "properties": {
           "name": {
@@ -159,15 +291,22 @@
           "status": {
             "description": "Implementation status. Applies to all listed subscribers.",
             "type": "string",
-            "enum": ["implemented", "planned"]
+            "enum": [
+              "implemented",
+              "planned"
+            ]
           },
           "subscribers": {
             "description": "One or more domain IDs that consume the event. Each must match a domain id in the domains list. Empty array is valid for events with no current cross-domain consumers.",
             "oneOf": [
-              { "type": "string" },
+              {
+                "type": "string"
+              },
               {
                 "type": "array",
-                "items": { "type": "string" }
+                "items": {
+                  "type": "string"
+                }
               }
             ]
           }
@@ -179,7 +318,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["call", "domain", "status", "callers"],
+        "required": [
+          "call",
+          "domain",
+          "status",
+          "callers"
+        ],
         "additionalProperties": false,
         "properties": {
           "call": {
@@ -193,15 +337,22 @@
           "status": {
             "description": "Implementation status.",
             "type": "string",
-            "enum": ["implemented", "planned"]
+            "enum": [
+              "implemented",
+              "planned"
+            ]
           },
           "callers": {
             "description": "One or more domain IDs that invoke this operation. Each must match a domain id in the domains list.",
             "oneOf": [
-              { "type": "string" },
+              {
+                "type": "string"
+              },
               {
                 "type": "array",
-                "items": { "type": "string" },
+                "items": {
+                  "type": "string"
+                },
                 "minItems": 1
               }
             ]

@@ -141,6 +141,27 @@ describe('routing a domain to a real service', () => {
     assert.equal((await mock.fetch(new Request('http://mock.test/intake/applications'))).status, 200);
     assert.equal(received.length, 1);
   });
+
+  test('a stub outranks a handler too, once', async () => {
+    let handled = 0;
+    const mock = await boot({ routing: [{ domain: 'intake', handler: async (request) => {
+      // Routing a domain also reads its events through the handler: count only the calls to it.
+      if (new URL(request.url).pathname.endsWith('/applications')) handled += 1;
+      return Response.json({ items: [], total: 0 });
+    } }] });
+
+    await mock.fetch(new Request('http://mock.test/mock/stubs/http', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ match: { method: 'GET', url: '/intake/applications' }, response: { status: 503 } }),
+    }));
+
+    assert.equal((await mock.fetch(new Request('http://mock.test/intake/applications'))).status, 503);
+    assert.equal(handled, 0);
+    // Used up: the next call reaches the handler.
+    await mock.fetch(new Request('http://mock.test/intake/applications'));
+    assert.equal(handled, 1);
+  });
 });
 
 describe('routing the events a machine receives', () => {

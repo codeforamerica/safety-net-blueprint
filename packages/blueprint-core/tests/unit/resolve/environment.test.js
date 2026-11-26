@@ -32,14 +32,14 @@ describe('filterEnvironment', () => {
     assert.ok(only(result).paths['/users']);
   });
 
-  test('strips x-environments from survivors', () => {
-    // A resolved contract describes one environment; it should not still be
-    // carrying the question of which.
+  test('keeps x-environments on survivors', () => {
+    // Resolve never takes an annotation away: it still says which
+    // environments the node is for.
     const result = filterEnvironment([doc({
       paths: { '/users': { 'x-environments': ['production'], get: { summary: 'List users' } } },
     })], 'production');
 
-    assert.equal(only(result).paths['/users']['x-environments'], undefined);
+    assert.deepEqual(only(result).paths['/users']['x-environments'], ['production']);
     assert.equal(only(result).paths['/users'].get.summary, 'List users');
   });
 
@@ -82,7 +82,7 @@ describe('filterEnvironment', () => {
     assert.equal(only(result).enabled, true);
   });
 
-  test('filters array items and strips the marker from survivors', () => {
+  test('filters array items and keeps the marker on survivors', () => {
     const result = filterEnvironment([doc({
       servers: [
         { url: 'https://api.example.com', 'x-environments': ['production'] },
@@ -95,7 +95,7 @@ describe('filterEnvironment', () => {
     assert.equal(servers.length, 2);
     assert.equal(servers[0].url, 'https://api.example.com');
     assert.equal(servers[1].url, 'https://common.example.com');
-    assert.equal(servers[0]['x-environments'], undefined);
+    assert.deepEqual(servers[0]['x-environments'], ['production']);
   });
 
   // ---------------------------------------------------------------------------

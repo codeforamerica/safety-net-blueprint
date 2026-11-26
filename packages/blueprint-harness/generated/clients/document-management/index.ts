@@ -2,3 +2,4 @@
 
 export { getDocument, listDocuments, type Options, uploadDocument } from './sdk.gen';
 export type { ClientOptions, Document, DocumentList, DocumentListWritable, DocumentVersion, DocumentVersionWritable, DocumentWritable, DocumentWritable2, GetDocumentData, GetDocumentError, GetDocumentErrors, GetDocumentResponse, GetDocumentResponses, ListDocumentsData, ListDocumentsResponse, ListDocumentsResponses, UploadDocumentData, UploadDocumentError, UploadDocumentErrors, UploadDocumentResponse, UploadDocumentResponses } from './types.gen';
+export * as Events from './events.js';

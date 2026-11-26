@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="blueprint-try-it" content="off"><title>Signing in</title></head>
+<body><p>Signing in…</p>
+<script>
+// The provider sent the visitor here, with a token or a code after # or ?.
+// The page that opened this window finishes signing in (try-it/sign-in.js).
+if (window.opener) window.opener.postMessage({ blueprintSignIn: { hash: location.hash.slice(1), search: location.search.slice(1) } }, '*');
+window.close();
+</script>
+<!-- the site's routing -->
+<script src="site-routing.js"></script>
+</body></html>

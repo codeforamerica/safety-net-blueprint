@@ -67,7 +67,7 @@ flowchart LR
   transcript -. "the transcript's events" .-> session
   adapter -. "the session's events:<br/>finished lines, gaps" .-> transcript
   adapter -- "adapter API:<br/>a credential" --> issuer
-  adapter -- "audio out" --> service[(Service, or a relay<br/>in front of one)]
+  adapter -- "audio out" --> service[(Service)]
   service -- "text back" --> adapter
 ```
 
@@ -77,22 +77,22 @@ pause and stop, and it reports what happens by publishing the session's own
 events, which the session, the app and the transcript follow — the app
 hears the same events whoever publishes them. That's a
 [running adapter](../cross-cutting/adapters.md#a-running-adapter). Whether the
-adapter streams to a vendor directly, through a relay the state runs, or to a
-model in the page is its own business; the session and the app can't tell.
+adapter streams to a vendor directly, to a server the state runs in front of
+one, or to a model in the page is its own business; the session and the app
+can't tell.
 
 | Part | API | Defined in | What it does |
 |---|---|---|---|
 | App | — | — | The software in the browser: the staff member's screen. It calls the session's actions — start, pause, resume, stop — through the SDK generated from the contracts, and follows the session's events ([Decision 16](#decision-16-the-apps-actions-go-in-and-the-adapter-reports-by-publishing-the-sessions-events)). |
 | Session | sessions API | `communication-transcription-sessions-openapi.yaml`; its actions, events and reactions in `communication-transcription-sessions-state-machine.yaml` | Keeps track of the connection. Its actions start the transcript, call the transcripts API to pause and resume, and start, pause and stop its adapter; it follows what the adapter publishes, and closes the transcript when the adapter has ended. Usually kept in the page by routing. |
-| Session adapter | adapter API: `startStream`, `pauseStream`, `stopStream` | `communication-transcription-sessions-adapter-openapi.yaml` | Code for one transcription service, running in the page: it gets a credential, captures and streams the audio, turns the service's results into lines, reconnects after a drop, renews its credential, and publishes the session's events — `connected`, `line_updated`, `line_finished`, `disconnected`, `failed`, `ended` — with `publishEvent`. One per service: Amazon Transcribe, Deepgram, a relay, a model in the page. |
-| Session adapter's credentials part | adapter API: `requestCredentials`, and `getCredentialKeys` for an adapter that signs tokens for a relay | `communication-transcription-sessions-adapter-openapi.yaml` | Holds the service's secret, so it runs on a server: it answers the streaming part's `requestCredentials` with where to connect and a credential that lasts minutes, after checking the staff member is signed in ([Decision 11](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service)). Once the streaming part connects, it's out of the picture until a renewal or a reconnect. |
+| Session adapter | adapter API: `startStream`, `pauseStream`, `stopStream` | `communication-transcription-sessions-adapter-openapi.yaml` | Code for one transcription service, running in the page: it gets a credential when its service takes one, captures and streams the audio, turns the service's results into lines, reconnects after a drop, renews its credential, and publishes the session's events — `connected`, `line_updated`, `line_finished`, `disconnected`, `failed`, `ended` — with `publishEvent`. One per service: Amazon Transcribe, Deepgram, Google behind a server the state runs, a model in the page. |
+| Session adapter's credentials part | adapter API: `requestCredentials` | `communication-transcription-sessions-adapter-openapi.yaml` | Holds the service's secret, so it runs on a server: it answers the streaming part's `requestCredentials` with where to connect and a credential that lasts minutes, after checking the staff member is signed in ([Decision 11](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service)). Once the streaming part connects, it's out of the picture until a renewal or a reconnect. |
 | Transcript | transcripts API | `communication-transcripts-openapi.yaml`; its actions, events and reactions in `communication-transcripts-state-machine.yaml` | Keeps the transcript and its rules. It follows the session's `line_finished` and the gap on `connected`, and keeps each line once ([Decision 17](#decision-17-a-line-in-progress-is-tied-to-its-finished-line-by-the-adapters-key)). Sends every change as an event. |
-| Relay | relay API | `communication-transcripts-relay-asyncapi.yaml` | One way an adapter reaches a service a browser can't, such as Google Cloud Speech-to-Text, which takes only gRPC, or a model the state runs itself: a server the state runs, speaking the relay API toward the adapter and the service's API toward the service ([Decisions 12](#decision-12-a-service-with-no-browser-path-sits-behind-a-relay-that-implements-the-blueprints-relay-contract) and [13](#decision-13-the-relay-contract-takes-the-services-common-pattern-and-the-standard-result-names)). Inside the adapter's black box: the session never sees it. |
 | Service | service's API | The vendor's documentation, such as [Amazon Transcribe streaming](https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html) | Turns speech into text: Amazon Transcribe, Deepgram, Whisper, a model the state runs. |
 
 All the blueprint's files are in `blueprint-core/base-contracts/domains/communication/`.
 
-Audio goes from the page to the service, or the relay the adapter streams to,
+Audio goes from the page to the service, or the server the adapter streams to,
 and never through the blueprint. Lines in progress are events nothing keeps;
 only finished lines are kept. The secret never reaches the page. Every diagram
 below starts with the staff member signed in; how they sign in is part of the
@@ -100,14 +100,13 @@ security model in [Identity & Access](../cross-cutting/identity-access.md), and
 the adapter's credentials part checks it before it issues a credential.
 
 The contracts define every part but the adapter's own code: the transcript,
-the session, both parts of the session adapter's interface, the relay, and
-routing, which decides where each part runs. The mock runs the session and the
-transcript, and stands in for the adapter, the service and the relay with
-stubs. The harness's three transcription scenarios, in
+the session, both parts of the session adapter's interface, and routing,
+which decides where each part runs. The mock runs the session and the
+transcript, and stands in for the adapter with stubs. The harness's two
+transcription scenarios, in
 `blueprint-harness/contracts/scenarios/`, play the app's and the adapter's
 parts through every step, each checked against the contracts: a spoken
-conversation (`transcription.arazzo.yaml`), the same through a relay
-(`transcription-relay.arazzo.yaml`), and a chat
+conversation (`transcription.arazzo.yaml`) and a chat
 (`transcription-chat.arazzo.yaml`). Each has a main path and its other
 situations: pausing, a dropped connection, what's rejected and the rest. The
 shape is a general one, for any live stream from the browser to a vendor:
@@ -506,8 +505,7 @@ All in `blueprint-core/base-contracts/domains/communication/`.
 | Events | Generated by resolve beside each API, as `communication-transcripts-events-asyncapi.yaml` and `communication-transcription-sessions-events-asyncapi.yaml`, from the APIs and the state machines' `emits:` |
 | Transcription services, including `whisper` and `none` | `communication-transcripts-registry-transcription-services.yaml` |
 | The session adapter: the streaming operations the session calls, and the credential its credentials part issues (Decisions 11 and 16) | `communication-transcription-sessions-adapter-openapi.yaml` |
-| The contract a relay implements: audio in, text out (Decisions 12 and 13) | `communication-transcripts-relay-asyncapi.yaml` |
-| Shapes the adapter and the relay contract share | `communication-transcripts-schema.yaml` |
+| What the session adapter sends: the session's events, each a reference to its generated channel | `communication-transcription-sessions-adapter-asyncapi.yaml` |
 | Profiles a deployment starts with | `communication-transcripts-config.yaml`, validated by `communication-transcripts-config-schema.yaml` |
 | Sample transcripts | `communication-transcripts-mock-data.yaml` |
 
@@ -526,8 +524,8 @@ All in `blueprint-core/base-contracts/domains/communication/`.
 | 9 | [A dropped connection is a gap, not an event](#decision-9-a-dropped-connection-is-a-gap-not-an-event) | The record shows what was lost, whatever caused it |
 | 10 | [A transcript names its profile; the profile's history is the record](#decision-10-a-transcript-names-its-profile-the-profiles-history-is-the-record) | Profiles change through the API, and their change events say what each said when |
 | 11 | [The adapter asks its credentials part how to stream, in one shape for every service](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service) | Where to connect, a short-lived credential and the settings to send, named as OAuth names a token response |
-| 12 | [A service with no browser path sits behind a relay that implements the blueprint's relay contract](#decision-12-a-service-with-no-browser-path-sits-behind-a-relay-that-implements-the-blueprints-relay-contract) | Google, a self-hosted model, or any service a state fronts itself |
-| 13 | [The relay contract takes the services' common pattern and the standard result names](#decision-13-the-relay-contract-takes-the-services-common-pattern-and-the-standard-result-names) | Binary audio, start/end lifecycle, W3C and Google result names; a signed token in the subprotocol |
+| 12 | [A service a browser can't reach gets an adapter of its own](#decision-12-a-service-a-browser-cant-reach-gets-an-adapter-of-its-own) | Google, a self-hosted model, or any service a state fronts itself; how the adapter reaches it is the adapter's business |
+| 13 | [Superseded: the relay contract's messages](#decision-13-superseded-the-relay-contracts-messages) | There's no relay contract; see Decision 12 |
 | 14 | [The session's states follow WebRTC's, named to match its actions](#decision-14-the-sessions-states-follow-webrtcs-named-to-match-its-actions) | `created`, `connecting`, `connected`, `disconnected`, `paused`, `stopping`, `closed` and `failed`; a state shares its word with the action or event that leads to it |
 | 15 | [Going off the record stops the audio](#decision-15-going-off-the-record-stops-the-audio) | Pausing stops the adapter first, and resuming starts it again |
 | 16 | [The app's actions go in, and the adapter reports by publishing the session's events](#decision-16-the-apps-actions-go-in-and-the-adapter-reports-by-publishing-the-sessions-events) | The session's API is start, pause, resume and stop; the session and the transcript follow what the adapter publishes |
@@ -811,7 +809,7 @@ documentation, November 2026:
 | Service | What the server gets | How the browser presents it | How long it lasts |
 |---|---|---|---|
 | [Amazon Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/streaming-setting-up.html) | A presigned WebSocket URL, with the language and audio format signed into it | The URL is the credential | At most 5 minutes to connect |
-| [Google Cloud Speech-to-Text](https://docs.cloud.google.com/speech-to-text/docs/streaming-recognize) | Nothing: streaming is gRPC only, which a browser cannot open | Through a relay ([Decision 12](#decision-12-a-service-with-no-browser-path-sits-behind-a-relay-that-implements-the-blueprints-relay-contract)) | — |
+| [Google Cloud Speech-to-Text](https://docs.cloud.google.com/speech-to-text/docs/streaming-recognize) | Nothing: streaming is gRPC only, which a browser cannot open | Through a server the state runs ([Decision 12](#decision-12-a-service-a-browser-cant-reach-gets-an-adapter-of-its-own)) | — |
 | [Google Gemini Live](https://aistudio.google.com/docs/live-api/ephemeral-tokens) | An ephemeral token | `access_token` query parameter | 1 minute to connect, 30 to use |
 | [Azure AI Speech](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short#authentication) | A token, and the region it works in | An argument to Azure's SDK, the only browser client | 10 minutes, renewed during a session |
 | [OpenAI Realtime](https://developers.openai.com/api/reference/resources/realtime/subresources/client_secrets/methods/create) | A client secret | A bearer header (WebRTC) or a WebSocket subprotocol | Up to 2 hours, reusable |
@@ -846,9 +844,7 @@ documentation, November 2026:
 - **(C) ✓** One operation on the session adapter's credentials part, answering in
   one shape for every service: the service, the protocol (`websocket` or
   `webrtc`), the URL, the credential as `accessToken` and `tokenType` with
-  `expiresIn`, `connectionParameters`, and — for a relay — the `subprotocol`
-  the connection speaks ([Decision 13](#decision-13-the-relay-contract-takes-the-services-common-pattern-and-the-standard-result-names)).
-  The request says the audio format the adapter will send, which a service may
+  `expiresIn`, and `connectionParameters`. The request says the audio format the adapter will send, which a service may
   sign into the credential.
 
 **Decision:** OAuth's names, with its meaning and in the blueprint's camelCase.
@@ -899,131 +895,58 @@ round trip through the session for something only the adapter uses. The
 adapter's two parts are one adapter, for one service, and the call between
 them stays inside it.
 
-### Decision 12: A service with no browser path sits behind a relay that implements the blueprint's relay contract
+### Decision 12: A service a browser can't reach gets an adapter of its own
 
 **Status:** Decided: C
 
 **What's being decided:** Some services can't be reached from a browser at
 all — Google Cloud Speech-to-Text accepts only gRPC, and a model a state runs
-itself has no browser credentials — so what stands in for the service
-decides whether a deployment can use them.
+itself has no browser credentials — so how a deployment uses one decides
+whether it can.
 
 **Considerations:**
-- Something outside the browser has to receive the audio and pass it on. The
-  mock running in a page can't either: it is code in the same browser.
-- A relay is the state's service, on the service's side. The adapter streams
-  to it as it would to any service, so audio still never passes through the
-  blueprint ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
+- Something outside the browser has to receive the audio and pass it on: a
+  server the state runs in front of the service. The mock running in a page
+  can't, since it's code in the same browser.
+- The adapter streams to that server as it would to any service, so audio
+  still never passes through the blueprint
+  ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
 - A model a state runs on its own servers, such as Whisper or NVIDIA Riva, is
   a real option for a state that doesn't want interview audio sent to a
-  vendor, and has no browser path of its own. A relay also lets a state keep audio inside its own boundary, or change
-  the service behind it without changing the adapter.
+  vendor, and has no browser path of its own.
+- The session and the transcript see the same calls and events whatever the
+  adapter streams to. How the adapter talks to the server in front of a
+  service is inside the adapter's black box, as how it talks to Amazon is.
 
 **Options:**
 - **(A)** Support only services a browser can reach. Google Cloud and
   self-hosted models are out.
-- **(B)** A relay that copies an existing service's protocol, ElevenLabs' say,
-  so that service's adapter works unchanged. The blueprint's design
-  then depends on a vendor's format.
-- **(C) ✓** A relay that implements a relay contract the blueprint defines,
-  in AsyncAPI: one adapter works with any relay, for any service behind it.
-  The operation in [Decision 11](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service)
-  answers with the relay's URL and a credential the relay accepts.
+- **(B)** A relay contract the blueprint defines, in AsyncAPI, which every
+  such server implements, so one adapter works with any of them. The
+  blueprint then defines what's inside an adapter's black box, with its own
+  messages, subprotocol and signed tokens, none of which the session or the
+  transcript ever sees.
+- **(C) ✓** An adapter for that service, like any other, registered for its
+  entry in the transcription-services registry. The state runs a server in
+  front of the service, and the adapter streams to it.
 
-**Decision:** Choosing a service behind a relay means running the relay: a
-deployment that uses one, including a demo in a page, points the adapter at
-wherever the state hosts it. The relay is inside the adapter's black box: the
-session and the transcript work the same with or without one.
+**Decision:** The session adapter is the one contract behind the session. A
+service a browser can't reach is one more adapter: its credentials part
+answers `requestCredentials` with where the state's server is and a credential
+that server accepts, and its streaming part speaks whatever that server
+speaks. The blueprint defines no contract for that connection. A state that
+fronts several services with one server can reuse one adapter's code for all
+of them, registered once for each.
 
-It's called the relay contract, not an audio contract, because it covers the
-whole connection between the adapter and the relay: audio goes in and text
-comes back over the one WebSocket, with one lifecycle and ids that tie the text
-to the stream, and AsyncAPI describes both directions of a channel in one
-document. And it's what a relay implements, as a session adapter implements
-`communication-transcription-sessions-adapter-openapi.yaml`.
+### Decision 13: Superseded: the relay contract's messages
 
-### Decision 13: The relay contract takes the services' common pattern and the standard result names
+**Status:** Superseded by [Decision 12](#decision-12-a-service-a-browser-cant-reach-gets-an-adapter-of-its-own)
 
-**Status:** Decided: C
-
-**What's being decided:** A relay ([Decision 12](#decision-12-a-service-with-no-browser-path-sits-behind-a-relay-that-implements-the-blueprints-relay-contract))
-receives audio from the adapter and sends back what the service heard, so
-the messages it speaks decide what every relay builds and the one adapter
-that talks to any of them.
-
-**Background:** How streaming services shape the connection, from their own
-documentation, November 2026:
-
-| Service | Audio up | Settings | Results down | Ending |
-|---|---|---|---|---|
-| [Deepgram](https://developers.deepgram.com/reference/speech-to-text/listen-streaming) | Binary frames | Query parameters | `Results`: `is_final`, `speech_final`, `alternatives[]`, words with speaker | `CloseStream` |
-| [AssemblyAI](https://www.assemblyai.com/docs/api-reference/streaming-api/streaming-api) | Binary frames | Query parameters | `Turn`: `end_of_turn`, words in ms | `Terminate` → `Termination` |
-| [Speechmatics](https://docs.speechmatics.com/rt-api-ref) | Binary frames | `StartRecognition` → `RecognitionStarted` | `AddPartialTranscript`, `AddTranscript` | `EndOfStream` → `EndOfTranscript` |
-| [Gladia](https://docs.gladia.io/chapters/live-stt/getting-started) | Binary frames | Set when the session is made | `transcript`: `is_final`, speaker, channel | `stop_recording` → `end_session` |
-| [ElevenLabs](https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime) | Base64 in JSON | Query parameters | `partial_transcript`, `committed_transcript` | — |
-| [OpenAI Realtime](https://developers.openai.com/api/docs/guides/realtime-transcription) | Base64 in JSON | `session.update` | `…transcription.delta`, `.completed`; no timing or speakers | — |
-| [Amazon Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/streaming-setting-up.html) | AWS event-stream frames | Signed into the URL | `IsPartial`, `Alternatives[]`, `ChannelId` | An empty audio event |
-| [Google Cloud](https://docs.cloud.google.com/speech-to-text/v2/docs/reference/rpc/google.cloud.speech.v2), [NVIDIA Riva](https://github.com/nvidia-riva/common) | gRPC: config first, then audio | First message | `is_final`, `alternatives[{transcript, confidence, words}]`, `channel_tag` | Close the stream |
-
-No standard defines the connection. The W3C [Web Speech API](https://webaudio.github.io/web-speech-api/)
-names results in a browser — `isFinal`, `alternatives`, `transcript`,
-`confidence` — and is the only standard naming there is; MRCP (RFC 6787) runs
-over SIP, not WebSockets.
-
-**Considerations:**
-- Most services send audio as raw binary frames, which base64 in JSON makes a
-  third larger, and settle on one lifecycle: the adapter starts, streams,
-  and ends, and the service answers its last results before saying it's done.
-- A relay mostly translates Google's or a self-hosted model's results, which
-  are Google-shaped; result names taken from Google and the Web Speech API map
-  from them almost one to one.
-- Deepgram's protocol is the most copied — a self-hosted Whisper server,
-  WhisperLiveKit, speaks it — and Deepgram publishes it in AsyncAPI.
-- Browser code can't send WebSocket pings, so keeping a quiet connection open
-  needs a message of its own.
-
-**Options:**
-- **(A)** Copy Deepgram's protocol. Settings ride in the URL, the names are
-  Deepgram's, and two "final" flags (`is_final`, `speech_final`) mean
-  different things.
-- **(B)** Copy OpenAI's. Audio is base64, and results carry no timing or
-  speakers, which every line needs.
-- **(C) ✓** A message set of the blueprint's, in AsyncAPI, built from what the
-  services share and the standard names: `start` → `started`; audio as binary
-  frames; `keepalive`; `finalize` to flush what's been said; `end` → the last
-  results → `ended`; `result` with `isFinal` and
-  `alternatives[{transcript, confidence, words}]`, its start and end, channel,
-  language and speaker; and `error` with codes after the Web Speech API's.
-
-**Decision:** Three things are the blueprint's own, since no service settles
-them: each result has an id, so a final result replaces its earlier versions
-— Google's have none; times are whole milliseconds from the start of the
-connection — services split between seconds and milliseconds; and speaker
-labels are strings — Riva's are numbers, Google's and Gladia's strings.
-
-The connection is a WebSocket, the one way to stream both ways that every
-browser has and a state can run simply; WebRTC or WebTransport would be another
-server in the AsyncAPI document, offered only to an adapter that names it in
-`requestCredentials`' protocols. The relay speaks the subprotocol
-`blueprint.transcripts.relay.v1` ([RFC 6455](https://www.rfc-editor.org/rfc/rfc6455)'s
-way for a WebSocket to say what it speaks), which `requestCredentials` answers
-with, so the adapter knows it's talking to a relay.
-
-The relay accepts a signed, short-lived JWT ([RFC 7519](https://www.rfc-editor.org/rfc/rfc7519),
-following RFC 8725), which it checks itself: the session adapter's credentials part
-signs it with a private key, naming the relay as its audience and expiring within a minute,
-and the relay checks the signature, audience and expiry against the public keys
-the credentials part publishes as a JSON Web Key Set (RFC 7517), its
-`getCredentialKeys`, at `GET /.well-known/jwks.json`. Every relay can — each is a server, and every server
-language has the libraries — without a call per connection, and the relay can
-check tokens but never make them; a token that can't be revoked does little
-harm in the minute it lasts. An opaque token the relay asks about (RFC 7662)
-could be revoked, but costs a call and an endpoint; the staff member's own
-sign-in token would tie the relay to one identity provider and to no
-transcript. The adapter sends it in the WebSocket subprotocol header, beside
-the subprotocol's name, not in the URL: RFC 6750 says to avoid tokens in URLs,
-which are logged. A deployment with no backend of its own still has the relay's,
-so the relay's deployment runs the adapter's credentials part that signs.
+This decided the messages of a relay contract the blueprint defined, for a
+server in front of a service a browser can't reach. Decision 12 now leaves
+that connection to the service's adapter, so there's no relay contract and
+nothing here to decide. The number stays so the decisions after it keep
+theirs.
 
 ### Decision 14: The session's states follow WebRTC's, named to match its actions
 
@@ -1188,7 +1111,11 @@ what the session's API is and who can tell what happened.
 session calls its adapter's `startStream`, `pauseStream` and `stopStream`,
 which answer at once (`202`) and work on after. The adapter publishes the
 session's events with `publishEvent`, each with the session's id as its
-subject and partition key, so one session's events stay in order.
+subject and partition key, so one session's events stay in order. The
+adapter runs in the browser of the caller who started or resumed the session,
+so it publishes as them. `start` and `resume` record that caller as
+`startedById`, and the session and the transcript ignore an adapter event
+whose `authid` is anyone else's.
 
 | What happens | Who | How | State | What else follows |
 |---|---|---|---|---|
@@ -1249,8 +1176,7 @@ ElevenLabs' lines in progress carry no id at all.
   in progress is an event nothing keeps.
 - An event may be published again after a network error, so whatever keeps a
   line has to recognize it the second time.
-- The relay contract already gives each result an id
-  ([Decision 13](#decision-13-the-relay-contract-takes-the-services-common-pattern-and-the-standard-result-names)).
+- Most services give each result an id; Google's has none.
 
 **Options:**
 - **(A)** The adapter chooses the entry's id. The one record whose id
@@ -1267,7 +1193,7 @@ ElevenLabs' lines in progress carry no id at all.
   session's id and the key, so a line published twice is kept once.
 
 **Decision:** The adapter uses the service's own result id as the key where
-there is one, as there is on a relay, and makes one where there isn't. A
+there is one, and makes one where there isn't. A
 service's result id is unique only within one connection, so the adapter
 makes it unique across reconnects and resumes, for example by putting the
 connection's number in front. A line in progress is only an event; the entry
@@ -1327,7 +1253,7 @@ until they are closed; the profiles the framework provides set 30 minutes.
 |---|---|---|
 | Live transcription of a conversation | Contact-center and meeting platforms transcribe calls as they happen | built — the record and its rules, the session, and the adapter that connects it to a service |
 | Short-lived credentials for streaming | Services issue temporary tokens or signed URLs so a browser never holds the key | built — the session adapter's credentials part issues one, in one shape for every service |
-| A service a browser can't reach | Speech services that take only gRPC, or a model run in-house | built — the relay contract a relay implements; the relay is the state's to run |
+| A service a browser can't reach | Speech services that take only gRPC, or a model run in-house | built — an adapter for the service, streaming to a server the state runs in front of it |
 | Telling speakers apart | Transcription services label speakers or channels | partial — each line keeps the service's label and a role mapped from it |
 | Going off the record | Recording controls pause and resume | partial — pauses are kept in the timeline and enforced |
 | Removing sensitive details from the text | Many services can redact personal information | gap |
@@ -1336,7 +1262,7 @@ until they are closed; the profiles the framework provides set 30 minutes.
 ## References
 
 - [Communication](communication.md) — the domain transcripts are a capability of
-- [Browser-to-Vendor Stream](../cross-cutting/browser-vendor-stream.md) — the general shape the session, its adapter and the relay follow
+- [Browser-to-Vendor Stream](../cross-cutting/browser-vendor-stream.md) — the general shape the session and its adapter follow
 - [Adapter Pattern](../cross-cutting/adapters.md#a-running-adapter) — the running adapter the session adapter is
 - [Inter-Domain Communication](../inter-domain-communication.md#who-publishes-an-event) — who publishes an event, events from outside the server, and where the event bus runs
 - [Contract-Driven Architecture](../contract-driven-architecture.md) — contract artifacts and the adapter pattern

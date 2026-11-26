@@ -2,8 +2,8 @@
  * Filter a contract set down to one environment.
  *
  * A node carrying `x-environments` is kept only when the target environment is
- * listed, and the marker is stripped from whatever survives — a resolved
- * contract describes one environment and should not still be asking which.
+ * listed. The marker stays on whatever survives, as every annotation does
+ * through resolve: it still says which environments the node is for.
  *
  * With no target environment this is a no-op: every node is kept, markers
  * included, because nothing has been decided yet.
@@ -43,7 +43,7 @@ export function filterEnvironment(docs, envTarget) {
  *
  * @param {*} node
  * @param {string} envTarget
- * @param {() => void} onTouched - Called once per node removed or stripped
+ * @param {() => void} onTouched - Called once per node removed
  * @returns {*} The filtered node, or null if it should be removed
  */
 function filterNode(node, envTarget, onTouched) {
@@ -59,12 +59,9 @@ function filterNode(node, envTarget, onTouched) {
   }
 
   if (!includedInEnvironment(node, envTarget)) return null;
-  if (MARKER in node) onTouched();
 
   const result = {};
   for (const [key, value] of Object.entries(node)) {
-    if (key === MARKER) continue;
-
     const filtered = filterNode(value, envTarget, onTouched);
     // A removed child is dropped; a removed array element was already filtered
     // out above, so only object-valued children can come back null here.

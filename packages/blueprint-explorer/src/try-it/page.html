@@ -66,14 +66,13 @@
   /* A long title wraps under itself, not under its number. */
   .op.step .n { flex: none; }
   .op.step .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  /* How a step travels: an HTTP call, an event on the stream, or a WebSocket message. */
+  /* How a step travels: an HTTP call, or an event on the stream. */
   .via {
     flex: none; align-self: center; font-family: var(--mono); font-size: .62rem; font-weight: 600;
     padding: 0 .3rem; border-radius: 3px; border: 1px solid; line-height: 1.5;
   }
   .via-http { color: #555; background: #f2f2f2; border-color: #dcdcdc; }
   .via-event { color: #24613a; background: #e7f4ea; border-color: #bcdcc5; }
-  .via-ws { color: #5d2f7a; background: #f1e8f6; border-color: #d7c2e4; }
   /* Something the step can't show, which a "Not shown:" bullet names. */
   .via-workflow { color: #1f4f86; background: #e6f0fb; border-color: #b9d2ef; }
   .panel ol.inner { margin: .6rem 0 0; padding-left: 0; list-style: none; font-size: .88rem; }
@@ -306,6 +305,10 @@
   .tour-picker { display: block; margin: 0 0 .8rem; }
   .tour-picker span { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .25rem; }
   .tour-picker select { width: 100%; }
+  .tour-choice { margin: 0 0 .8rem; }
+  .tour-choice .tour-picker { margin-bottom: .4rem; }
+  .start-over { font: 600 12px system-ui, sans-serif; padding: .3rem .7rem; border-radius: 4px; border: 1px solid #2B1A78; background: #fff; color: #2B1A78; cursor: pointer; }
+  .start-over:disabled { opacity: .5; cursor: default; }
   ul.checks { list-style: none; padding: 0; margin: .5rem 0 0; font-family: var(--mono); font-size: .78rem; }
   ul.checks .passed { color: var(--ok); }
   ul.checks .failed { color: var(--bad); }
@@ -336,12 +339,17 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, awayFrom, inEnvironment } =
   globalThis.BlueprintMock;
 
-// Where this explorer keeps the mock's records between its pages: under the
-// mock's own folder, which every page that runs it shares.
-const records = { scope: new URL('../mock/', location.href).href, version: globalThis.BlueprintContractsVersion };
+// The site as the picked environment has it (environments.js), and where this
+// explorer keeps the mock's records between its pages: under the mock's own
+// folder, which every page that runs it shares, apart for each environment.
+// Scenarios run against the mock, so always in the site's first environment, the sandbox.
+const site = inEnvironment({
+  contracts: globalThis.BlueprintContracts, version: globalThis.BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
+}, { first: true });
+const records = { scope: site.scope, version: site.version };
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, text = '', className = '') => {
@@ -362,7 +370,6 @@ const pageConfig = (() => {
 
 let docs;          // every document in the set
 let mock;          // the server derived from them
-let session;       // how it was started, and how to save it for the next page
 // What the page is showing: the application walk-through, or one of the
 // contract set's Arazzo scenarios by path — which step of it, and what its
 // last run answered, by workflow and step.
@@ -378,10 +385,10 @@ let tourScope = null;           // the workflows the run covers, when it started
 let tourLast = null;            // the last step this run ran, by workflow/step
 let branchClosed = false;       // the branch being walked, closed in the list down the side
 
-/** The contract set, which contracts.js beside the page defines. */
+/** The contract set, which contracts.js beside the page defines, in the picked environment. */
 const loadContracts = async () => {
   if (!globalThis.BlueprintContracts) throw new Error('contracts.js did not load');
-  return globalThis.BlueprintContracts;
+  return site.contracts;
 };
 
 // ── Reading the contracts ───────────────────────────────────────────────────
@@ -663,23 +670,12 @@ const valueFor = (declared, doc) => {
  * the contract set, and the time it takes is printed because it is the
  * claim: an entire backend, in about as long as a keystroke.
  */
-let derivedFrom;   // the contract set the server was derived from
-const derive = async ({ seed = true, artifact, restore = false, keepWalk = false } = {}) => {
-  const set = artifact ?? contracts;
-  derivedFrom = set;
+const derive = async ({ seed = true } = {}) => {
+  const set = contracts;
   docs = extract(set, 'docs');
-  // Restored, with what an earlier page left; this page leaves what it holds for the next.
-  session = await startMock({ contracts: set, ...records, seed, restore, basePath });
-  mock = session.mock;
-  // The control panel shows this mock, and starts it over.
-  hostMock({
-    ...session,
-    mock: () => mock,
-    restart: derive,
-    // Routing changed: the same records and stubs, and the walk carries on.
-    reroute: () => derive({ seed: session.seeded, artifact: derivedFrom, restore: true, keepWalk: true }),
-  });
-  if (keepWalk) return;
+  // A mock of the page's own, fresh each time: nothing from the API reference
+  // pages' mock comes in, and nothing this one does goes back to them.
+  ({ mock } = await startMock({ contracts: set, ...records, seed, basePath, shared: false }));
 
   // The system is new, so nothing the walk did to the old one still holds:
   // the records it made are gone with the store that held them.
@@ -725,12 +721,6 @@ const GROUPS = [
     title: 'Events',
     about: 'Messages an API sends or receives, as its AsyncAPI document declares them: what happened, for whoever is following.',
     holds: (kind) => kind === 'message',
-  },
-  {
-    id: 'ws',
-    title: 'WebSocket',
-    about: 'Messages over a connection an AsyncAPI document describes, such as the relay contract\'s: what the client and the service say to each other.',
-    holds: (kind) => kind === 'ws',
   },
   {
     id: 'control',
@@ -910,20 +900,13 @@ const describe = (step) => {
   return { title: first.trim().replace(/\s+/g, ' ') || step.stepId, points };
 };
 
-/**
- * How a step travels: `ws` for a message on a connection an AsyncAPI document
- * with servers describes, such as the relay's; `event` for one on the event
- * stream; `http` for a call.
- */
-const transportOf = (doc, step, ops) => {
+/** How a step travels: `event` for a message on the event stream; `http` for a call. */
+const transportOf = (step) => {
   if (step.workflowId !== undefined) return 'workflow';
   if (step.action === undefined && step.channelPath === undefined) return 'http';
-  const named = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId ?? '');
-  const source = named && (doc.content.sourceDescriptions ?? []).find((candidate) => candidate.name === named[1]);
-  const ref = source && ops.get(`${String(source.url).split('/').pop()}#${named[2]}`);
-  return ref?.reached === 'servers' ? 'ws' : 'event';
+  return 'event';
 };
-const TRANSPORT_TAGS = { http: 'HTTP', event: 'Event', ws: 'WS', workflow: 'Steps' };
+const TRANSPORT_TAGS = { http: 'HTTP', event: 'Event', workflow: 'Steps' };
 
 /**
  * The workflow a step runs, and the document it's in: the scenario's own, by
@@ -947,7 +930,7 @@ const gapTag = (step) => {
   return tag;
 };
 
-/** Whether a step calls the mock's own routes, as one standing in for an adapter, a service or a relay does. */
+/** Whether a step calls the mock's own routes, as one standing in for an adapter or a service does. */
 const isStub = (doc, step) => {
   const named = /^\$sourceDescriptions\.([^.]+)\./.exec(step.operationId ?? '');
   const source = named && (doc.content.sourceDescriptions ?? []).find((candidate) => candidate.name === named[1]);
@@ -1064,35 +1047,14 @@ const sectionIntroOf = (workflow) => {
 /** The run of the tour on this server, started at its first step. */
 const runnerFor = (doc) => {
   if (!tourRunner) {
-    // Each call a step makes goes in the control panel's activity log, with
-    // its response and the events it set off, as Send's do.
-    const fetchHere = async (request) => {
+    const fetchHere = (request) => {
       const { pathname, search } = new URL(request.url);
-      const time = new Date().toISOString();
-      const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.clone().text();
-      const started = performance.now();
-      const response = await mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
-      const ms = Math.round(performance.now() - started);
-      // A stream doesn't end, so its body is left out.
-      let shown = '';
-      if (!(response.headers.get('content-type') ?? '').includes('text/event-stream')) {
-        const text = await response.clone().text();
-        try { shown = JSON.stringify(JSON.parse(text), null, 2); } catch { shown = text; }
-      }
-      let eventIds = [];
-      if (request.method !== 'GET' && response.ok) {
-        const listed = await mock.fetch(new Request(new URL(`${basePath}/platform/events?start=${encodeURIComponent(time)}&sort=time&limit=100`, location.origin)));
-        if (listed.ok) eventIds = ((await listed.json())?.items ?? []).map((event) => event.id);
-      }
-      logRequest(records, { time, method: request.method, path: pathname + search, body: body || undefined, status: response.status, ok: response.ok, ms, shown, eventIds });
-      return response;
+      return mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
     };
-    // The mock's WebSocket, for steps on a connection an AsyncAPI document
-    // describes, such as the relay's.
     // A branched scenario runs one branch's workflows, from where the run
     // started; another runs every workflow no step runs.
     const workflows = isBranched(doc) ? (tourScope ?? workflowsOf(doc).map((workflow) => workflow.workflowId)) : undefined;
-    tourRunner = startScenario(doc.content, { fetch: fetchHere, operations: scenarioOperations(), WebSocket: mock.WebSocket, documents: arazzoDocs(), workflows });
+    tourRunner = startScenario(doc.content, { fetch: fetchHere, operations: scenarioOperations(), documents: arazzoDocs(), workflows });
     tourLast = null;
   }
   return tourRunner;
@@ -1279,7 +1241,7 @@ const tourPicker = () => {
   // A scenario of a framework capability, which it declares in
   // info.x-capability, is grouped with the others of that capability; one of
   // no capability stands on its own, first. Within a group, by file name
-  // without its extension, so `transcription` comes before `transcription-relay`.
+  // without its extension, so `transcription` comes before `transcription-chat`.
   const stem = (doc) => fileNameOf(doc.relativePath).replace(/\.arazzo\.ya?ml$/, '');
   const optionOf = (doc) => {
     const option = el('option', doc.content.info?.title ?? doc.relativePath);
@@ -1302,8 +1264,14 @@ const tourPicker = () => {
   picker.value = currentScenario()?.relativePath ?? '';
   // Another tour starts on fresh data, so nothing the last one made is in its way.
   picker.onchange = async () => { tour = picker.value; tourBranch = 'main'; await derive({ seed: true }); };
+  // The same, for the scenario showing: a fresh mock with the sample data, and the run from the top.
+  const over = Object.assign(el('button', 'Start over', 'start-over'), { type: 'button' });
+  over.title = 'Start the scenario again on a fresh mock with the sample data';
+  over.onclick = async () => { over.disabled = true; tourBranch = 'main'; await derive({ seed: true }); over.disabled = false; };
   field.append(picker);
-  return field;
+  const wrap = el('div', '', 'tour-choice');
+  wrap.append(field, over);
+  return wrap;
 };
 
 /**
@@ -1433,9 +1401,9 @@ const stepItem = (doc, entries, index, ops) => {
   const run = Boolean(tourResults.get(entry.key)?.passed);
   // A call to the mock's own routes registers a stub: setup, not the flow.
   const stub = isStub(doc, entry.step);
-  const via = stub ? 'stub' : transportOf(doc, entry.step, ops);
+  const via = stub ? 'stub' : transportOf(entry.step);
   const tag = el('span', stub ? 'Stub' : TRANSPORT_TAGS[via], `via via-${via}`);
-  tag.title = { http: 'An HTTP call', event: 'An event, heard on the event stream', ws: 'A message over a WebSocket', workflow: 'Several steps, run as one: another workflow', stub: 'Registers a stub: the mock answers for a part this scenario doesn\'t run' }[via];
+  tag.title = { http: 'An HTTP call', event: 'An event, heard on the event stream', workflow: 'Several steps, run as one: another workflow', stub: 'Registers a stub: the mock answers for a part this scenario doesn\'t run' }[via];
   if (stub) button.classList.add('stub');
   const title = el('span', describe(entry.step).title, 'title');
   const between = betweenLine(doc, entry.step);
@@ -1587,10 +1555,8 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
 
   // A step that sends or receives a message (Arazzo 1.1) is an event's, not an HTTP call's.
   const messaging = step.action !== undefined || step.channelPath !== undefined;
-  // On a connection of its own (the relay's) it's a WebSocket message; else an event.
-  const overWs = messaging && Boolean(sending?.message ?? result?.request?.message);
   // A step that runs another workflow has no one kind: its steps each have theirs.
-  const group = step.workflowId !== undefined ? null : messaging ? GROUPS.find((candidate) => candidate.holds(overWs ? 'ws' : 'message'))
+  const group = step.workflowId !== undefined ? null : messaging ? GROUPS.find((candidate) => candidate.holds('message'))
     : op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
   panel.append(el('p', `Workflow · ${sectionOf(entry.workflow)}`, 'sectionline'));
   // The workflow's introduction, on its first step when a step at a time; the
@@ -1657,14 +1623,13 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     // number and the result; its checks name an inner step that failed.
     for (const inner of workflow?.steps ?? []) {
       const item = el('li', describe(inner).title);
-      const via = isStub(home, inner) ? 'stub' : transportOf(home, inner, ops);
+      const via = isStub(home, inner) ? 'stub' : transportOf(inner);
       item.append(el('span', via === 'stub' ? 'Stub' : TRANSPORT_TAGS[via], `via via-${via} tag`));
       list.append(item);
     }
     panel.append(list);
   } else if (result && !result.response && step.action !== 'send') {
-    // A message received: the event, or the frame, as it arrived. One sent
-    // over a WebSocket is shown above, as what was sent.
+    // A message received: the event, as it arrived.
     const heard = el('pre', '', result.passed ? '' : 'bad');
     heard.append(el('span', result.message ? 'Received' : 'Nothing received', 'label'),
       document.createTextNode(result.message ? JSON.stringify(result.message.payload, null, 2) : ''));
@@ -2272,9 +2237,6 @@ const renderStage = async () => {
   stage.replaceChildren();
   const doc = currentScenario();
   if (doc) renderTourStage(stage, doc);
-  // A step run changes what the mock holds: the next page gets it, and the control panel shows it.
-  session?.keep();
-  mockChanged();
 };
 
 let contracts;
@@ -2285,7 +2247,7 @@ const boot = async () => {
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.has('tour')) tour = hash.get('tour');
 
-  await derive({ seed: true, restore: true });
+  await derive({ seed: true });
   // After the first derive, never before: this renders, and there is
   // nothing to render until the server exists.
   renderGroups();

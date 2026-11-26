@@ -1,12 +1,17 @@
 /**
- * Auth context extraction for the mock server.
+ * Who's calling the mock.
  *
- * Resolves the caller's identity from the request using these sources, in order:
- *   1. X-Caller-Id header — explicit mock/dev convention
- *   2. Bearer JWT — decodes the payload (no signature verification) and reads
- *      the `userId` claim (User Service UUID)
- *
- * Returns null when no recognizable auth context is present.
+ * The contract set says how callers sign in: the shared schemes in
+ * base/components/security-schemes.yaml, as the environment has them, each
+ * naming in `x-caller` where the caller's id, roles and anything else come
+ * from. The mock reads each request the way those schemes say (callerReader)
+ * before its handler runs (identify), and everything that asks who's calling
+ * reads that: a token's claims for a bearer, OAuth or OpenID Connect scheme,
+ * a header for one in a header. It never checks a token's signature: the mock
+ * protects nothing, and in a page, whoever runs it controls it. A request no
+ * scheme identifies falls back to the X-Caller-Id and X-Caller-Roles headers,
+ * the framework's default, so a scenario or a test that sends them works
+ * whatever the environment's scheme.
  */
 
 /**
@@ -34,6 +39,9 @@ function headerOf(req, name) {
  * @returns {{ userId: string, sub?: string, roles?: Array } | null}
  */
 export function extractAuthContext(req) {
+  const known = identified.get(req);
+  if (known?.id) return { userId: known.id, roles: known.roles };
+
   // 1. X-Caller-Id header (mock/dev convention)
   const callerId = headerOf(req, 'x-caller-id');
   if (callerId) {
@@ -68,6 +76,8 @@ export function extractAuthContext(req) {
  */
 export function extractCallerRoles(req) {
   if (systemRequests.has(req)) return systemRoles();
+  const known = identified.get(req);
+  if (known?.roles) return known.roles;
   const header = headerOf(req, 'x-caller-roles');
   return header ? header.split(',').map(r => r.trim()).filter(Boolean) : [];
 }
@@ -137,7 +147,113 @@ export function areSystemRoles(roles) {
  * @returns {string|null}
  */
 export function callerHeader(req, name) {
+  if (name === 'x-caller-id' && identified.get(req)?.id) return identified.get(req).id;
   return headerOf(req, name) ?? null;
+}
+
+/**
+ * The caller as `$caller` has them: their id, their roles, and whatever else
+ * the scheme's `x-caller` names, such as the counties a state adds.
+ *
+ * @param {{ headers?: Headers|Record<string,string> }} req
+ * @returns {{ id: string|null, roles: string[] } & Record<string, unknown>}
+ */
+export function callerOf(req) {
+  const known = identified.get(req);
+  return { ...(known ?? {}), id: callerHeader(req, 'x-caller-id'), roles: extractCallerRoles(req) };
+}
+
+// The caller each request was identified as (identify), kept beside the
+// request, so no handler reads a header the scheme doesn't name.
+const identified = new WeakMap();
+
+/**
+ * The same sender for a request rebuilt from another, as the route table
+ * rebuilds one at a path without the site's prefix: who it's from, whether
+ * the system sent it, and what caused it.
+ *
+ * @param {Request} from
+ * @param {Request} to
+ * @returns {Request} `to`
+ */
+export function sameSender(from, to) {
+  if (identified.has(from)) identified.set(to, identified.get(from));
+  if (systemRequests.has(from)) systemRequests.add(to);
+  if (causes.has(from)) causes.set(to, causes.get(from));
+  return to;
+}
+
+/**
+ * Remember who a request is from, as callerReader read it.
+ *
+ * @param {Request} req
+ * @param {object|null} caller
+ * @returns {Request} The same request
+ */
+export function identify(req, caller) {
+  if (caller) identified.set(req, caller);
+  return req;
+}
+
+/** A field's value as a list: a claim may be a list, or a comma-separated string. */
+const listOf = (value) => (Array.isArray(value) ? value.map(String)
+  : typeof value === 'string' ? value.split(',').map((v) => v.trim()).filter(Boolean)
+    : value == null ? undefined : [String(value)]);
+
+/**
+ * How to read a request's caller, from the environment's shared schemes:
+ * the first that identifies the request wins. A scheme in a header gives the
+ * id as that header's value, and its `x-caller` names the headers for the
+ * rest; a bearer, OAuth 2.0 or OpenID Connect scheme reads the token's claims
+ * `x-caller` names (`sub` and `roles` when it names none). A cookie is the
+ * server's own session, which the mock can't look up, so it identifies no
+ * one.
+ *
+ * @param {Record<string, object>} schemes - The shared schemes, by name
+ * @returns {(req: Request) => (Record<string, unknown> & { id: string, roles?: string[] }) | null}
+ */
+export function callerReader(schemes) {
+  const readers = Object.values(schemes ?? {}).filter((scheme) => scheme && typeof scheme === 'object').map((scheme) => {
+    const fields = scheme['x-caller'] ?? {};
+    if (scheme.type === 'apiKey' && scheme.in === 'header' && scheme.name) {
+      return (req) => {
+        const id = headerOf(req, String(scheme.name).toLowerCase());
+        if (!id) return null;
+        const caller = { id };
+        for (const [field, header] of Object.entries(fields)) {
+          if (field === 'id') continue;
+          const value = headerOf(req, String(header).toLowerCase());
+          if (value !== undefined) caller[field] = field === 'roles' ? listOf(value) : value;
+        }
+        return caller;
+      };
+    }
+    const bearer = (scheme.type === 'http' && String(scheme.scheme).toLowerCase() === 'bearer')
+      || scheme.type === 'oauth2' || scheme.type === 'openIdConnect';
+    if (!bearer) return null;
+    return (req) => {
+      const header = headerOf(req, 'authorization');
+      if (!header?.startsWith('Bearer ')) return null;
+      let claims;
+      try { claims = decodeJwtPayload(header.slice(7)); } catch { return null; }
+      const named = { id: 'sub', roles: 'roles', ...fields };
+      const id = claims[named.id];
+      if (id == null) return null;
+      const caller = { id: String(id) };
+      for (const [field, claim] of Object.entries(named)) {
+        if (field === 'id' || claims[claim] === undefined) continue;
+        caller[field] = field === 'roles' ? listOf(claims[claim]) : claims[claim];
+      }
+      return caller;
+    };
+  }).filter(Boolean);
+  return (req) => {
+    for (const read of readers) {
+      const caller = read(req);
+      if (caller) return caller;
+    }
+    return null;
+  };
 }
 
 // The event that caused a request the mock sends itself — an action calling an
@@ -201,7 +317,8 @@ function randomHex(bytes) {
 function decodeJwtPayload(token) {
   const parts = token.split('.');
   if (parts.length !== 3) throw new Error('Invalid JWT format');
-  // base64url → base64 → buffer → string
+  // base64url → base64 → text, with atob, which a page and Node both have
   const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
 }

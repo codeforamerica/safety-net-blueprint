@@ -41,9 +41,9 @@ export { runScenario, startScenario, operationIndex, controlOperations } from '.
  * @param {boolean} [options.seed] - Seed from the artifact's mock-data documents
  * @param {Array} [options.routing] - Domains, APIs and operations something
  *   else answers — a service at a URL, or a `handler` function this page
- *   passes — as `schemas/routing-schema.json` describes the entries.
+ *   passes — as blueprint-core's `schemas/routing-schema.yaml` describes the entries.
  *   Configuration for this page, not part of the contract set.
- * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[], routed: string[], stopFollowing: () => void, WebSocket: typeof WebSocket }>}
+ * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[], routed: string[], stopFollowing: () => void }>}
  *   `stopFollowing` stops reading the events of services routing sends to,
  *   which starts when a state machine here reacts to one (routed-events.js).
  */
@@ -97,7 +97,5 @@ export async function createMockServer({
     { store, instance, readDocs: () => docs, seeded: seed, baseUrl, basePath, routing },
   );
   for (const key of routed) console.log(`  ROUTE ${key}`);
-  // A WebSocket connected in-process to the documents the mock serves one
-  // for, such as a relay's (ws.js).
-  return { fetch, routes, store, endpoints, routed, stopFollowing, WebSocket: instance.ws.WebSocket };
+  return { fetch, routes, store, endpoints, routed, stopFollowing };
 }

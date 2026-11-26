@@ -31,6 +31,7 @@ export const listSuggestions = <ThrowOnError extends boolean = false>(options?: 
     requestValidator: async (data) => await zListSuggestionsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListSuggestionsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/suggestions',
     ...options
 });
@@ -76,6 +77,7 @@ export const createSuggestion = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zCreateSuggestionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateSuggestionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/suggestions',
     ...options,
     headers: {
@@ -93,6 +95,7 @@ export const getSuggestion = <ThrowOnError extends boolean = false>(options: Opt
     requestValidator: async (data) => await zGetSuggestionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetSuggestionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/suggestions/{suggestionId}',
     ...options
 });
@@ -108,6 +111,7 @@ export const acceptSuggestion = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zAcceptSuggestionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zAcceptSuggestionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/suggestions/{suggestionId}/accept',
     ...options,
     headers: {
@@ -125,6 +129,7 @@ export const dismissSuggestion = <ThrowOnError extends boolean = false>(options:
     requestValidator: async (data) => await zDismissSuggestionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zDismissSuggestionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/suggestions/{suggestionId}/dismiss',
     ...options,
     headers: {
@@ -142,6 +147,7 @@ export const expireSuggestion = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zExpireSuggestionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zExpireSuggestionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/suggestions/{suggestionId}/expire',
     ...options
 });

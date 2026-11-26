@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Left as it is by the explorer's build: no Try it on this page. -->
+<meta name="blueprint-try-it" content="off">
+<title>Fake sign-in</title>
+<style>
+  :root { --ink: #1a1a1a; --muted: #555; --line: #d8d5f0; --accent: #2B1A78; --bg: #f6f5fd; }
+  body { margin: 0; font: 15px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--bg); display: grid; place-items: center; min-height: 100vh; padding: 16px; box-sizing: border-box; }
+  main { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 24px; max-width: 360px; width: 100%; box-sizing: border-box; }
+  h1 { font-size: 1.2rem; margin: 0 0 .5rem; color: var(--accent); }
+  p { color: var(--muted); margin: 0 0 1rem; }
+  label { display: block; font-weight: 600; margin-bottom: .3rem; }
+  input { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; margin-bottom: 1rem; }
+  button { font: 600 14px system-ui, sans-serif; padding: 6px 18px; border-radius: 4px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fake sign-in</h1>
+  <p>The harness's stand-in identity provider. It signs in anyone, by any name, so signing in can be tried with nothing running. A real site names its own provider in its contracts' security scheme.</p>
+  <form>
+    <label for="name">Sign in as</label>
+    <input id="name" value="Pat Caseworker" autocomplete="off" required>
+    <button type="submit">Sign in</button>
+  </form>
+</main>
+<script>
+// OAuth 2.0's implicit flow: back to the redirect URI with a token after #.
+// The token is a JWT with the name as a claim, unsigned, as only this stand-in
+// would issue one.
+const asked = new URLSearchParams(location.search);
+const encode = (value) => btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+document.querySelector('form').onsubmit = (event) => {
+  event.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const now = Math.floor(Date.now() / 1000);
+  const token = `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: name, name, aud: asked.get('client_id'), iat: now, exp: now + 3600 })}.`;
+  const back = new URLSearchParams({ access_token: token, token_type: 'Bearer', expires_in: '3600', state: asked.get('state') ?? '' });
+  location.href = `${asked.get('redirect_uri')}#${back}`;
+};
+</script>
+</body>
+</html>

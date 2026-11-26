@@ -1256,6 +1256,7 @@ components:
                 - scheduled
                 - in_progress
                 - completed
+              x-enum-source: states[].id
             submittedAt:
               type:
                 - string
@@ -1277,6 +1278,7 @@ components:
               enum:
                 - snap_standard
                 - medicaid_standard
+              x-enum-source: slaTypes[].id
             slaInfo:
               type: array
               readOnly: true
@@ -1634,6 +1636,9 @@ components:
                 - scheduled
                 - in_progress
                 - completed
+              x-enum-source:
+                source: states[].id
+                machine: Interview
             startedAt:
               type: string
               format: date-time
@@ -1822,6 +1827,7 @@ components:
                     - scheduled
                     - in_progress
                     - completed
+                  x-enum-source: states[].id
                 programsAppliedFor:
                   type: array
                   items:
@@ -2184,3 +2190,8 @@ components:
             - "null"
           format: date
           description: The date the document itself bears, which is not the date it arrived.
+  securitySchemes:
+    callerId:
+      $ref: ../../base/components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

@@ -9,9 +9,8 @@ summary: >
   The browser streams to a vendor directly, for something live such as
   speech, while the blueprint keeps the result. A session in the page tracks
   the connection; its running adapter streams to the vendor and reports by
-  publishing the session's events; the adapter's credentials part issues
-  short-lived credentials; and a relay stands in for a vendor the browser
-  can't reach.
+  publishing the session's events; and the adapter's credentials part issues
+  short-lived credentials.
 
 use_when:
   - >-
@@ -26,8 +25,8 @@ use_when:
   - >-
     The connection belongs to one browser tab and doesn't need to outlive it.
   - >-
-    The vendor issues browsers short-lived credentials, or a relay the state
-    runs can stand in for one that doesn't.
+    The vendor issues browsers short-lived credentials, or the state runs a
+    server the browser can reach in front of one that doesn't.
 
 do_not_use_when:
   - case: One request and one answer, such as checking a fact with an outside authority.
@@ -75,15 +74,10 @@ rules:
     Between start and connected the session is connecting, so a connection
     that fails to open has somewhere to land.
   - >-
-    Define a relay contract, in AsyncAPI, for vendors a browser can't reach; the
-    state runs the relay, which implements it toward the adapter and speaks the
-    vendor's protocol toward the vendor.
-  - >-
-    Have the relay check the credential during the handshake, before it
-    accepts the connection. When the check fails, the relay refuses the
-    upgrade with HTTP 401, or accepts, sends an error saying the caller isn't
-    allowed, and closes at once with code 1008. Nothing else flows on a
-    connection that failed the check.
+    For a vendor a browser can't reach, write an adapter for it like any
+    other. The state runs a server in front of the vendor, and how the adapter
+    talks to that server is the adapter's own business: define no contract
+    for it, since the session sees the same calls and events either way.
   - >-
     Name the session's states from a standard for a connection's states where
     one fits (WebRTC's), and name actions, states and events with one word each
@@ -101,7 +95,7 @@ rules:
 
 example: >
   Transcription, in the communication domain: the transcription session, the
-  transcript, the transcription session adapter and the relay contract
+  transcript and the transcription session adapter
   (docs/architecture/domains/communication-transcripts.md, "How the parts work
   together" and Decisions 3, 11 to 17).
 

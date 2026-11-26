@@ -108,10 +108,10 @@ So when you add a feature to a tooling package, adding a contract here that exer
 - The scenario the Scenarios page opens with (`first_tour` in `explorer/config.yaml`). Each step's first line is its title in the page, and its bullets are what to notice
 - Written down, not worked out from the contracts, so it reads the same however the set changes
 
-**[`contracts/scenarios/transcription.arazzo.yaml`](contracts/scenarios/transcription.arazzo.yaml)**, **[`transcription-relay.arazzo.yaml`](contracts/scenarios/transcription-relay.arazzo.yaml)** and **[`transcription-chat.arazzo.yaml`](contracts/scenarios/transcription-chat.arazzo.yaml)**
-- Transcribing a conversation three ways: spoken, with the client connecting straight to the service; spoken, through the state's relay; and typed, a chat, with no session or service
+**[`contracts/scenarios/transcription.arazzo.yaml`](contracts/scenarios/transcription.arazzo.yaml)** and **[`transcription-chat.arazzo.yaml`](contracts/scenarios/transcription-chat.arazzo.yaml)**
+- Transcribing a conversation two ways: spoken, with the session's adapter streaming to the service; and typed, a chat, with no session or service
 - Each has a main path (start, the normal use, stop) and other situations (rejections, pausing, a dropped connection, closing after 30 minutes with nothing added and the rest), marked on each workflow with `x-branch` (see `docs/conventions/extensions.yaml`). Each other situation starts from scratch, its first step running the main path's opening by `workflowId`, so it runs on its own
-- Use the same actors, by the same names, in all three, so their steps can be compared
+- Use the same actors, by the same names, in both, so their steps can be compared
 - Calls the sessions and transcripts APIs, and receives the events they send as Arazzo 1.1 AsyncAPI steps (`action: receive`), so a step shows the event the client hears
 - Found by their contract type, not their folder — `scenarios/` is for organizing. Their domain comes from `info.x-domain`, and their capability from `info.x-capability: transcripts`, which groups them in the Scenarios page's list
 - Each runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a scenario on the Scenarios page
@@ -123,8 +123,8 @@ So when you add a feature to a tooling package, adding a contract here that exer
 ### Overlays
 
 **[`contracts/overlays/transcription-profiles.yaml`](contracts/overlays/transcription-profiles.yaml)**
-- Adds three profiles to the framework's profile catalog (`communication-transcripts-config.yaml`), with `append:`, as a state seeds its own: `english-interviews` (the fake service, in English, with no idle timeout), `english-interviews-30-minutes` (the same, closing after 30 minutes with nothing added) and `english-google` (Google Cloud Speech-to-Text, through a relay)
-- The profiles the spoken transcription scenarios start under, by their ids, so none of them begins by adding one. The chat scenario uses the framework's own `typed` profile
+- Adds one profile to the framework's profile catalog (`communication-transcripts-config.yaml`), with `append:`, as a state seeds its own: `fake-secured`, whose service asks you to sign in (`overlays/sign-in.yaml`)
+- The scenarios use the framework's own profiles: `whisper` for a spoken conversation, which the explorer runs in the page, and `typed` for a chat
 
 **[`contracts/overlays/enums.yaml`](contracts/overlays/enums.yaml)**
 - Extends the base `MetricCollection` enum to add `applications` and `determinations`

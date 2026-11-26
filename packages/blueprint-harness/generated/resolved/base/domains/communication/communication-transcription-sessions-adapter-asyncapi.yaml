@@ -1,0 +1,59 @@
+asyncapi: 3.0.0
+x-relationship:
+  type: external
+info:
+  title: Transcription session adapter
+  version: 0.1.0
+  x-domain: communication
+  x-capability: transcripts
+  x-status: alpha
+  description: |
+    The session's events the adapter publishes with `publishEvent`, each with
+    the session's id as its subject and partition key, so one session's
+    events stay in order. The session follows `connected`, `disconnected`,
+    `failed` and `ended`; the transcript follows `line_finished`, and the gap
+    on `connected`; the app shows `line_updated`.
+channels:
+  connected:
+    $ref: ./communication-transcription-sessions-events-asyncapi.yaml#/channels/communication.transcription_session.connected
+  disconnected:
+    $ref: ./communication-transcription-sessions-events-asyncapi.yaml#/channels/communication.transcription_session.disconnected
+  failed:
+    $ref: ./communication-transcription-sessions-events-asyncapi.yaml#/channels/communication.transcription_session.failed
+  line_updated:
+    $ref: ./communication-transcription-sessions-events-asyncapi.yaml#/channels/communication.transcription_session.line_updated
+  line_finished:
+    $ref: ./communication-transcription-sessions-events-asyncapi.yaml#/channels/communication.transcription_session.line_finished
+  ended:
+    $ref: ./communication-transcription-sessions-events-asyncapi.yaml#/channels/communication.transcription_session.ended
+operations:
+  sendConnected:
+    action: send
+    summary: The connection to the service is open, with the stretch nothing was captured in before it as its gap.
+    channel:
+      $ref: "#/channels/connected"
+  sendDisconnected:
+    action: send
+    summary: The connection dropped; the adapter reconnects with a fresh credential and sends connected again.
+    channel:
+      $ref: "#/channels/disconnected"
+  sendFailed:
+    action: send
+    summary: The adapter gave up connecting or reconnecting.
+    channel:
+      $ref: "#/channels/failed"
+  sendLineUpdated:
+    action: send
+    summary: A line in progress, to show.
+    channel:
+      $ref: "#/channels/line_updated"
+  sendLineFinished:
+    action: send
+    summary: A finished line, once for its key; sent again with the same key after a network error.
+    channel:
+      $ref: "#/channels/line_finished"
+  sendEnded:
+    action: send
+    summary: After stopStream, the last line is sent and the connection closed.
+    channel:
+      $ref: "#/channels/ended"

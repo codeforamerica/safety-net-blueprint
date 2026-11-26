@@ -517,7 +517,8 @@ test('Validator Tests', async (t) => {
     const response = createErrorResponse(errors, 422);
 
     assert.strictEqual(response.code, 'VALIDATION_ERROR');
-    assert.strictEqual(response.message, 'The request contains invalid data');
+    // The message names each field and what's wrong with it.
+    assert.strictEqual(response.message, 'The request contains invalid data: name is required; email must match format "email".');
     assert.deepStrictEqual(response.details, errors);
 
     console.log('  ✓ Creates 422 validation error response');
@@ -529,7 +530,7 @@ test('Validator Tests', async (t) => {
     const response = createErrorResponse(errors, 400);
 
     assert.strictEqual(response.code, 'BAD_REQUEST');
-    assert.strictEqual(response.message, 'The request is malformed or contains invalid parameters');
+    assert.strictEqual(response.message, 'The request is malformed or contains invalid parameters: body Invalid JSON.');
     assert.deepStrictEqual(response.details, errors);
 
     console.log('  ✓ Creates 400 bad request response');

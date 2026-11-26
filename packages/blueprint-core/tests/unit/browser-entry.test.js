@@ -105,7 +105,7 @@ test('The /browser entry', async (t) => {
 
   await t.test('exports exactly the portable surface', async () => {
     const browser = await import('../../src/browser.js');
-    assert.deepStrictEqual(Object.keys(browser).sort(), ['extract', 'generate'],
+    assert.deepStrictEqual(Object.keys(browser).sort(), ['applyEnvironment', 'extract', 'generate', 'validateRouting'],
       'Adding an export here is additive and fine — update this list. Removing one is breaking.');
   });
 

@@ -76,10 +76,15 @@
   /* An operation's sections: plain headings and lists, one box only, the card. */
   /* Closed, an operation is one line tinted by its method, as Swagger lists
      them: method, path, name. Open, it's the two columns. */
-  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  /* The request (method and path) on its own line, the card's full width;
+     the summary, operationId and links on the line below. */
+  .op-line { flex: 1 1 100%; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .op-meta { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding-left: 20px; }
+  /* The path keeps its room and breaks only after a slash; the operationId shrinks first. */
+  .op-path { font: 600 13px monospace; color: #1a1a1a; min-width: 0; overflow-wrap: anywhere; }
+  .op-path > span { white-space: nowrap; }
   .op-name { font-size: 13px; color: #555; }
-  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .op-id { font-size: 11px; color: #999; flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
   .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
   .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
@@ -226,6 +231,7 @@
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
       <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">REST API for the Document Management domain — the central store for uploaded files and their metadata across all safety net programs.</p><p style="margin:0 0 6px;"><strong>Upload model:</strong> A document and its first version are created atomically via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">POST /documents</code> (multipart/form-data). Subsequent versions are uploaded via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">POST /documents/{documentId}/document-versions</code>. File content is delivered via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">GET /document-versions/{documentVersionId}/content</code> (proxy by default; states may overlay to redirect).</p><p style="margin:0 0 6px;"><strong>Context passthrough:</strong> Callers attach correlation context to a document via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">metadata</code> at creation or via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">PUT /documents/{documentId}/metadata/{domain}</code> after the fact. Metadata is echoed in events so downstream consumers can correlate without additional lookups. Keys are structured as nested objects per domain namespace — <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">{ "intake": { "verificationId": "..." } }</code>.</p><p style="margin:0 0 6px;"><strong>Document types:</strong> Baseline types are seeded from <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">document-management-config.yaml</code>. States add program-specific types at runtime via <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">POST /document-types</code>.</p><blockquote style="border-left:3px solid #ddd;padding:4px 10px;margin:6px 0;color:#666;font-style:italic;"><strong>Status: Alpha</strong> — Breaking changes expected.</blockquote></div></div>
       
+      
     </div><section id="section-documents" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Documents</h2>
@@ -233,18 +239,20 @@
       </div>
       <div id="op-get-documents" class="content-item op-get" data-try-op="listDocuments" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/documents</code>
-        <span class="op-name">List documents</span>
+        <code class="op-path"><span></span>/<wbr><span>documents</span></code>
       </span>
-      <code class="op-id" title="operationId">listDocuments</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List documents</span>
+        <code class="op-id" title="operationId">listDocuments</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-documents" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-documents" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -569,18 +577,20 @@
   </details>
 </div><div id="op-post-documents" class="content-item op-post" data-try-op="uploadDocument" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/documents</code>
-        <span class="op-name">Upload a document</span>
+        <code class="op-path"><span></span>/<wbr><span>documents</span></code>
       </span>
-      <code class="op-id" title="operationId">uploadDocument</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Upload a document</span>
+        <code class="op-id" title="operationId">uploadDocument</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-documents" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-documents" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -883,18 +893,20 @@
   </details>
 </div><div id="op-get-documents-documentId" class="content-item op-get" data-try-op="getDocument" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/documents/{documentId}</code>
-        <span class="op-name">Get a document</span>
+        <code class="op-path"><span></span>/<wbr><span>documents</span>/<wbr><span>{documentId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getDocument</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a document</span>
+        <code class="op-id" title="operationId">getDocument</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-documents-documentId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-documents-documentId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1123,18 +1135,20 @@
   </details>
 </div><div id="op-patch-documents-documentId" class="content-item op-patch" data-try-op="updateDocument" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/documents/{documentId}</code>
-        <span class="op-name">Update a document</span>
+        <code class="op-path"><span></span>/<wbr><span>documents</span>/<wbr><span>{documentId}</span></code>
       </span>
-      <code class="op-id" title="operationId">updateDocument</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Update a document</span>
+        <code class="op-id" title="operationId">updateDocument</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-patch-documents-documentId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-documents-documentId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1419,18 +1433,20 @@
   </details>
 </div><div id="op-put-documents-documentId-metadata-domain" class="content-item op-put" data-try-op="setDocumentMetadata" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PUT</span>
-        <code class="op-path">/documents/{documentId}/metadata/{domain}</code>
-        <span class="op-name">Set domain metadata on a document</span>
+        <code class="op-path"><span></span>/<wbr><span>documents</span>/<wbr><span>{documentId}</span>/<wbr><span>metadata</span>/<wbr><span>{domain}</span></code>
       </span>
-      <code class="op-id" title="operationId">setDocumentMetadata</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Set domain metadata on a document</span>
+        <code class="op-id" title="operationId">setDocumentMetadata</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-put-documents-documentId-metadata-domain" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-put-documents-documentId-metadata-domain" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1706,18 +1722,20 @@
   </details>
 </div><div id="op-delete-documents-documentId-metadata-domain" class="content-item op-delete" data-try-op="deleteDocumentMetadata" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
-        <code class="op-path">/documents/{documentId}/metadata/{domain}</code>
-        <span class="op-name">Remove domain metadata from a document</span>
+        <code class="op-path"><span></span>/<wbr><span>documents</span>/<wbr><span>{documentId}</span>/<wbr><span>metadata</span>/<wbr><span>{domain}</span></code>
       </span>
-      <code class="op-id" title="operationId">deleteDocumentMetadata</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Remove domain metadata from a document</span>
+        <code class="op-id" title="operationId">deleteDocumentMetadata</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-delete-documents-documentId-metadata-domain" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-delete-documents-documentId-metadata-domain" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1856,18 +1874,20 @@
       </div>
       <div id="op-post-documents-documentId-document-versions" class="content-item op-post" data-try-op="uploadDocumentVersion" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/documents/{documentId}/document-versions</code>
-        <span class="op-name">Upload a new version</span>
+        <code class="op-path"><span></span>/<wbr><span>documents</span>/<wbr><span>{documentId}</span>/<wbr><span>document-versions</span></code>
       </span>
-      <code class="op-id" title="operationId">uploadDocumentVersion</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Upload a new version</span>
+        <code class="op-id" title="operationId">uploadDocumentVersion</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-documents-documentId-document-versions" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-documents-documentId-document-versions" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2089,18 +2109,20 @@
   </details>
 </div><div id="op-get-document-versions-documentVersionId" class="content-item op-get" data-try-op="getDocumentVersion" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/document-versions/{documentVersionId}</code>
-        <span class="op-name">Get a document version</span>
+        <code class="op-path"><span></span>/<wbr><span>document-versions</span>/<wbr><span>{documentVersionId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getDocumentVersion</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a document version</span>
+        <code class="op-id" title="operationId">getDocumentVersion</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-document-versions-documentVersionId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-document-versions-documentVersionId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2275,18 +2297,20 @@
   </details>
 </div><div id="op-get-document-versions-documentVersionId-content" class="content-item op-get" data-try-op="getDocumentVersionContent" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/document-versions/{documentVersionId}/content</code>
-        <span class="op-name">Get file content</span>
+        <code class="op-path"><span></span>/<wbr><span>document-versions</span>/<wbr><span>{documentVersionId}</span>/<wbr><span>content</span></code>
       </span>
-      <code class="op-id" title="operationId">getDocumentVersionContent</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get file content</span>
+        <code class="op-id" title="operationId">getDocumentVersionContent</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-document-versions-documentVersionId-content" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-document-versions-documentVersionId-content" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2419,18 +2443,20 @@
       </div>
       <div id="op-get-document-types" class="content-item op-get" data-try-op="listDocumentTypes" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/document-types</code>
-        <span class="op-name">List document types</span>
+        <code class="op-path"><span></span>/<wbr><span>document-types</span></code>
       </span>
-      <code class="op-id" title="operationId">listDocumentTypes</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List document types</span>
+        <code class="op-id" title="operationId">listDocumentTypes</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-document-types" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-document-types" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2678,18 +2704,20 @@
   </details>
 </div><div id="op-post-document-types" class="content-item op-post" data-try-op="createDocumentType" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/document-types</code>
-        <span class="op-name">Create a document type</span>
+        <code class="op-path"><span></span>/<wbr><span>document-types</span></code>
       </span>
-      <code class="op-id" title="operationId">createDocumentType</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Create a document type</span>
+        <code class="op-id" title="operationId">createDocumentType</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-document-types" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-document-types" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2894,18 +2922,20 @@
   </details>
 </div><div id="op-get-document-types-documentTypeId" class="content-item op-get" data-try-op="getDocumentType" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/document-types/{documentTypeId}</code>
-        <span class="op-name">Get a document type</span>
+        <code class="op-path"><span></span>/<wbr><span>document-types</span>/<wbr><span>{documentTypeId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getDocumentType</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a document type</span>
+        <code class="op-id" title="operationId">getDocumentType</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-document-types-documentTypeId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-document-types-documentTypeId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -3075,18 +3105,20 @@
   </details>
 </div><div id="op-delete-document-types-documentTypeId" class="content-item op-delete" data-try-op="deleteDocumentType" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
-        <code class="op-path">/document-types/{documentTypeId}</code>
-        <span class="op-name">Delete a document type</span>
+        <code class="op-path"><span></span>/<wbr><span>document-types</span>/<wbr><span>{documentTypeId}</span></code>
       </span>
-      <code class="op-id" title="operationId">deleteDocumentType</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Delete a document type</span>
+        <code class="op-id" title="operationId">deleteDocumentType</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-delete-document-types-documentTypeId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-delete-document-types-documentTypeId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -3216,18 +3248,20 @@
       </div>
       <div id="op-get-document-links" class="content-item op-get" data-try-op="listDocumentLinks" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/document-links</code>
-        <span class="op-name">List document links</span>
+        <code class="op-path"><span></span>/<wbr><span>document-links</span></code>
       </span>
-      <code class="op-id" title="operationId">listDocumentLinks</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List document links</span>
+        <code class="op-id" title="operationId">listDocumentLinks</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-document-links" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-document-links" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -3489,18 +3523,20 @@
   </details>
 </div><div id="op-post-document-links" class="content-item op-post" data-try-op="createDocumentLink" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/document-links</code>
-        <span class="op-name">Link a document to a subject</span>
+        <code class="op-path"><span></span>/<wbr><span>document-links</span></code>
       </span>
-      <code class="op-id" title="operationId">createDocumentLink</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Link a document to a subject</span>
+        <code class="op-id" title="operationId">createDocumentLink</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-document-links" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-document-links" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -3722,18 +3758,20 @@
   </details>
 </div><div id="op-get-document-links-documentLinkId" class="content-item op-get" data-try-op="getDocumentLink" data-try-file="domains/document-management/document-management-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/document-links/{documentLinkId}</code>
-        <span class="op-name">Get a document link</span>
+        <code class="op-path"><span></span>/<wbr><span>document-links</span>/<wbr><span>{documentLinkId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getDocumentLink</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a document link</span>
+        <code class="op-id" title="operationId">getDocumentLink</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-document-links-documentLinkId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-document-links-documentLinkId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -4097,9 +4135,10 @@
 <script src="../mock/contracts.js" defer></script>
 <script type="module">
 if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
-  BlueprintMock.mountSendPanels({
+  // In the environment the reader picked (try-it/environments.js).
+  BlueprintMock.mountSendPanels(BlueprintMock.inEnvironment({
     contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
-  });
+  }));
 }
 </script>
 <!-- the mock: control panel -->
@@ -4107,12 +4146,22 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -4159,18 +4208,26 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>
 </body>

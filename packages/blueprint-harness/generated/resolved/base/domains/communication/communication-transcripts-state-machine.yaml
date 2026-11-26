@@ -29,6 +29,9 @@ machines:
       - id: atAfterPauseBegan
         description: the time given is not before the open pause began
         condition: openPause == null || timestamp(request.at) >= timestamp(openPause.startedAt)
+      - id: publishedByStarter
+        description: the session's event was published by the caller who started it, or the session was started with no caller identified
+        condition: session != null && (!has(session.startedById) || (has(this.authid) && this.authid == session.startedById))
       - id: profileExists
         description: the profile it names exists
         condition: profile != null
@@ -157,8 +160,10 @@ machines:
         context:
           - session:
               from: communication/transcription-sessions
-              where:
-                id: $this.subject
+              where: item.id == this.subject
+        guards:
+          - conditions:
+              - publishedByStarter
         steps:
           - if: this.data.transcriptId != session.transcriptId
             then:
@@ -190,8 +195,10 @@ machines:
         context:
           - session:
               from: communication/transcription-sessions
-              where:
-                id: $this.subject
+              where: item.id == this.subject
+        guards:
+          - conditions:
+              - publishedByStarter
         steps:
           - if: this.data.transcriptId != session.transcriptId
             then:
