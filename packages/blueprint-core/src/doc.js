@@ -21,7 +21,7 @@
 
 import { followRef, indexByRelativePath, resolveRef, isRemoteRef } from './ref-lookup.js';
 import { buildApiModel } from './openapi/model.js';
-import { extractDomain, extractCapability } from './contract-types.js';
+import { extractDomain, extractCapability, apiNameOf, protocolsOf } from './contract-types.js';
 
 /**
  * Build a Doc from already-parsed document data.
@@ -50,6 +50,10 @@ export function toDoc({ path, relativePath = null, domain = null, type, content 
     domain: domain ?? extractDomain(content),
     // A framework file's capability, null for anything else; see extractCapability.
     capability: extractCapability(content),
+    // The API an OpenAPI or AsyncAPI document describes; see apiNameOf.
+    api: type === 'openapi' || type === 'asyncapi' ? apiNameOf(relativePath ?? path) : null,
+    // What the API is reached over; none for an events document. See protocolsOf.
+    protocols: protocolsOf(type, content),
     type,
     content,
     refs() { return indexRefs(this.content); },

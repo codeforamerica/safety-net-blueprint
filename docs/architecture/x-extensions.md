@@ -258,6 +258,16 @@ Declares a relationship between a spec element and another contract artifact. Us
 - **FK fields** (`type: fk`, the default): annotates a UUID foreign-key field to identify the related resource. Recommended on all fields that end in `Id` and have `format: uuid`.
 - **Generated operations** (`type: state-machine-action | ruleset | composition`): injected by the resolve pipeline to record which contract artifact produced the endpoint. Enables the explorer and other tooling to link endpoints back to their source artifacts bidirectionally. A generated operation documents its source artifact; servers serve it from that artifact — the mock serves a transition from its state machine, a ruleset from its rules document, a composition from its compositions document — never from the operation itself, so each route has one source.
 
+- **Operations answered outside the contracts** (`type: external`): something outside the contract set answers the operation, such as a state's adapter. Servers built from the contracts don't answer it themselves: the mock answers it only with an HTTP stub, or sends it where routing says, and otherwise with 501. `blueprint-resolve --domain` or `--capability` writes it on every operation of an API kept only because a chosen API calls it, so its contract is there and its behavior isn't. It takes `type` and nothing else: the operation's API declares its domain in `info.x-domain`, and there is no artifact to name.
+
+```yaml
+/issue-connection:
+  post:
+    operationId: issueTranscriptConnection
+    x-relationship:
+      type: external
+```
+
 Omitting `type` is equivalent to `type: fk` for backward compatibility.
 
 **Polymorphic references** (`resource: Polymorphic`) name a record whose resource is given by a type field beside the id, such as a document link's `subjectType` and `subjectId`. The reference names that field with `discriminator.propertyName`, borrowing OpenAPI's discriminator vocabulary. The type field is an enum, and each value names a resource by its name in snake_case (`application_member` → `ApplicationMember`), as OpenAPI's discriminator takes a value as a schema's name, unless `discriminator.mapping` names a resource for it, or `External` for something outside the contracts. Validation fails for a type field that isn't an enum or a value that names nothing. A framework reference, whose resources only a contract set knows, gets its enum from the set's overlay. A polymorphic reference is then checked on write and reached by `onDelete` like any other.
@@ -335,12 +345,12 @@ get:
 
 | Field | Required | Description |
 |---|---|---|
-| `type` | No | Kind of relationship. Defaults to `fk` when absent. Valid values: `fk`, `state-machine-action`, `ruleset`, `composition`. |
+| `type` | No | Kind of relationship. Defaults to `fk` when absent. Valid values: `fk`, `state-machine-action`, `ruleset`, `composition`, `external`. |
 | `resource` | FK and `state-machine-action` | For FK: related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`), required when `type` is `fk` or absent. For `state-machine-action`: the resource whose machine declares the action, since two machines in a domain can each have an action of the same name. |
-| `domain` | FK: optional; others: required | The blueprint domain that owns the referenced artifact. For FK fields, omit for same-domain references. |
+| `domain` | FK: optional; generated operations: required; `external`: not allowed | The blueprint domain that owns the referenced artifact. For FK fields, omit for same-domain references. |
 | `style` | FK only | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only.** Supported values: `expand` inlines the related resource, named without the `Id` suffix, in place of the FK field — which stays as well where it is a writable field; `links-only` adds a `links` navigation object. `expand` applies only to forward references; back-references are silently downgraded to `links-only`. See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | FK only | Subset of fields to include when `style: expand`. Supports dot notation. Must be non-empty when specified. |
-| `id` | Non-FK only | Identifier of the artifact within its domain contract. For `state-machine-action`: the action `id`. For `ruleset`: the ruleset name. For `composition`: the composition name. |
+| `id` | Generated operations only | Identifier of the artifact within its domain contract. For `state-machine-action`: the action `id`. For `ruleset`: the ruleset name. For `composition`: the composition name. |
 
 `links-only` style adds a `links` navigation object alongside the FK field without expanding it. `expand` style renames the FK field and replaces it with the related resource's schema. Omitting `style` leaves the field untouched — `x-relationship` is purely a metadata annotation in that case, used by tooling (field inventory, diagram generation) but not by the resolver.
 

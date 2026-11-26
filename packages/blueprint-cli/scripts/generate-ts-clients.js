@@ -485,7 +485,10 @@ async function main() {
 
   // Generate client for each domain
   for (const file of specFiles) {
-    const domain = basename(file).replace('-openapi.yaml', '');
+    // One client per API, named for it.
+    const doc = docs.find((d) => d.relativePath === file);
+    if (!doc) throw new Error(`generate-ts-clients: ${file} was found but not loaded as a document of ${specsDir}.`);
+    const domain = doc.api;
     domains.push(domain);
     const specPath = join(specsDir, file);
     const domainOutputDir = join(outputDir, domain);

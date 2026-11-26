@@ -12,9 +12,11 @@
  * control panel.
  *
  * Events are read from the AsyncAPI documents, which carry each message's
- * example; who publishes them and who subscribes, from the state machines. A WebSocket
- * document (the transcript relay) is left out: its messages go over a
- * connection, not the event bus.
+ * example; who publishes them and who subscribes, from the state machines. Only
+ * the documents reached over no protocol of their own are: an events document
+ * declares no servers, since the event bus carries it. One reached over a
+ * protocol, such as the transcript relay's WebSocket, is an API, and its
+ * messages belong to one connection, not the bus.
  */
 
 import { readdirSync, writeFileSync, mkdirSync, rmSync } from 'fs';
@@ -31,9 +33,6 @@ import { OPERATION_STYLE, OPERATION_SCRIPT } from './lib/operation-page.js';
 
 const SM_DOCS = '../state-machine-docs';
 
-/** Whether an AsyncAPI document's channels are a WebSocket's. */
-const overWebSocket = (content) => Object.values(content?.channels ?? {}).some((channel) => channel?.bindings?.ws);
-
 /**
  * Every event the AsyncAPI documents define a message for, once each, with
  * the domain whose document defines it and that document's example.
@@ -42,7 +41,7 @@ function eventsOf(asyncDocs) {
   const events = new Map();
   for (const doc of asyncDocs) {
     const content = doc.content ?? {};
-    if (overWebSocket(content)) continue;
+    if (doc.protocols.length) continue;
     const domain = content.info?.['x-domain'] ?? doc.domain;
     for (const message of Object.values(content.components?.messages ?? {})) {
       const type = message?.name;

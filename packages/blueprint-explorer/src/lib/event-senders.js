@@ -9,7 +9,6 @@
  *   - the timer service, which publishes the callback a machine asked for.
  */
 
-import { basename } from 'path';
 import { esc as h, titleCase, apiEndpointSlug, actionAnchor, objectSlug } from './html.js';
 
 /** What sends an event, said as a path from its domain: Communication › Transcript › close. */
@@ -26,7 +25,7 @@ function writeEndpoints(apiDocs) {
   for (const doc of apiDocs) {
     const domain = doc.domain ?? doc.content?.info?.['x-domain'];
     if (!domain) continue;
-    const page = basename(doc.path).replace('-openapi.yaml', '');
+    const page = doc.api;
     const paths = doc.content?.paths ?? {};
     for (const resource of doc.model()?.resources ?? []) {
       if (!resource.name) continue;
@@ -93,7 +92,7 @@ export function callTargets(apiDocs) {
     const local = servers.find((server) => /localhost|127\.0\.0\.1/.test(server.url)) ?? servers[0];
     let base = '';
     try { base = new URL(local?.url ?? '', 'http://relative.invalid').pathname.replace(/\/$/, ''); } catch { /* no base path */ }
-    const page = basename(doc.path).replace('-openapi.yaml', '');
+    const page = doc.api;
     const writes = new Map([...writeEndpoints([doc]).values()].map((endpoint) => [`${endpoint.method} ${endpoint.path}`, endpoint.type]));
     for (const [path, item] of Object.entries(doc.content?.paths ?? {})) {
       for (const method of ['get', 'post', 'put', 'patch', 'delete']) {

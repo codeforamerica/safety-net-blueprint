@@ -24,6 +24,7 @@ import { startMock } from './start-mock.js';
 import { logRequest } from './activity.js';
 import { hostMock, mockChanged } from './control-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
+import { routingInUse, entryFor, destinationOf } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 const MANAGED = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
@@ -48,9 +49,8 @@ const serverOf = (doc) => {
   return ((servers.find((s) => /localhost|127\.0\.0\.1/.test(s.url)) ?? servers[0])?.url ?? '').replace(/\/$/, '');
 };
 
-/** The namespace the generated client exports a document's operations under: intake-openapi.yaml → intake. */
-const namespaceOf = (doc) => (doc.relativePath ?? '').split('/').pop().replace(/-openapi\.yaml$/, '')
-  .replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+/** The namespace the generated client exports a document's operations under: its API's name, camelCased. */
+const namespaceOf = (doc) => (doc.api ?? '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
 /** TypeScript to write as it is, not as a value: a variable's name. */
 class Code { constructor(code) { this.code = code; } }
@@ -211,6 +211,12 @@ const propertiesOf = (doc, schema, seen = new Set()) => {
   return Object.assign({}, ...(node.allOf ?? []).map((part) => propertiesOf(doc, part, seen)), node.properties ?? {});
 };
 
+/** A `$ref`, followed into another document of the set when it points there. */
+const followed = (doc, node, docs) => {
+  const at = local(doc, node);
+  return typeof at?.$ref === 'string' ? doc.resolveRef(at.$ref, docs) : at;
+};
+
 /** A same-document `$ref`, followed; anything else as it is. */
 const local = (doc, node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
   ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], doc.content) : node);
@@ -265,7 +271,8 @@ const mediaTypeOf = (op) => Object.keys(op.operation.requestBody?.content ?? {})
  * The bodies a request can start with: the operation's own examples, then
  * each sample record of the resource it writes — from the mock data, or the
  * config catalog the mock is loaded from — kept to the fields the
- * request accepts, then an empty object. An update with no examples of its
+ * request accepts, then the request schema's own example, then an empty
+ * object. An update with no examples of its
  * own starts from the record its path names instead, fetched when it is
  * picked (`fromRecord`). A JSON Patch starts as an empty list of changes.
  */
@@ -294,7 +301,12 @@ const startingBodies = (docs, examples, op) => {
     ...(examples.config[resource] ?? []).map((entry) => ({ name: entry.name ?? entry.id, value: entry })),
   ].map((sample) => ({ ...sample, value: trimmed(sample.value, fields) }))
     .filter((sample) => Object.keys(sample.value).length > 0);
-  return samples.length ? samples : [{ name: 'Empty', value: {} }];
+  if (samples.length) return samples;
+  // An action's request, such as get-connection's, has no records to start
+  // from; its schema may give an example.
+  const schema = followed(op.doc, json.schema, docs);
+  if (schema?.example !== undefined) return [{ name: 'Example', value: schema.example }];
+  return [{ name: 'Empty', value: {} }];
 };
 
 
@@ -323,6 +335,8 @@ const STYLE = `
   .try-code .foot { display: flex; justify-content: flex-end; padding: 6px 8px; background: #1e1b3a; border-top: 1px solid #2f2a5c; }
   .try-code .send { font: 600 12px sans-serif; padding: 4px 16px; border-radius: 4px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; }
   .try-code .send:disabled { opacity: .5; cursor: default; }
+  .try-code .foot { gap: 8px; align-items: center; }
+  .try-code .real { font: 600 11px system-ui, sans-serif; color: #fff; background: #b45309; padding: 2px 8px; border-radius: 3px; }
   .resp-tab.sent { font-family: sans-serif; }
   .resp-panel .sent-status { font-weight: 700; } .resp-panel .sent-status.ok { color: #15803d; } .resp-panel .sent-status.bad { color: #b42318; }
   .resp-panel .sent-headers { margin: 4px 0 0; font: 11px monospace; color: #555; }
@@ -415,15 +429,29 @@ export async function mountSendPanels({ contracts, version, scope }) {
   // ── The mock ─────────────────────────────────────────────────────────────
   let mock;
   let session;
+  // Each operation's tag, shown when its call leaves the page: the site's
+  // routing sends it to a real service (routing.js).
+  const realTags = [];
+  const markReal = () => {
+    const routing = routingInUse(records, docs);
+    for (const { tag, op } of realTags) {
+      const entry = entryFor(routing, { operationId: op.operation.operationId, api: op.doc.api, domain: op.doc.domain });
+      tag.hidden = !entry;
+      if (entry) tag.title = `Sent to ${destinationOf(entry)}, not answered by the mock in this page.`;
+    }
+  };
   const start = async ({ seed, restore }) => {
     session = await startMock({ contracts, ...records, seed, restore });
     mock = session.mock;
+    markReal();
     await refreshPickers();
     // The control panel shows this mock, and starts it over.
     hostMock({
       ...session,
       mock: () => mock,
       restart: ({ seed: again }) => start({ seed: again, restore: false }),
+      // Routing changed: the same records and stubs, on a mock that takes it.
+      reroute: () => start({ seed: session.seeded, restore: true }),
       // The control panel changed the mock: a record may have come or gone.
       changed: refreshPickers,
     });
@@ -684,7 +712,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     // response tabs, beside the documented ones: one tab for what was sent,
     // and one for what a local run returned.
     const foot = el('div', '', 'foot');
-    foot.append(button);
+    const real = Object.assign(el('span', 'Real service', 'real'), { hidden: true });
+    realTags.push({ tag: real, op });
+    foot.append(real, button);
     code.append(foot);
     const showSent = (tabText, ok, content, key = 'sent') => {
       let section = holder.querySelector('.op-side > .responses-section');

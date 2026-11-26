@@ -22,8 +22,9 @@
  *               state-machine-docs, rules-docs, event-catalog, api-reference, scenarios
  */
 
-import { cpSync, existsSync, mkdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { cpSync, existsSync, mkdirSync, readFileSync } from 'fs';
+import { resolve, join, dirname } from 'path';
+import yaml from 'js-yaml';
 import {
   buildAnnotationsExplorer,
   buildContextMap,
@@ -58,7 +59,21 @@ const authoredDir = authoredArg ? resolve(process.cwd(), authoredArg.slice('--au
 // tool scripts (which read from their --content arg) can find them there.
 if (configDir !== outDir) {
   mkdirSync(outDir, { recursive: true });
-  if (existsSync(join(configDir, 'config.yaml'))) cpSync(join(configDir, 'config.yaml'), join(outDir, 'config.yaml'));
+  if (existsSync(join(configDir, 'config.yaml'))) {
+    cpSync(join(configDir, 'config.yaml'), join(outDir, 'config.yaml'));
+    // The site's own script, logo and pages, which config.yaml names relative to itself.
+    const config = yaml.load(readFileSync(join(configDir, 'config.yaml'), 'utf8')) ?? {};
+    for (const key of ['script', 'logo', 'pages']) {
+      const named = config[key];
+      if (typeof named !== 'string') continue;
+      if (!existsSync(join(configDir, named))) {
+        console.error(`config.yaml names ${key}: ${named}, but ${join(configDir, named)} doesn't exist.`);
+        process.exit(1);
+      }
+      mkdirSync(dirname(join(outDir, named)), { recursive: true });
+      cpSync(join(configDir, named), join(outDir, named), { recursive: true });
+    }
+  }
   const cmConfig  = join(configDir, 'context-map', 'config');
   if (existsSync(cmConfig))  cpSync(cmConfig,  join(outDir, 'context-map', 'config'),  { recursive: true });
 }

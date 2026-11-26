@@ -6137,6 +6137,51 @@
           ]
         },
         {
+          "name": "Get InterviewExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/66666666-6666-4666-8666-666666666666/interviews/7a1e0c2d-0000-4000-8000-0000000000a1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "66666666-6666-4666-8666-666666666666",
+                "interviews",
+                "7a1e0c2d-0000-4000-8000-0000000000a1"
+              ],
+              "variables": [
+                "applicationId",
+                "interviewId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Get Non-Existent Application (404)",
           "request": {
             "method": "GET",
@@ -7436,6 +7481,67 @@
           ]
         },
         {
+          "name": "Create Application (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/66666666-6666-4666-8666-666666666666/interviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "66666666-6666-4666-8666-666666666666",
+                "interviews"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"66666666-6666-4666-8666-666666666666\",\n  \"status\": \"in_progress\",\n  \"scheduledFor\": \"2026-10-11\",\n  \"startedAt\": \"2026-10-11T14:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another application with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Create Application",
           "request": {
             "method": "POST",
@@ -7535,6 +7641,70 @@
               }
             },
             "description": "Create a new application with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/66666666-6666-4666-8666-666666666666/interviews/{{interviewId}}/process-suggestions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "66666666-6666-4666-8666-666666666666",
+                "interviews",
+                "{{interviewId}}",
+                "process-suggestions"
+              ],
+              "variables": [
+                "applicationId",
+                "interviewId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"66666666-6666-4666-8666-666666666666\",\n  \"status\": \"in_progress\",\n  \"scheduledFor\": \"2026-10-11\",\n  \"startedAt\": \"2026-10-11T14:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another application with different data"
           },
           "event": [
             {

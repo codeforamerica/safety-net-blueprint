@@ -21,6 +21,9 @@ import { loadConfig } from './lib/config.js';
 import { esc } from './lib/html.js';
 import { build as buildAuthored } from './authored.js';
 import { addControlPanel } from './lib/control-panel.js';
+import { addSiteScript } from './lib/site-script.js';
+import { buildSitePages } from './lib/site-pages.js';
+import { inlineMd } from './lib/markdown.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +34,8 @@ export function build({ contentDir, authoredDir }) {
 // ── Authored pages ────────────────────────────────────────────────────────────
 
 buildAuthored({ contentDir, authoredDir });
+// The site's own pages, before the control panel and its script go on every page.
+buildSitePages(contentDir);
 
 // ── Load content config ───────────────────────────────────────────────────────
 
@@ -38,6 +43,14 @@ const hubConfig     = loadConfig(contentDir);
 const projectName   = hubConfig.name;
 const repoUrl       = hubConfig.repo?.url;
 const featuredLinks = hubConfig.featured_links ?? [];
+// The site's title on its home page.
+const siteTitle     = hubConfig.title ?? `${projectName} Explorer`;
+// What the site is, under its title; a sentence or two of Markdown.
+const tagline       = hubConfig.tagline ?? `Reference and tools for the ${projectName} contracts.`;
+// Who publishes it, in the footer.
+const organization  = hubConfig.organization ?? { name: 'Code for America', url: 'https://codeforamerica.org' };
+// The site's own mark in the header, in place of the Blueprint's.
+const logo          = hubConfig.logo ?? null;
 
 // ── Directory scanning ────────────────────────────────────────────────────────
 
@@ -154,7 +167,7 @@ const scenarioTags = tours ? tagList(
 
 const featuredLinksHtml = featuredLinks.length ? `
     <div style="margin-top:1.5rem;display:flex;justify-content:center;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-      <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:0.04em;text-transform:uppercase;">For state leadership</span>
+      ${hubConfig.featured_heading ? `<span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:0.04em;text-transform:uppercase;">${esc(hubConfig.featured_heading)}</span>` : ''}
       ${featuredLinks.map(l => `<a href="${l.href}" style="font-size:12.5px;font-weight:600;color:white;text-decoration:none;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);padding:0.3rem 0.875rem;border-radius:100px;">${l.label}</a>`).join('\n      ')}
     </div>` : '';
 
@@ -165,7 +178,7 @@ const html = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${projectName} — Explorer</title>
+  <title>${esc(siteTitle)}</title>
   <style>
     :root {
       --dark-blue:    #2B1A78;
@@ -213,7 +226,7 @@ const html = `<!DOCTYPE html>
       gap: 0.75rem;
     }
 
-    .wordmark svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .wordmark svg, .wordmark img { width: auto; height: 22px; flex-shrink: 0; }
 
     header h1 {
       font-size: 14px;
@@ -441,10 +454,10 @@ const html = `<!DOCTYPE html>
 
   <header>
     <div class="wordmark">
-      <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      ${logo ? `<img src="${esc(logo)}" alt="">` : `<svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <polygon points="11,1 20,6 20,16 11,21 2,16 2,6" fill="none" stroke="#C2C0E8" stroke-width="1.5"/>
         <polygon points="11,5 17,8.5 17,13.5 11,17 5,13.5 5,8.5" fill="#5650BE"/>
-      </svg>
+      </svg>`}
       <h1>${projectName}</h1>
     </div>
     <nav>
@@ -453,8 +466,8 @@ const html = `<!DOCTYPE html>
   </header>
 
   <div class="hero">
-    <h2>${projectName} Explorer</h2>
-    <p>Diagrams, tools, and reference outputs for the ${projectName} — a shared contract layer for state benefits programs.</p>${featuredLinksHtml}
+    <h2>${esc(siteTitle)}</h2>
+    <p>${inlineMd(tagline).replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" style="color:inherit;text-decoration:underline;">$1</a>')}</p>${featuredLinksHtml}
   </div>
 
   <main>
@@ -509,7 +522,7 @@ const html = `<!DOCTYPE html>
           <div class="card-header-row">
             ${sectionTitle(contentDir, "Data Dictionary", "data-dictionaries/index.html")}
           </div>
-          <p>Field-level reference for the blueprint data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>${outputTags(dictPages, `data-dictionaries`, 'dot-green', { href: 'data-dictionaries/index.html', noun: 'data dictionaries' })}
+          <p>Field-level reference for the data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>${outputTags(dictPages, `data-dictionaries`, 'dot-green', { href: 'data-dictionaries/index.html', noun: 'data dictionaries' })}
         </div>
       </div>` : ''}
 
@@ -528,7 +541,7 @@ const html = `<!DOCTYPE html>
           <div class="card-header-row">
             ${sectionTitle(contentDir, "State Machine Docs", "state-machine-docs/index.html")}
           </div>
-          <p>Generated reference for the state machines defined in the blueprint contracts — states, transitions, actions, and event subscriptions.</p>${outputTags(smPages, `state-machine-docs`, 'dot-blue', { href: 'state-machine-docs/index.html', noun: 'state machines' })}
+          <p>Generated reference for the state machines defined in the contracts — states, transitions, actions, and event subscriptions.</p>${outputTags(smPages, `state-machine-docs`, 'dot-blue', { href: 'state-machine-docs/index.html', noun: 'state machines' })}
         </div>
       </div>` : ''}
 
@@ -620,7 +633,7 @@ const html = `<!DOCTYPE html>
           <div class="card-header-row">
             ${sectionTitle(contentDir, "Context Map", "context-map/domains.html")}
           </div>
-          <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>${outputTags(contextPages, `context-map`, 'dot-blue', { href: 'context-map/domains.html', noun: 'domains' })}
+          <p>Visual map of the bounded contexts, systems, and integration relationships across the domains.</p>${outputTags(contextPages, `context-map`, 'dot-blue', { href: 'context-map/domains.html', noun: 'domains' })}
         </div>
       </div>` : ''}
 
@@ -631,7 +644,7 @@ const html = `<!DOCTYPE html>
   <footer>
     ${repoUrl ? `<a href="${repoUrl}">${projectName}</a>` : projectName}
     &nbsp;·&nbsp;
-    Code for America
+    ${organization.url ? `<a href="${esc(organization.url)}">${esc(organization.name)}</a>` : esc(organization.name)}
   </footer>
 
 </body>
@@ -640,8 +653,10 @@ const html = `<!DOCTYPE html>
 writeFileSync(join(contentDir, 'index.html'), html, 'utf8');
 console.log(`  wrote ${join(contentDir, 'index.html')}`);
 
-// Built last, the hub puts the control panel's button on every page, its own too.
+// Built last, the hub puts the control panel's button on every page, its own
+// too, and the site's own script, if config.yaml names one.
 addControlPanel(contentDir);
+addSiteScript(contentDir);
 } // end build()
 
 // CLI entry point

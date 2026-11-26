@@ -21,9 +21,9 @@ info:
     email: support@example.com
 servers:
   - url: https://adapter.example.com
-    description: State-configured adapter server
-  - url: http://localhost:9090
-    description: Local stub server
+    description: Production server
+  - url: http://localhost:1080
+    description: Local development server
 tags:
   - name: Evaluate
     description: Eligibility evaluation endpoints.
@@ -38,6 +38,8 @@ paths:
         for the baseline criteria; states may extend the request via overlay if
         their rules engine needs additional context.
       operationId: evaluateExpeditedScreening
+      x-relationship:
+        type: external
       tags:
         - Evaluate
       requestBody:
@@ -71,6 +73,8 @@ paths:
         Applications that can be fully determined ex parte are closed automatically
         without caseworker intervention (42 CFR § 435.916).
       operationId: evaluateMedicaidExParte
+      x-relationship:
+        type: external
       tags:
         - Evaluate
       requestBody:
@@ -108,6 +112,8 @@ paths:
         chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs
         (snap).
       operationId: evaluateDetermination
+      x-relationship:
+        type: external
       tags:
         - Evaluate
       requestBody:

@@ -149,6 +149,9 @@ export function extractMetadata(spec, resourceName, resolve = null) {
         method: method.toUpperCase(),
         operationId: operation.operationId,
         summary: operation.summary,
+        // Answered by something outside the contracts, such as a state's
+        // adapter (x-relationship type external): the mock answers none itself.
+        external: operation['x-relationship']?.type === 'external',
         parameters: allParameters,
         // Sort configuration from the operation's x-sortable extension (if
         // declared). Undefined when the operation does not opt into sorting;

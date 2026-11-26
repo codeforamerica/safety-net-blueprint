@@ -336,7 +336,7 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom } =
   globalThis.BlueprintMock;
 
 // Where this explorer keeps the mock's records between its pages: under the
@@ -663,14 +663,23 @@ const valueFor = (declared, doc) => {
  * the contract set, and the time it takes is printed because it is the
  * claim: an entire backend, in about as long as a keystroke.
  */
-const derive = async ({ seed = true, artifact, restore = false } = {}) => {
+let derivedFrom;   // the contract set the server was derived from
+const derive = async ({ seed = true, artifact, restore = false, keepWalk = false } = {}) => {
   const set = artifact ?? contracts;
+  derivedFrom = set;
   docs = extract(set, 'docs');
   // Restored, with what an earlier page left; this page leaves what it holds for the next.
   session = await startMock({ contracts: set, ...records, seed, restore, basePath });
   mock = session.mock;
   // The control panel shows this mock, and starts it over.
-  hostMock({ ...session, mock: () => mock, restart: derive });
+  hostMock({
+    ...session,
+    mock: () => mock,
+    restart: derive,
+    // Routing changed: the same records and stubs, and the walk carries on.
+    reroute: () => derive({ seed: session.seeded, artifact: derivedFrom, restore: true, keepWalk: true }),
+  });
+  if (keepWalk) return;
 
   // The system is new, so nothing the walk did to the old one still holds:
   // the records it made are gone with the store that held them.
@@ -1159,8 +1168,25 @@ const resetTour = () => {
   branchClosed = false;
 };
 
+// The servers away from this machine a run was allowed to change, asked once each.
+const allowedAway = new Set();
+
+/**
+ * Whether a run may go on: asked once, before a scenario sends calls to a
+ * server chosen in the control panel that isn't this machine, since each
+ * step creates and changes what's there.
+ */
+const mayRun = () => {
+  const away = awayFrom(records, docs);
+  if (!away || allowedAway.has(away)) return true;
+  const ok = confirm(`This scenario's calls will go to ${away}, as the control panel says, and create and change records there. Run it?`);
+  if (ok) allowedAway.add(away);
+  return ok;
+};
+
 /** Run on, through the given step or to the end, remembering each answer. */
 const runOn = async (doc, until, say) => {
+  if (!mayRun()) return 0;
   const runner = runnerFor(doc);
   const entries = scenarioSteps(doc);
   let count = 0;

@@ -68,7 +68,7 @@ export function buildSchemaIndex(docs) {
  * field-level, not endpoint-level, and are skipped.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {Map<string, { path: string, method: string, file: string|null }>}
+ * @returns {Map<string, { path: string, method: string, file: string|null, api: string|null }>}
  */
 export function buildRelationshipIndex(docs) {
   const index = new Map();
@@ -81,7 +81,7 @@ export function buildRelationshipIndex(docs) {
         if (!rel.domain || !rel.id) continue;
 
         const key = [rel.type, rel.domain, rel.resource, rel.id].filter(Boolean).join(':');
-        if (!index.has(key)) index.set(key, { path, method, file: doc.relativePath ?? null });
+        if (!index.has(key)) index.set(key, { path, method, file: doc.relativePath ?? null, api: doc.api });
       }
     }
   }

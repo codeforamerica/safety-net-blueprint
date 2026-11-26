@@ -140,7 +140,7 @@ export function forwardTo(target, { includeHeaders = [], timeoutMs = DEFAULT_TIM
       }
       return Response.json({
         code: 'BAD_GATEWAY',
-        message: `Could not reach ${url.origin} for this route: ${error.message}`,
+        message: `Could not reach ${url.origin} for this route: ${error.message}${refusedInPage(error)}`,
       }, { status: 502 });
     }
 
@@ -208,6 +208,15 @@ export function routingFromDocument(document) {
   checkSchema(document);
   return document.routing;
 }
+
+/**
+ * What a failed fetch in a page may mean. A browser says only "Failed to
+ * fetch" when a server doesn't allow calls from the page's address, so the
+ * likely reason is named, as Swagger UI names it.
+ */
+export const refusedInPage = (error) => (typeof document !== 'undefined' && error?.name === 'TypeError'
+  ? '. The server may not allow calls from this page (CORS), or may be down or unreachable from here.'
+  : '');
 
 /** The domain an entry names to route every domain, as a proxy's catch-all is written. */
 const EVERY_DOMAIN = '*';

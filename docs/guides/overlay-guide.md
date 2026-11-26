@@ -35,6 +35,19 @@ Replace enum values, descriptions, or other scalar values:
     - pending_review
 ```
 
+### Set an API's Servers
+
+The contracts' `servers` name example addresses (`https://api.example.com/intake`). Replace them with where your services run, so clients and docs point there: an explorer's control panel lists each server's `description` as a place to send calls ("Production server"), and sends each API to its own server for it.
+
+```yaml
+- target: $.servers[0].url
+  file: communication-transcripts-openapi.yaml
+  description: Where our transcripts API runs
+  update: https://ai.example.gov/communication
+```
+
+Each API declares its own servers, so give `file:` for each (see [File Disambiguation](#file-disambiguation)). Keep the `description`s the same across APIs, so one choice covers them all.
+
 ### Add Properties
 
 Add new fields to an existing schema:

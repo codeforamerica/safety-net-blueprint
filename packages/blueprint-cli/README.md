@@ -71,6 +71,23 @@ npx blueprint-resolve \
 
 Overlays let you customize base contracts without forking them — add fields, change descriptions, restrict visibility, or set domain-specific defaults. See the [Overlay Guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md).
 
+To write only part of the set, name it with `--api` (an API's file name without `-openapi.yaml`), `--domain` or `--capability` (a document's `x-capability`). Each is repeatable, and they add together:
+
+```bash
+npx blueprint-resolve --spec=./src --overlay=./overlays --capability=transcripts --out=./resolved
+```
+
+Everything built from the folder afterward — the explorer, the bundle, the mock server, clients — then covers only that part, with no flags of its own. Resolve chooses after applying overlays and generating endpoints, and the part stands on its own:
+
+- **An API comes with what's about its resources.** Nothing in an OpenAPI document points at its state machine or sample records; they name its resources. So `--api` follows the resources: their state machines, the rulesets and compositions those use, and, in its domain, the annotations, metrics and SLA types about them, with the sample records and configuration catalogs of its schemas. A file that covers other resources too is cut to the entries about these.
+- **What the chosen documents reference** comes along: everything they `$ref`, and the state machines they extend.
+- **The parts of platform they use** come along, since nothing references them: the events API when anything publishes or hears events or sets timers, the timers document when a state machine sets one, and the registries API when a registry is kept.
+- **The contract of an API a chosen one calls or references** comes along, but not its behavior. A state machine step that calls another API's operation (`call: { operationId: createSuggestion }`), or a schema that `$ref`s one in another API's document, brings that API's OpenAPI document, with each operation marked `x-relationship: { type: external }`: the mock answers it only with an HTTP stub or by routing it, and the explorer shows it as external.
+- **A scenario is kept** when every document it calls is kept, and not only as a called contract. It never brings in more.
+- **A type whose resource was left out is external.** A transcript's `subjectType: interview` names intake's Interview; without intake, resolve maps `interview` to `External` in the transcript's `discriminator.mapping`, so the folder validates.
+
+A name no document declares is an error that lists the ones the set has.
+
 ### `blueprint-validate`
 
 Runs all validators against a resolved contracts directory in sequence:

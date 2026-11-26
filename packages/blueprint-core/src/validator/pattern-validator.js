@@ -907,13 +907,17 @@ export function isActionPath(path) {
 const OPERATION_RELATIONSHIP_TYPES = new Set(['state-machine-action', 'ruleset', 'composition']);
 
 /**
- * Validates x-relationship annotations on operations (non-FK types).
- * These are injected by the resolve pipeline onto generated endpoints and
- * record which contract artifact produced the endpoint.
+ * Validates x-relationship annotations on operations. Resolve writes the
+ * generated types on the endpoints it generates, to record which contract
+ * artifact produced each; `external`, written by hand or by resolve, says
+ * something outside the contracts answers the operation.
  *
  * Checks:
- *  - type is one of the known non-FK values
- *  - domain and id are both present (required for all non-FK types)
+ *  - type is a known one, so a misspelled one isn't taken as an ordinary
+ *    operation without a word (fk, a field's, is allowed and checked elsewhere)
+ *  - domain and id are both present on a generated type
+ *  - external carries nothing else: the operation's API already declares its
+ *    domain, and there is no artifact to name
  *
  * Does not validate that the referenced artifact actually exists — that
  * requires cross-file knowledge available only at resolve time.
@@ -933,7 +937,29 @@ export function validateOperationRelationships(spec, errors) {
       if (!rel || typeof rel !== 'object') continue;
 
       const { type } = rel;
-      if (!type || !OPERATION_RELATIONSHIP_TYPES.has(type)) continue;
+      if (type === 'external') {
+        const extra = Object.keys(rel).filter((key) => key !== 'type');
+        if (extra.length) {
+          errors.push({
+            path: `paths/${path}/${method}/x-relationship`,
+            rule: 'operation-x-relationship-external-fields',
+            message: `Operation "${method} ${path}" has x-relationship type "external", which takes no other field: remove ${extra.join(', ')}. Its API's info.x-domain says its domain.`,
+            severity: 'error',
+          });
+        }
+        continue;
+      }
+      // fk, written or by default, is a field's, and allowed here: it is checked as one elsewhere.
+      if (!type || type === 'fk') continue;
+      if (!OPERATION_RELATIONSHIP_TYPES.has(type)) {
+        errors.push({
+          path: `paths/${path}/${method}/x-relationship`,
+          rule: 'operation-x-relationship-unknown-type',
+          message: `Operation "${method} ${path}" has x-relationship type "${type}", which is none of: fk, ${[...OPERATION_RELATIONSHIP_TYPES, 'external'].join(', ')}.`,
+          severity: 'error',
+        });
+        continue;
+      }
 
       if (!rel.domain) {
         errors.push({

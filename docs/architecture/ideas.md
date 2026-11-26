@@ -8,7 +8,6 @@ Possibilities for the mock server and the explorer that nobody is working on. Th
 
 - **Save and load records.** Download what the mock holds as a file, and load one back, including a mock-data YAML file. Useful for demos: set up a state once and start from it later. The event log would come along as history, without the events happening again; event stubs wouldn't. With it, a `--seed=<dir>` option on `blueprint-build-explorer` could build a set of records into the site, as the mock server's `--seed` does.
 - **A minimal body for creates,** with only the required fields. Today the Example list offers each sample record, trimmed to what the request accepts.
-- **WebSockets.** Connect to a channel an AsyncAPI document describes, such as the relay's, send messages, and see what comes back. Events are covered by the control panel and the Events API; WebSockets aren't yet.
 
 ### Beyond Try it
 
@@ -44,3 +43,19 @@ Notes for any of these:
 - **`itty-router`.** A small `fetch`-native router, if the hand-written route matcher ever stops paying for itself.
 
 Not recommended: `@mswjs/data`. It overlaps the store seam and would mean taking on another project's data model for something the contracts already define.
+
+## Resolving contracts
+
+- **Declare a set's servers once.** Every API declares its own `servers`, so pointing a set at where it really runs means an overlay action per API file, repeated whenever an API is added. Most sets follow one pattern: a base address plus each API's path. One block in an overlay's `config:`, beside the other set-wide options, could say it once, with `{domain}` and `{api}` filled in for each API, as OpenAPI server URLs already fill in their variables:
+
+  ```yaml
+  config:
+    x-servers:
+      - description: Production server
+        url: https://api.state.gov/{domain}        # or https://{domain}.api.state.gov
+      - description: Production server
+        apis: [communication-transcripts-audio-adapter]
+        url: https://adapter.vendor.com            # an API that runs somewhere else
+  ```
+
+  Resolve would write each API's `servers` from the narrowest entry matching it for each description, as routing picks its narrowest entry, so the contracts, generated clients, docs and the explorer's server menu agree. An entry could also name domains or capabilities: the AI services run by different teams each have their own address. OpenAPI has no servers for a whole set, so `x-servers` would be the blueprint's own.

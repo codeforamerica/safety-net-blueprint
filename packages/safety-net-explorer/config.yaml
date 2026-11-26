@@ -5,7 +5,11 @@ repo:
   spec_path: "packages/safety-net-contracts/src"
   link_template: "{url}/blob/{branch}/{spec_path}"
 
-# Optional hero links shown in the explorer hub (e.g. for leadership audiences)
+tagline: "Diagrams, tools, and reference outputs for the Safety Net Blueprint — a shared contract layer for state benefits programs."
+
+# The Blueprint's own pages for state leadership, under authored/, linked below.
+blueprint_pages: true
+featured_heading: "For state leadership"
 featured_links:
   - label: "Executive Summary"
     href: "authored/executive-summary.html"

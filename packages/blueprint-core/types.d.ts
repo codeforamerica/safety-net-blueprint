@@ -97,6 +97,21 @@ export interface Doc {
    * file a contract set writes itself.
    */
   capability: string | null;
+  /**
+   * The name of the API an OpenAPI or AsyncAPI document describes, which the
+   * mock's routing and `$apis.<api>.<id>` references use: `intake`,
+   * `communication-transcripts`. An events AsyncAPI document shares its API's
+   * name. Null for every other type.
+   */
+  api: string | null;
+  /**
+   * The protocols the document's API is reached over, each once, sorted:
+   * `['http']` for OpenAPI, and for AsyncAPI what its servers declare, with
+   * `wss` read as `ws` and `https` as `http`. Empty for an events AsyncAPI
+   * document, which declares no servers because the event bus carries its
+   * messages, and for every other type.
+   */
+  protocols: string[];
   content: Record<string, unknown>;
   /** Every `$ref` in the document, keyed by the literal ref string. */
   refs(): Map<string, RefEntry>;
@@ -246,6 +261,25 @@ export interface ResolveOptions {
   envTarget?: string | null;
   /** Values for `${VAR}` placeholders. Unresolved ones are left literal. */
   envVariables?: Record<string, string>;
+  /**
+   * Keep only documents declaring these domains, with what they need to stand
+   * on their own: what they `$ref` or extend, the parts of platform they use,
+   * and the scenarios whose every source is kept. A polymorphic type whose
+   * resource is left out is mapped to `External`. Adds to `capabilities`;
+   * omit both for the whole set. A name no document declares throws.
+   */
+  domains?: string[];
+  /** Keep only documents declaring these capabilities (`x-capability`), likewise. */
+  capabilities?: string[];
+  /**
+   * Keep only these APIs (`doc.api`), likewise: each one's OpenAPI and events
+   * documents, and the parts of the documents beside them about its
+   * resources, followed by name — the state machines of its resources, the
+   * rulesets and compositions they use, and the annotations, sample records,
+   * metrics and SLA types about them. A document covering other resources too
+   * is cut to the entries about these.
+   */
+  apis?: string[];
 }
 
 export interface ResolveResult {

@@ -10,6 +10,31 @@
       "description": "Display name for the project (used in hub title and footer).",
       "type": "string"
     },
+    "title": {
+      "description": "The site's title on its home page (e.g. AI Services Developer Portal). Defaults to \"<name> Explorer\".",
+      "type": "string",
+      "minLength": 1
+    },
+    "tagline": {
+      "description": "What the site is, a sentence or two of Markdown, shown under its title on the home page. Defaults to \"Reference and tools for the <name> contracts.\"",
+      "type": "string",
+      "minLength": 1
+    },
+    "logo": {
+      "description": "An image of the site's own, relative to config.yaml (e.g. logo.svg), shown beside its name in the home page's header in place of the Blueprint mark. The build copies it into the site.",
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.).+\\.(svg|png|jpg|jpeg|webp)$"
+    },
+    "organization": {
+      "description": "Who publishes the site, named in the footer. Defaults to Code for America.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
     "annotations": {
       "description": "Allowlist of annotation field types to display across all explorer views (data dictionary, annotations explorer, etc.). If absent, all annotation fields are shown. Use this to suppress internal or structural annotation types that are not meaningful to your audience.",
       "type": "array",
@@ -40,12 +65,26 @@
         }
       }
     },
+    "script": {
+      "description": "A JavaScript file of the site's own, relative to config.yaml (e.g. portal.js). The build copies it into the site and loads it on every page, before the mock starts, for what only code can do, such as setting BlueprintExplorer.routing.",
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.).+\\.js$"
+    },
+    "pages": {
+      "description": "A folder of the site's own pages, relative to config.yaml (e.g. pages). Each Markdown page is rendered in the explorer's layout as an HTML page of the same name, titled by its first heading; anything else is copied as it is. Link a page from featured_links (e.g. pages/getting-started.html).",
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.)[^/]+(/[^/]+)*/?$"
+    },
+    "blueprint_pages": {
+      "description": "Whether the site includes the Blueprint's own pages for state leadership (executive summary, adoption model, architecture principles), under authored/. Defaults to false.",
+      "type": "boolean"
+    },
     "first_tour": {
       "description": "The scenario the Scenarios page opens with, by its path in the contract set (e.g. scenarios/framework-features.arazzo.yaml). Defaults to the first.",
       "type": "string"
     },
     "featured_links": {
-      "description": "Optional hero links shown in the explorer hub (e.g. for leadership audiences).",
+      "description": "Optional links shown under the tagline on the home page: the site's own pages, or anything else, such as live demos.",
       "type": "array",
       "items": {
         "type": "object",
@@ -56,6 +95,11 @@
           "href": { "type": "string" }
         }
       }
+    },
+    "featured_heading": {
+      "description": "A label before the featured links (e.g. For state leadership). None by default.",
+      "type": "string",
+      "minLength": 1
     },
     "cross_cutting": {
       "description": "Cross-cutting concerns shown as a banner on the context-map overview.",

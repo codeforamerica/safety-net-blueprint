@@ -198,7 +198,7 @@
       <code class="op-id" title="operationId">evaluateExpeditedScreening</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
-        
+        <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
         <a href="#op-post-evaluate-expedited-screening" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
@@ -422,7 +422,7 @@
       <code class="op-id" title="operationId">evaluateMedicaidExParte</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
-        
+        <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
         <a href="#op-post-evaluate-medicaid-ex-parte" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
@@ -720,7 +720,7 @@
       <code class="op-id" title="operationId">evaluateDetermination</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
-        
+        <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
         <a href="#op-post-evaluate-determination" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
@@ -1460,7 +1460,7 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const scope = new URL('../mock/', location.href).href;
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
         || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }

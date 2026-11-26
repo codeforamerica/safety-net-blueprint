@@ -43,6 +43,55 @@ node build.js --only=event-catalog --resolved=./resolved
 node build.js --only=data-dictionaries --resolved=./resolved
 ```
 
+### A site's own content
+
+A site built from the explorer, such as a developer portal, says what it is and who publishes it in `config.yaml`. Files it names are relative to `config.yaml`, and the build copies them into the site:
+
+```yaml
+name: AI Services
+title: AI Services Developer Portal   # on the home page; "<name> Explorer" when omitted
+tagline: APIs for the services Code for America runs for state benefits programs. **Try them in your browser.**
+logo: logo.svg                 # in the header, in place of the Blueprint mark
+organization:                  # in the footer; Code for America when omitted
+  name: Code for America
+  url: https://codeforamerica.org
+pages: pages                   # a folder of the site's own pages
+featured_links:                # under the tagline
+  - label: Getting started
+    href: pages/getting-started.html
+  - label: Live transcription demo
+    href: https://example.org/live-transcription
+```
+
+- **`tagline`** is a sentence or two of Markdown under the site's title. Without one, it's "Reference and tools for the *name* contracts."
+- **`pages`** is a folder. Each Markdown page in it becomes an HTML page of the same name in the explorer's layout, titled by its first heading: links, code blocks and tables included. Anything else, an HTML page or an image, is used as it is. Link a page from `featured_links`.
+- **`featured_heading`** puts a label before the featured links, such as "For state leadership". There's none by default.
+- **`blueprint_pages: true`** adds the Blueprint's own pages for state leadership (executive summary, adoption model, architecture principles) under `authored/`. A site gets none of them otherwise.
+
+### A site's own script
+
+Name a JavaScript file in `config.yaml`, relative to it, and every page loads it before the mock starts:
+
+```yaml
+script: portal.js
+```
+
+The script can send some APIs to real services by setting `BlueprintExplorer.routing`, in the mock server's routing format: a URL with `to`, or a `handler` function, such as one that adds the visitor's sign-in token. Every mock the explorer starts takes it, and with none, every call stays in the page.
+
+```js
+// portal.js
+BlueprintExplorer.routing = [{
+  api: 'communication-transcripts-audio-adapter',
+  handler: async (request) => { /* add the token, then forward the call */ },
+}];
+```
+
+The control panel lists the routing under "Where calls go", and each entry has a switch between the real service and the mock in the page, for the browser tab: the mock restarts without that entry, keeping records and stubs. A call the mock can't answer itself, such as an adapter's, then needs a stub, and the panel offers the HTTP stub form for it. On the API reference, an operation whose call leaves the page has a "Real service" tag beside Send.
+
+The reader can also choose a server for the tab, as Swagger's server list does: at the top of "Where calls go", an environment the contracts' `servers` name by `description`, such as "Production server", which sends each API to its own server for it, or a URL they type, which takes every call, such as a local `blueprint-mock`. The site's own routing still wins, and a reload puts every call back in the page. Record pickers list the chosen server's records; Restart, Start empty and timers, which are the page's own, are hidden; and Scenarios asks once before running against a server that isn't this machine. A server has to allow calls from the site's address (CORS); a refused call says so. To list real servers, set them in an overlay ([overlay guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md#set-an-apis-servers)).
+
+The mock server guide's [routing section](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md#answering-in-a-page) shows a handler that forwards a call. A real service has to accept requests from the site's address (CORS).
+
 Output is written to the `--content` directory as static HTML files. The API reference, state machine docs, event catalog, and data dictionaries update automatically as contracts change — rebuild after each resolve step.
 
 ## Changelog

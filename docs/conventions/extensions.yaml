@@ -213,7 +213,10 @@ x_extensions:
       Declares a relationship between a spec element and another contract artifact.
       Used in two contexts: on UUID foreign-key fields (type: fk, the default) to
       identify the related resource; and on generated operations (type: state-machine-action,
-      ruleset, or composition) to record which contract artifact produced the endpoint.
+      ruleset, or composition) to record which contract artifact produced the endpoint;
+      and on an operation something outside the contracts answers (type: external),
+      such as a state's adapter's, which servers built from the contracts answer only
+      with a stub or by routing it.
       The type field controls which other fields are required and how tooling interprets
       the annotation. Omitting type is equivalent to type: fk for backward compatibility.
       Every writable field named …Id that holds a uuid must declare it; validation
@@ -230,14 +233,17 @@ x_extensions:
         Valid values: fk (foreign-key field pointing to a resource schema),
         state-machine-action (operation generated from a state machine action),
         ruleset (operation generated from a rules contract ruleset),
-        composition (operation generated from a compositions contract).
+        composition (operation generated from a compositions contract),
+        external (operation answered outside the contracts: give it on each operation
+        of an adapter or other outside API, with no other field; resolve gives it to
+        an API kept only because a chosen one calls it).
       resource: >
         For fk: name of the related schema (PascalCase, e.g., Queue). Required
         when type is fk or absent. For state-machine-action: the resource whose
         machine declares the action (e.g., Application), since two machines in
         a domain can each have an action of the same name.
       domain: >
-        Optional for fk; required for all other types. The blueprint domain that
+        Optional for fk; not allowed for external; required for all other types. The blueprint domain that
         owns the referenced artifact (e.g., intake, workflow). For FK fields, omit
         for same-domain references. Values must be a valid Domain enum value.
       style: >

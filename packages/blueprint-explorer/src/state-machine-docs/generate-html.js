@@ -306,11 +306,10 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
         const steps = renderStepsHtml(op.steps, sm, machine, eventIndex, allStateMachines);
         let apiLinkHtml = '';
         const endpointInfo = endpointIndex?.get(`state-machine-action:${sm.domain}:${machine.object}:${op.id}`);
-        if (endpointInfo?.file) {
-          const { file, path, method } = endpointInfo;
-          // The API reference has a page per OpenAPI document, named for its file.
-          const page = file.split('/').pop().replace('-openapi.yaml', '');
-          apiLinkHtml = ' ' + apiReferenceLink(`../api-reference/${page}.html#${apiEndpointSlug(method, path)}`, 'API →', '', 'View API endpoint');
+        if (endpointInfo?.api) {
+          const { api, path, method } = endpointInfo;
+          // The API reference has a page per API, named for it.
+          apiLinkHtml = ' ' + apiReferenceLink(`../api-reference/${api}.html#${apiEndpointSlug(method, path)}`, 'API →', '', 'View API endpoint');
         }
         return `<tr id="${actionAnchor(machine.object, op.id)}">
           <td><strong style="color:${COLORS.darkBlue};">${op.id}</strong>${apiLinkHtml}${desc ? `<br><span style="font-size:12px;color:${COLORS.textLight};">${desc}</span>` : ''}</td>

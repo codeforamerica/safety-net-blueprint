@@ -211,9 +211,9 @@ function formShell({ stub, opensAsJson, fields, built, ready, save, cancel }) {
 // The envelope's own attributes, the same on every event or never repeated: not worth matching on.
 const ENVELOPE = new Set(['specversion', 'id', 'type', 'time', 'datacontenttype', 'traceparent', 'partitionkey', 'authid', 'authtype', 'causationid']);
 
-/** Whether an AsyncAPI document describes a WebSocket connection rather than events. */
-const overWebSocket = (content) => Object.values(content?.servers ?? {}).some((server) => /^wss?$/.test(server?.protocol ?? ''))
-  || Object.values(content?.channels ?? {}).some((channel) => channel?.bindings?.ws);
+/** Whether an AsyncAPI document describes events, which no protocol of its own carries, or an API such as a WebSocket's. */
+const ofEvents = (doc) => doc.type === 'asyncapi' && !doc.protocols.length;
+const overWebSocket = (doc) => doc.type === 'asyncapi' && doc.protocols.includes('ws');
 
 /**
  * What the contracts offer the three kinds of stub.
@@ -226,7 +226,7 @@ const overWebSocket = (content) => Object.values(content?.servers ?? {}).some((s
 export function stubChoices(docs, records = {}) {
   // Each event type, with its example.
   const events = new Map();
-  for (const doc of docs.filter((d) => d.type === 'asyncapi' && !overWebSocket(d.content))) {
+  for (const doc of docs.filter(ofEvents)) {
     for (const message of Object.values(doc.content?.components?.messages ?? {})) {
       if (message?.name && !events.has(message.name)) {
         events.set(message.name, { summary: message.summary ?? '', example: message.examples?.[0]?.payload ?? null });
@@ -381,7 +381,10 @@ function operationsIn(docs, records) {
         operations.push({
           key: `${method.toUpperCase()} ${template}`,
           operationId: operation.operationId,
-          callsOut: method === 'post' && callsOut(doc, path, rulePaths),
+          apiName: doc.api,
+          domain: doc.domain,
+          // Answered outside the contracts (x-relationship type external), or a call the mock can't work out.
+          callsOut: operation['x-relationship']?.type === 'external' || (method === 'post' && callsOut(doc, path, rulePaths)),
           api: content.info?.title ?? doc.relativePath,
           method: method.toUpperCase(),
           template,
@@ -455,14 +458,19 @@ const operationFor = (operations, method, url) => {
  * @param {{ choices: ReturnType<typeof stubChoices>, stub?: object, save: (stub: object) => Promise<string|null>, cancel: () => void }} options
  * @returns {HTMLElement}
  */
-export function httpStubForm({ choices, stub = null, save, cancel }) {
+export function httpStubForm({ choices, stub = null, preset = null, save, cancel }) {
   const { operations } = choices;
+  // Started on an operation the control panel names, with its first answer.
+  const first = (key) => {
+    const operation = operations.find((o) => o.key === key);
+    return operation?.answers.find((answer) => answer.status < 300) ?? operation?.answers[0];
+  };
   const written = stub ? operationFor(operations, stub.match?.method, (stub.match?.domain ? `/${stub.match.domain}` : '') + (stub.match?.url ?? '')) : null;
   const state = {
-    key: written?.operation.key ?? '',
+    key: written?.operation.key ?? (preset && operations.some((o) => o.key === preset) ? preset : ''),
     values: written?.values ?? {},
-    status: stub?.response?.status ?? '',
-    body: pretty(stub?.response?.body),
+    status: stub?.response?.status ?? (preset ? first(preset)?.status ?? '' : ''),
+    body: pretty(stub ? stub.response?.body : preset ? first(preset)?.body : undefined),
   };
   const chosen = () => operations.find((operation) => operation.key === state.key);
   const url = () => (chosen()?.template ?? '').replace(/\{([^}]+)\}/g, (_, name) => encodeURIComponent(state.values[name] ?? '') || `{${name}}`);
@@ -560,7 +568,7 @@ const skeleton = (schema, content, depth = 0) => {
 /** Each WebSocket channel, with the messages the mock receives and sends on it. */
 function channelsIn(docs) {
   const channels = [];
-  for (const doc of docs.filter((d) => d.type === 'asyncapi' && overWebSocket(d.content))) {
+  for (const doc of docs.filter(overWebSocket)) {
     const content = doc.content ?? {};
     const file = String(doc.relativePath ?? '').split('/').pop();
     for (const [key, channel] of Object.entries(content.channels ?? {})) {
