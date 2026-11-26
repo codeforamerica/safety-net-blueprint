@@ -1,6 +1,7 @@
 /**
  * Check the fields SLA type conditions and metric filters read against real
- * schemas, and that composition filters read their records as `item`.
+ * schemas, that composition filters read their records as `item`, and that
+ * an `x-derived` field reads its record as `object`.
  *
  * All three are CEL over one record, read through a variable as CEL's hosts
  * read a record (Kubernetes' `object`): a metric filter reads each record it
@@ -115,6 +116,27 @@ export function validateCompositionFilters(doc) {
     }
   };
   walk(doc.content?.compositions, 'compositions');
+  return errors;
+}
+
+/**
+ * @param {import('../../types.js').Doc} doc - An OpenAPI document
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+export function validateDerivedFields(doc) {
+  const errors = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'x-derived' && typeof value === 'string') {
+        errors.push(...checkExpression(value, undefined, null, `${at}/x-derived`, 'object'));
+      } else {
+        walk(value, `${at}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`);
+      }
+    }
+  };
+  walk(doc.content?.components, '#/components');
   return errors;
 }
 

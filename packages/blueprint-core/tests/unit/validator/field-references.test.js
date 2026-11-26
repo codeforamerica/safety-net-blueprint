@@ -86,3 +86,21 @@ test('a condition that is not CEL is reported', () => {
   assert.equal(error.rule, 'cel-syntax');
   assert.equal(error.path, 'slaTypes[snap].pauseWhen');
 });
+
+test('an x-derived field reads its record as object, and this is refused', () => {
+  const derived = (expr) => toDoc({
+    path: '/set/domains/workflow/workflow-derived-openapi.yaml',
+    relativePath: 'domains/workflow/workflow-derived-openapi.yaml',
+    type: 'openapi',
+    content: {
+      openapi: '3.1.0',
+      info: { title: 'Derived', version: '1', 'x-domain': 'workflow' },
+      paths: {},
+      components: { schemas: { Widget: { type: 'object', properties: { id: { type: 'string' }, code: { type: 'string', 'x-derived': expr } } } } },
+    },
+  });
+  assert.deepEqual(findings(derived('object.id')), []);
+  const [error] = findings(derived('this.id'));
+  assert.equal(error.rule, 'bare-field-reference');
+  assert.match(error.message, /reads "this" bare; the record is `object`/);
+});

@@ -155,6 +155,8 @@ rpc_endpoints:
 #     names the section it fills as section).
 #   - In an SLA type's conditions, object is the record its clock runs on:
 #     object.status in ["awaiting_client", "awaiting_verification"].
+#   - In x-derived, object is the record being returned:
+#     object.programsAppliedFor.size().
 #   - A field a record does not have is an error, not null, as CEL makes a
 #     missing key in a record; the condition does not match. Test for it with
 #     has(): !has(item.assignedToId) for an unassigned task, and

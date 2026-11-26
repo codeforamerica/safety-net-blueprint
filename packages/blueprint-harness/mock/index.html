@@ -1224,7 +1224,7 @@ const withParams = (path, params) => Object.entries(params).reduce(
 /**
  * The array a derived field counts, and the values its contract allows.
  *
- * `programCount` is `$this.programsAppliedFor.size()`, so the way to show
+ * `programCount` is `object.programsAppliedFor.size()`, so the way to show
  * that it is computed rather than stored is to change the list and read the
  * count back. Which list, and what may go in it, both come out of the
  * contract rather than being named here.
@@ -2532,7 +2532,7 @@ const locate = (token, op) => {
   for (const schema of sources) {
     for (const [name, declared] of Object.entries(collectProperties(schema, doc))) {
       // By name, or by the expression it declares: the notes quote
-      // `$this.programsAppliedFor.size()` on its own, and the thing a reader
+      // `object.programsAppliedFor.size()` on its own, and the thing a reader
       // wants when they read that is the field it was written on.
       if (name === token || deref(declared, doc)?.['x-derived'] === token) {
         return asProperty(name, declared);
