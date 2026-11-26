@@ -85,8 +85,10 @@ rpc_endpoints:
 #     A POST to a collection creates a record there; a POST to an action runs
 #     it as the system, its from: and conditions still checked; a PATCH updates
 #     a record. A call that fails fails the action or reaction that made it,
-#     and nothing it did is saved. Call an action only on a record in a state
-#     it accepts: test the state with if: first.
+#     and puts back the action's own record; calls made before it are not
+#     undone. Call an action only on a record in a state it accepts: test the
+#     state with if: first, so a later call can't fail after an earlier one
+#     has changed a record.
 #
 #   call:
 #     # By operationId — the validated path; use it for another domain's records:

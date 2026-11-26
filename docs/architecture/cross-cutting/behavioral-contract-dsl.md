@@ -183,7 +183,9 @@ action runs as the system: it skips only role matching, and the action's
 the action or reaction has saved its record, so an action called on that
 record reads it as it was left. A call that fails — an action that refuses,
 a path no API declares, a write the schema refuses — fails the action: it
-answers with the call's status, and nothing it did is saved. In a reaction to
+answers with the call's status, and its own record is put back. Calls made
+before the one that failed are not undone: what they changed stays changed,
+and their events have gone out. In a reaction to
 an event, the reaction fails the same way, and the mock logs the call and why.
 A call to an operation, by its `operationId` (below), is the validated path.
 
