@@ -2,7 +2,8 @@
  * A finished line a session's adapter publishes becomes a transcript entry,
  * and the entry's created event names the line_finished event as its cause
  * (causationid): how a consumer finds the entry a line became. Published
- * twice, as after a network error, the line is kept once. Run against the
+ * twice, as after a network error, the line is kept once. It goes to the
+ * session's own transcript, whatever the event's data names. Run against the
  * harness's contracts, with the adapter's streaming part answering in place.
  */
 
@@ -66,4 +67,28 @@ test('the entry a finished line became names the line_finished event as its caus
   await new Promise((resolve) => setTimeout(resolve, 30));
   const { body: entries } = await send('GET', `/communication/transcripts/${transcriptId}/entries`);
   assert.deepStrictEqual(entries.items.map((entry) => entry.text), ['Who lives with you?']);
+});
+
+test('a line goes to the session\'s own transcript, whatever transcript the event names', async () => {
+  const started = async () => {
+    const { body: session } = await send('POST', '/communication/transcription-sessions', {
+      profileId: '7a1e0c2d-0000-4000-8000-0000000000f1', model: 'standard', client: 'test/1.0.0', startedAt: '2026-10-12T10:00:00Z',
+    });
+    await send('POST', `/communication/transcription-sessions/${session.id}/start`, {});
+    return (await send('GET', `/communication/transcription-sessions/${session.id}`)).body;
+  };
+  const a = await started();
+  const b = await started();
+
+  // Session A's line, naming session B's transcript.
+  assert.strictEqual((await send('POST', '/platform/events', {
+    specversion: '1.0', id: 'line-a-to-b', source: '/communication', type: 'communication.transcription_session.line_finished',
+    subject: a.id, partitionkey: a.id,
+    data: { transcriptId: b.transcriptId, key: 'a.l1', text: 'Written by session A', speaker: 'staff', startedAt: '2026-10-12T10:00:05Z', endedAt: '2026-10-12T10:00:06Z' },
+  })).status, 201);
+
+  await eventually(async () => (await send('GET', `/communication/transcripts/${a.transcriptId}/entries`)).body.items
+    .some((entry) => entry.text === 'Written by session A'), 'the line did not reach session A\'s transcript');
+  const { body: bEntries } = await send('GET', `/communication/transcripts/${b.transcriptId}/entries`);
+  assert.ok(!bEntries.items.some((entry) => entry.text === 'Written by session A'), 'session B\'s transcript got session A\'s line');
 });
