@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- **Breaking:** metric filters, SLA conditions and `where:` conditions are evaluated as CEL, reading the record as `item` in a filter and `object` in an SLA condition, so one still written in JSON Logic matches nothing; rewrite it in CEL as `blueprint-validate` shows. A `forEach` step's `where:` now takes a CEL string, as a context binding's does. (#413)
+- **Breaking:** a composition's `filter:` is evaluated with the record as `item`, so one that reads a field bare, such as `category == "identity"`, now returns nothing; write `item.category == "identity"`, as `blueprint-validate` shows.
+- **Breaking:** an `x-derived` expression is evaluated with the record as `object`, so one that reads `this`, such as `this.id`, no longer evaluates and its field is left out of responses; write `object.id`, as `blueprint-validate` shows.
+- **Breaking:** `blueprint-swagger` is removed, and `express` and `swagger-ui-express` are no longer installed. To browse and try a contract set's APIs, build the explorer with `blueprint-build-explorer`: its API reference sends each request to a mock running in the page. (#465)
+- **Breaking:** before, the mock ran a procedure's `conditions:` list of JSON Logic conditions. Now it runs only a procedure's steps, so write each condition as an `if:` step, and `json-logic-js` is no longer installed. (#413)
+- **Breaking:** a singleton's events are now named for the schema its path returns, in snake_case, as every other resource's are, not for its path. Intake's `/applications/{applicationId}/household-info` returns `ApplicationHousehold`, so its updates are `intake.application_household.updated`, not `intake.household-info.updated`. Subscribe to the new name. (#492)
+- Before, `GET /platform/events` left out timer requests and cancellations, and a stub on `platform.timer.requested` fired only a timer asked for after it was registered. Now both are in the event log, and the stub fires a matching timer that's already waiting as soon as it's registered.
+
+### Patch Changes
+
+- Before, a path that starts with the same word as its server's base — `/orders` in an API served at `/orders`, or `/menu-items` at `/menu` — was served without the base, and creating a record there answered 501. Now every path is served under its server's base. (#534)
+- Before, a context binding with no `where:` was skipped with a warning and bound null. Now it binds the first record in its collection, as the state machine schema says, and a `forEach` with no `where:` runs once for every record. (#534)
+- Before, a state machine's call by path to another record's action ran with the caller's roles, and when that action refused, the calling action still answered 200 with its change saved, and a procedure's calls by path were dropped without a word. Now each call runs as the system, skipping only role matching, and a call that fails fails the action or reaction that made it, which answers or logs the call's error: nothing it or its calls changed in its own domain is kept, and none of their events is sent. (#534)
+- Before, `GET /platform/events?start=...` matched `start` as a field on each event and found none. Now `start` and `end` return the events at or after and at or before those times.
+- Before, a state machine was matched to its collection by adding "s" to its object's name, so a `Delivery` served at `/deliveries` started with no state and every action on it answered 409. Now a machine governs the resource core attaches it to, however its collection is spelled. (#492)
+- Before, a PATCH was merged into the stored record and the result checked against the update schema, so an update schema that allows no other fields — the framework's own `TranscriptionProfileUpdate` among them — refused every change. Now the request body is checked against the update schema, and the record it leaves against the resource's schema. (#534)
+- Before, the mock took a nested path for a collection or a singleton by whether its last word ends in "s", so a nested `people` or `children` collection could not be created. Now what each path is comes from core's model of the document. (#492)
+- Before, a seed record with an `items` array of its own, such as a basket, was not seeded, and nothing said so. Now it is, and an example left out — one shaped as a list response, or with no `id` — is named in a warning. (#449)
+- Before, two domains with a collection of the same name, such as `/ordering/settings` and `/dispatch/settings`, read and wrote the same records. Now each domain keeps its own, and a store names a collection by its domain and path (`intake/applications`, `intake/applications/members`), as the README's example of using a store directly now shows. (#534)
+- Uses @codeforamerica/blueprint-core 0.6.0, @codeforamerica/blueprint-rules-engine 0.2.2.
+
 ## 0.5.0
 
 ### Minor Changes

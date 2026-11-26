@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- **Breaking:** workflow's metric filters and SLA `pauseWhen` conditions, and eligibility's lookup of a pending service call, are written in CEL; the values they compute are unchanged. An overlay that edits inside one of these expressions now replaces the whole string, e.g. `pauseWhen: object.status in ["awaiting_client", "awaiting_verification"]`. (#413)
+- **Breaking:** intake's composition filters read each record as `item`, such as `'primary_applicant' in item.roles`; the records they return are unchanged. An overlay that replaces one of these filters writes it the same way.
+- **Breaking:** the User resource's `userId` is derived as `object.id`; its value is unchanged. An overlay that replaces it writes it the same way.
+- **Breaking:** Workflow's timer callbacks are named for the task, as `workflow.task.creation_deadline`, `workflow.task.sla_warning`, `workflow.task.sla_breach`, `workflow.task.client_timeout` and `workflow.task.verification_timeout`, and `workflow.task.de-escalated` is `workflow.task.de_escalated`.
+
+### Patch Changes
+
+- Before, intake's reaction to `eligibility.determination.completed` asked to close the application, or route it for approval, whatever state it was in, and the call was refused unless it was under review. Now the reaction acts only on an application under review. (#534)
+- Uses @codeforamerica/blueprint-mock-server 0.6.0.
+
 ## 0.3.0
 
 ### Minor Changes

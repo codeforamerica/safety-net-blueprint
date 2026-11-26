@@ -1,5 +1,18 @@
 # @codeforamerica/blueprint-cli
 
+## 0.7.0
+
+### Minor Changes
+
+- **Breaking:** `blueprint-build-explorer` no longer builds a Client Reference, so `--clients` is ignored and `--only=client-reference` rebuilds only the home page. Drop `--clients` from your command; the API reference shows each operation's TypeScript call instead. (#465)
+
+### Patch Changes
+
+- Before, `blueprint-build-explorer --config=<dir>` failed when that folder had no `config.yaml`. Now the explorer builds with its defaults. (#534)
+- `blueprint-build-explorer` now builds the explorer's Scenarios page too, and `--only=scenarios` builds it alone. (#465)
+- Before, `blueprint-scaffold-api --name=menu` was refused as an unknown argument, and a resource named `MenuItem` came out as schema `Menuitem` at `/menuitems`, with refs to a local `./components` folder and servers that didn't include the domain. Now it takes `--name=menu` as the other tools do, keeps `MenuItem` and serves it at `/menu-items`, refers to the framework's shared components, and serves the API under its domain, so its output validates as generated. `blueprint-add-api-resource` refers to the shared components the same way. (#534)
+- Uses @codeforamerica/blueprint-core 0.6.0, @codeforamerica/blueprint-explorer 0.4.0, @codeforamerica/blueprint-rules-engine 0.2.2.
+
 ## 0.6.0
 
 ### Minor Changes
