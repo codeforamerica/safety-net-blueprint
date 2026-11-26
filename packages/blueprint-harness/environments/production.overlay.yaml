@@ -1,6 +1,6 @@
 overlay: '1.0.0'
 info:
-  title: Live sign-in
+  title: Real sign-in
   version: 1.0.0
 
 # How callers sign in in production, beside production.env's values: OAuth

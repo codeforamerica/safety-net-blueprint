@@ -97,7 +97,7 @@ environments:
   - name: Mock
     variables: ../environments/local.env
     routing: routing.yaml
-  - name: Live
+  - name: Real
     variables: ../environments/production.env
     overlays: [../environments/production.overlay.yaml]
     routing: routing-production.yaml

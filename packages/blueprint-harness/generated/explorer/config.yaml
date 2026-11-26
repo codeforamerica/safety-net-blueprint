@@ -57,7 +57,7 @@ environments:
   # require it (production.overlay.yaml), through the stand-in sign-in page in
   # pages/. Sessions under fake-secured go to a fake service whose
   # credentials need it.
-  - name: Live
+  - name: Real
     variables: ../environments/production.env
     overlays: [../environments/production.overlay.yaml]
     routing: routing-production.yaml
