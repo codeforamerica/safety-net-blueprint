@@ -1,5 +1,22 @@
 # @codeforamerica/blueprint-explorer
 
+## 0.4.0
+
+### Minor Changes
+
+- Before, the annotation explorer listed every entry's usages open on the page. Now each entry opens like an operation on the API reference, and shows the TypeScript client's `Annotations` call that finds those usages, which Run evaluates in the page. (#465)
+- Before, an API reference page described each operation for reading only. Now each shows its curl and TypeScript call, and with Try it on, sends it to the mock running in the page, or for a rules endpoint, runs the client's evaluation in the page. (#465)
+- Every page the explorer builds, except its authored pages, now has a Try it switch that docks a control panel beside the page: restart the mock, add stubs, fire waiting timers, and follow a log of each request and the events it set off. What the mock holds carries from page to page, and reloading a page starts it over. (#465)
+- **Breaking:** The explorer no longer builds a Client Reference: `buildClientReference`, `--only=client-reference` and `--clients` are removed. Each operation on the API reference shows its TypeScript client call instead, and the annotation explorer shows the client's `Annotations` call. (#465)
+- Before, running a contract set's scenarios in a browser meant building the harness's demo page, which isn't published. Now, for a contract set with scenarios, the explorer builds a Scenarios page that runs the mock server in the browser and plays each scenario a step at a time, served or opened from disk; `first_tour` in `config.yaml` picks the scenario it opens with. (#465)
+
+### Patch Changes
+
+- Before, asterisks inside a code span in a contract's description were read as italics, so the `q` parameter's example `*john*` showed as an italic john. Now a code span shows exactly what's written.
+- The explorer's home page shows every tool in one grid without status badges, and each card lists up to four of its pages, then a link to all of them; a tool with nothing to show for the contract set gets no card.
+- Before, building the explorer failed with ENOENT unless `config.yaml` and `context-map/config/config.yaml` existed. Now both are optional: the domains come from the contracts, the project is named "Blueprint", and the context map takes its title from that name. (#534)
+- Uses @codeforamerica/blueprint-core 0.6.0, @codeforamerica/blueprint-rules-engine 0.2.2.
+
 ## 0.3.1
 
 ### Patch Changes

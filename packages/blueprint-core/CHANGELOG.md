@@ -1,5 +1,24 @@
 # @codeforamerica/blueprint-core
 
+## 0.6.0
+
+### Minor Changes
+
+- **Breaking:** a metric's `filter`, an SLA type's conditions (`autoAssignWhen`, `pauseWhen` and the rest) and the `where:` of a context binding or `forEach` step take CEL, and validation refuses JSON Logic in them with the CEL to write instead. Rewrite each as CEL that reads the record as `item` in a filter or `where:` and as `object` in an SLA condition, testing for a missing field with `has()`: `{ "==": [{ var: "assignedToId" }, null] }` becomes `!has(item.assignedToId) || item.assignedToId == null`. (#413)
+- **Breaking:** a composition's `filter:` reads each record as `item`, and validation refuses one that reads a field bare. Where you wrote `category == section.name`, write `item.category == section.name`.
+- **Breaking:** an `x-derived` expression reads the record as `object`, as a guard does, and validation refuses one that reads `this`, which elsewhere names the event a reaction handles. Where you wrote `x-derived: "this.id"`, write `x-derived: "object.id"`.
+- **Breaking:** Validation now reports an event not named `{domain}.{resource}.{event}`, the last two in snake_case, and a timer's callback is named that way too: where a state machine reacted to `communication.idle_check`, it reacts to `communication.transcript.idle_check`, and `decision-support.suggestion_expiry` is `decision-support.suggestion.suggestion_expiry`.
+- **Breaking:** before, a procedure's `conditions:` list passed validation. Now validation refuses it and says to write each condition as an `if:` step with a CEL condition. (#413)
+- **Breaking:** `extract(docs, 'relationships')` keys a state machine action by its machine's resource as well, as `state-machine-action:intake:Application:close`, so two machines in a domain can each have a `close`; each entry also gives the `file` its endpoint is in.
+
+### Patch Changes
+
+- Before, the AsyncAPI documents for each API's events, and the platform timer events, had no examples. Now each message carries one, a whole CloudEvent ready to publish; a generated one is built from the resource's first sample record. (#465)
+- Before, `extract(docs, 'examples')` left out, without a word, a record with an `items` array of its own and a record whose key contained "create", "update" or "payload". Now it leaves out only an example shaped as a list response (`items` with `total`, `limit` and `offset`) or one with no `id`, and warns naming each. (#449)
+- Before, validation took `GET /baskets/{basketId}` for a list when a basket has an `items` array, and demanded search, limit and offset parameters on it. Now a path ending in a parameter is never held to the list rules. (#534)
+- Before, the `section` path parameter on a sectionView composition's state endpoints was any string. Now it takes its values from the composition's section enum, such as `ApplicationReviewSections`, so API docs list them and the generated client types them. (#465)
+- Before, closing a transcript left its idle check waiting at the timer service. Now closing a transcript cancels it.
+
 ## 0.5.0
 
 ### Minor Changes
