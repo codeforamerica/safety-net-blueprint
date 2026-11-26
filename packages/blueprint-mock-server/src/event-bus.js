@@ -42,7 +42,10 @@ export function createEventBus() {
      * @returns {boolean} Whether anything was listening
      */
     emit(event, ...args) {
-      for (const held of holds) {
+      // The newest hold that picks it, so one opened inside another — an
+      // action called from an action — holds its own, and passes them to the
+      // outer one when it's released.
+      for (const held of [...holds].reverse()) {
         if (event === 'domain-event' && held.picks(args[0])) {
           held.events.push(args[0]);
           return true;
@@ -68,7 +71,8 @@ export function createEventBus() {
      * Hold back the domain events `picks` chooses, so listeners see them only
      * when released, in the order they were sent, or never when discarded. A
      * composition's patch holds the events its changes cause until all of
-     * them are saved; events anything else sends meanwhile pass through.
+     * them are saved, and an action or a reaction holds its domain's events
+     * (transaction.js); events anything else sends meanwhile pass through.
      *
      * @param {(event: object) => boolean} picks
      * @returns {{ release: () => void, discard: () => void }}

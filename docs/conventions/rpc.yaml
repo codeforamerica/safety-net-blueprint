@@ -84,11 +84,13 @@ rpc_endpoints:
 #         <fieldName>: <value expression>   # or {$push: <value>} to append to an array field
 #     A POST to a collection creates a record there; a POST to an action runs
 #     it as the system, its from: and conditions still checked; a PATCH updates
-#     a record. A call that fails fails the action or reaction that made it,
-#     and puts back the action's own record; calls made before it are not
-#     undone. Call an action only on a record in a state it accepts: test the
-#     state with if: first, so a later call can't fail after an earlier one
-#     has changed a record.
+#     a record. A call that fails fails the action or reaction that made it.
+#     The action and its calls to its own domain are one transaction: nothing
+#     they changed in the domain is kept, and none of their events is sent.
+#     A call to another domain is done once it succeeds; when a later failure
+#     has to undo it, handle the failure with catch: and call what undoes it.
+#     Call an action only on a record in a state it accepts: test the state
+#     with if: first.
 #
 #   call:
 #     # By operationId — the validated path; use it for another domain's records:
