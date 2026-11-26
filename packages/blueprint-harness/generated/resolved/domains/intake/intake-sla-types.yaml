@@ -8,12 +8,12 @@ slaTypes:
       amount: 30
       unit: days
     warningThresholdPercent: 80
-    autoAssignWhen: "\"snap\" in programsAppliedFor"
-    pauseWhen: status in ["withdrawn"]
+    autoAssignWhen: "\"snap\" in object.programsAppliedFor"
+    pauseWhen: object.status in ["withdrawn"]
   - id: medicaid_standard
     name: Medicaid Standard Processing
     duration:
       amount: 45
       unit: days
     warningThresholdPercent: 80
-    pauseWhen: status in ["withdrawn"]
+    pauseWhen: object.status in ["withdrawn"]

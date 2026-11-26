@@ -104,7 +104,7 @@ A single expression language — CEL (Common Expression Language) — used throu
 
 ## Expressions
 
-Condition expressions appear in guards, `if:` and `match:` steps, SLA pause/resume conditions, and metric filter predicates. Common patterns:
+Condition expressions appear in guards, `if:` and `match:` steps, SLA pause/resume conditions, and metric filter predicates. Each reads the record through a variable, as CEL's hosts do (Kubernetes reads `object`): a guard, a step and an SLA condition read the record as `object`; a metric filter, a composition filter and a `where:` read each record they count, return or search as `item`. Common patterns:
 
 | Pattern | Example |
 |---|---|
@@ -112,6 +112,7 @@ Condition expressions appear in guards, `if:` and `match:` steps, SLA pause/resu
 | List membership | `"snap" in object.programs` |
 | List size | `object.programs.size() == 1` |
 | Null check | `object.field != null` |
+| Field present | `has(object.field)` — reading a field the record doesn't have is an error, which a condition counts as no match |
 | Logical and / or | `a && b` / `a \|\| b` |
 | Negation | `!condition` |
 | Any in list satisfies | `object.programs.exists(p, p == "snap")` |

@@ -23,7 +23,7 @@ import {
   validateSortableConfig,
 } from './compositions.js';
 import { validateEvents } from './validator/event-validator.js';
-import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
+import { validateSlaTypeFields, validateMetricFields, validateCompositionFilters } from './validator/field-reference-validator.js';
 import { jsonLogicExpressions } from './validator/json-logic-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
@@ -982,7 +982,8 @@ function validateDoc(doc, context) {
         ...validateEditableKeys(compositionDoc),
         ...validateBindFields(compositionDoc, context.resourceSchemaIndex),
         ...validateFieldsArrays(compositionDoc, context.resourceSchemaIndex),
-        ...validateSortableConfig(compositionDoc)
+        ...validateSortableConfig(compositionDoc),
+        ...validateCompositionFilters(doc)
       );
       break;
     }
